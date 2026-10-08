@@ -28,6 +28,7 @@ import obnoxiousMouseManifest from "file://../defaultOverlays/obnoxious-mouse/ov
 import obnoxiousMouseScript from "file://../defaultOverlays/obnoxious-mouse/script.js";
 import obnoxiousMouseCss from "file://../defaultOverlays/obnoxious-mouse/style.css";
 import obnoxiousMouseBoardTheme from "file://../defaultOverlays/obnoxious-mouse/theme.css";
+import obnoxiousPanel from "file://../defaultOverlays/obnoxious-shared/panel.css";
 import obnoxiousSpotifyHtml from "file://../defaultOverlays/obnoxious-spotify/index.html";
 import obnoxiousSpotifyManifest from "file://../defaultOverlays/obnoxious-spotify/overlay.json";
 import obnoxiousSpotifyCss from "file://../defaultOverlays/obnoxious-spotify/style.css";
@@ -90,6 +91,7 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "font.css": obnoxiousFont,
         "FONT-LICENSE.txt": obnoxiousFontLicense,
         "index.html": obnoxiousKeyboardHtml,
+        "panel.css": obnoxiousPanel,
         "style.css": obnoxiousKeyboardCss,
         "theme.css": obnoxiousKeyboardTheme,
         "overlay.json": obnoxiousKeyboardManifest
@@ -99,6 +101,7 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "font.css": obnoxiousFont,
         "FONT-LICENSE.txt": obnoxiousFontLicense,
         "index.html": obnoxiousMouseHtml,
+        "panel.css": obnoxiousPanel,
         "mouse-theme.css": obnoxiousMouseTheme,
         "script.js": obnoxiousMouseScript,
         "style.css": obnoxiousMouseCss,
@@ -112,6 +115,7 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "font.css": obnoxiousFont,
         "FONT-LICENSE.txt": obnoxiousFontLicense,
         "index.html": obnoxiousSpotifyHtml,
+        "panel.css": obnoxiousPanel,
         "script.js": spotifyScript,
         "style.css": obnoxiousSpotifyCss,
         "theme.css": obnoxiousSpotifyTheme,
