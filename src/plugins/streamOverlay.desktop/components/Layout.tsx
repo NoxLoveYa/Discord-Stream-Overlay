@@ -85,8 +85,6 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const canvas = useRef<HTMLCanvasElement>(null);
     const painter = useRef<ReturnType<typeof createPainter>>(null);
     const background = useRef<HTMLImageElement>(null);
-    const pending = useRef<{ x: number; y: number; } | null>(null);
-    const raf = useRef(0);
     const stage = useRef<HTMLDivElement>(null);
     const [expanded, setExpanded] = useState(false);
     const nativeFullscreen = useRef(false);
@@ -123,17 +121,19 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
 
     useEffect(() => {
         let alive = true;
-        let frameRequest = 0;
 
-        const tick = async () => {
-            try {
-                const frame = await Native.layoutFrame(pictureWidth.current);
-                if (!alive || !frame || !canvas.current) return;
+        // the main process answers when a frame has been drawn, so each one is shown as soon as it exists
+        const receive = async () => {
+            while (alive) {
+                try {
+                    const frame = await Native.layoutFrame(pictureWidth.current);
+                    if (!alive || !frame || !canvas.current) continue;
 
-                painter.current ??= createPainter(canvas.current);
-                painter.current?.(frame.bitmap, frame.width, frame.height);
-            } finally {
-                if (alive) frameRequest = requestAnimationFrame(tick);
+                    painter.current ??= createPainter(canvas.current);
+                    painter.current?.(frame.bitmap, frame.width, frame.height);
+                } catch {
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
             }
         };
 
@@ -148,21 +148,20 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         };
         const changesTimer = setInterval(collect, CHANGES_MS);
 
-        tick();
+        receive();
         return () => {
             alive = false;
-            cancelAnimationFrame(frameRequest);
             clearInterval(changesTimer);
             if (backgroundUrl.current) URL.revokeObjectURL(backgroundUrl.current);
-            cancelAnimationFrame(raf.current);
             if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
             Native.layoutHide();
         };
     }, []);
 
-    const at = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    // as fractions of the picture, kept inside it: a captured pointer goes on outside the canvas, and the overlay stops at the edge
+    const send = (kind: "move" | "down" | "up", e: React.PointerEvent<HTMLCanvasElement>) => {
         const r = e.currentTarget.getBoundingClientRect();
-        return { x: clamp((e.clientX - r.left) / r.width), y: clamp((e.clientY - r.top) / r.height) };
+        Native.layoutPointer(kind, clamp((e.clientX - r.left) / r.width), clamp((e.clientY - r.top) / r.height));
     };
 
     // the real full screen when Discord allows it, the window covered by the picture otherwise
@@ -199,13 +198,6 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         };
     }, [expanded]);
 
-    // moves are sent at most once per frame
-    const flushMove = () => {
-        raf.current = 0;
-        if (pending.current) Native.layoutPointer("move", pending.current.x, pending.current.y);
-        pending.current = null;
-    };
-
     return (
         <div>
             <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
@@ -225,20 +217,11 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
                         onPointerDown={e => {
                             if (e.button !== 0) return;
                             e.currentTarget.setPointerCapture(e.pointerId);
-                            cancelAnimationFrame(raf.current);
-                            flushMove();
-                            Native.layoutPointer("down", at(e).x, at(e).y);
+                            send("down", e);
                         }}
-                        onPointerMove={e => {
-                            pending.current = at(e);
-                            raf.current ||= requestAnimationFrame(flushMove);
-                        }}
-                        onPointerUp={e => {
-                            cancelAnimationFrame(raf.current);
-                            flushMove();
-                            Native.layoutPointer("up", at(e).x, at(e).y);
-                        }}
-                        onPointerCancel={e => Native.layoutPointer("up", at(e).x, at(e).y)}
+                        onPointerMove={e => send("move", e)}
+                        onPointerUp={e => send("up", e)}
+                        onPointerCancel={e => send("up", e)}
                     />
                 </div>
 

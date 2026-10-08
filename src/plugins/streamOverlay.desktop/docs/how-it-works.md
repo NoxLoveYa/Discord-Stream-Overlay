@@ -100,7 +100,8 @@ overlays offscreen at 60 Hz (the stream's own window only runs at 30 fps). It ke
 smaller and the host page (`main/host.ts`) puts the overlays in a stage that has the size of the screen and is scaled
 down with a CSS transform, so the overlays still measure the real screen (their saved positions mean the same thing)
 while about 1280 px (1920 when full screen) are painted instead of 2560 × 1440. The settings page (`components/Layout.tsx`) is in the renderer and cannot be pushed to, so it asks
-`Native.layoutFrame` for the newest frame once per animation frame; the BGRA bytes are uploaded to a WebGL texture and
+`Native.layoutFrame` for the next frame, which the main process answers as soon as one has been drawn (a long poll, so a
+frame is not left waiting for a timer); the BGRA bytes are uploaded to a WebGL texture and
 the channels swapped in a shader, so no per-pixel work runs in JavaScript. What the overlays saved is collected
 separately every 150 ms (`Native.layoutChanges` asks the overlay page, which is slower than a frame). Behind the canvas is a screenshot of the display
 (`desktopCapturer`, taken once when the tab opens at the display's own resolution), which is what the stream shows without the overlays: the real on-screen
@@ -111,8 +112,8 @@ the tab is open:
   `OverlayInput` merges those keys into the real key state;
 - the pointer over the canvas goes to `OverlayWindow.pointer` as fractions of the picture. That scales them to the page,
   tells the page where the cursor is (so it lets the mouse through to the overlay under it; not repeated while a button
-  is held) and injects the matching event with `webContents.sendInputEvent`, so the overlay's own `move.js` drags and
-  resizes as usual;
+  is held) and injects the matching event with `webContents.sendInputEvent` (moves carry the left-button flag, or the page
+  takes them for a release), so the overlay's own `move.js` drags and resizes as usual;
 - what the overlay saves comes back with the next collection and is written to the plugin settings, which re-renders the
   window and updates the stream through the normal sync.
 

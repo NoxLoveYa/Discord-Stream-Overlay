@@ -72,8 +72,9 @@ export class OverlayWindow {
             webContents.executeJavaScript(`window.__streamOverlayPointer?.(${Math.round(clamp(fx) * screenSize.width)}, ${Math.round(clamp(fy) * screenSize.height)})`).catch(() => { });
         }
         if (kind !== "move") this.pressed = kind === "down";
+        // a move without the button flag reads as a release to the page, and a drag would stop
         webContents.sendInputEvent(kind === "move"
-            ? { type: "mouseMove", x, y }
+            ? { type: "mouseMove", x, y, ...this.pressed && { button: "left", modifiers: ["leftbuttondown"] } }
             : { type: kind === "down" ? "mouseDown" : "mouseUp", x, y, button: "left", clickCount: 1 });
     }
 
