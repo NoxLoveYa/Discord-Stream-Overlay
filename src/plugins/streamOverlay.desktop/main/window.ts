@@ -241,7 +241,11 @@ export class OverlayWindow {
         win.setAlwaysOnTop(true, "screen-saver");
         win.setIgnoreMouseEvents(true);
         // the dirty rectangle is only trusted when pixels and window units are the same thing (no display scaling)
-        if (this.offscreen) win.webContents.on("paint", (_, dirty, image) => this.stream.frame(image, image.getSize().width === win.getContentSize()[0] ? dirty : undefined));
+        // a paint can still come after the window was destroyed
+        if (this.offscreen) win.webContents.on("paint", (_, dirty, image) => {
+            if (win.isDestroyed()) return;
+            this.stream.frame(image, image.getSize().width === win.getContentSize()[0] ? dirty : undefined);
+        });
         win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
         win.webContents.on("will-navigate", e => e.preventDefault());
         win.on("closed", () => {
