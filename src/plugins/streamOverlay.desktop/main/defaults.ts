@@ -35,7 +35,7 @@ import spotifyHtml from "file://../defaultOverlays/spotify/index.html";
 import spotifyManifest from "file://../defaultOverlays/spotify/overlay.json";
 import spotifyScript from "file://../defaultOverlays/spotify/script.js";
 import spotifyCss from "file://../defaultOverlays/spotify/style.css";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
 
 /** Copied into every overlay that looks like the keyboard: each overlay folder has to be complete on its own. */
@@ -113,13 +113,16 @@ const hashOf = (files: string[], read: (file: string) => string | null) => {
 
 const shippedHash = (name: string) => hashOf(Object.keys(defaultOverlays[name]), file => defaultOverlays[name][file]);
 
-const installedHash = (target: string, name: string) => hashOf(Object.keys(defaultOverlays[name]), file => {
+/** The hash of these files of the copy in `target`. */
+const installedHash = (target: string, files: string[]) => hashOf(files, file => {
     try {
         return readFileSync(join(target, file), "utf-8");
     } catch {
         return null;
     }
 });
+
+const filesIn = (target: string) => readdirSync(target, { withFileTypes: true }).filter(d => d.isFile()).map(d => d.name);
 
 /** Overlay name -> the hash of the files written last, or "" when that is not known. */
 function readMarker(marker: string): Record<string, string> {
@@ -133,10 +136,15 @@ function readMarker(marker: string): Record<string, string> {
     return Object.fromEntries(raw.split("\n").filter(Boolean).map(name => [name, ""]));
 }
 
-function install(target: string, name: string) {
+/** `prune`: files of an older version that this one no longer has are removed (only for a copy that is known to be ours). */
+function install(target: string, name: string, prune = false) {
     mkdirSync(target, { recursive: true });
     for (const [file, content] of Object.entries(defaultOverlays[name]))
         writeFileSync(join(target, file), content);
+
+    if (prune)
+        for (const file of filesIn(target))
+            if (!(file in defaultOverlays[name])) rmSync(join(target, file), { force: true });
 }
 
 const checked = new Set<string>();
@@ -169,16 +177,17 @@ export function seedDefaults(dir: string) {
                 seeded[name] = shipped;
             }
         } else if (known !== shipped && known !== CUSTOM && existsSync(target)) {
-            const installed = installedHash(target, name);
-            if (installed === shipped) {
+            if (installedHash(target, Object.keys(defaultOverlays[name])) === shipped) {
                 seeded[name] = shipped;
-            } else if (installed === known || known === "") {
+            } else if (known === "" || installedHash(target, filesIn(target)) === known) {
+                // what was written last had the files of that version, which are not always the ones of this one (a new
+                // version can add files): so it is what is there that says whether the copy was edited
                 if (known === "") {
                     const backup = join(dir, `.${name}.backup`);
                     rmSync(backup, { recursive: true, force: true });
                     cpSync(target, backup, { recursive: true });
                 }
-                install(target, name);
+                install(target, name, true);
                 seeded[name] = shipped;
             }
         }
