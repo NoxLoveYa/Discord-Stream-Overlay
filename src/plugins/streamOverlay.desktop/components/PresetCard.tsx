@@ -12,15 +12,13 @@ import { TextInput, useState } from "@webpack/common";
 import type { ReactNode } from "react";
 
 import { IconButton } from "./IconButton";
+import { submitOrCancel } from "./keys";
 
 interface PresetCardProps {
     name: string;
-    /** the current state is the one this preset saved */
     active: boolean;
-    /** was just created */
     fresh: boolean;
     summary: ReactNode;
-    /** whether another preset already has this name */
     isTaken(name: string): boolean;
     onApply(): void;
     onUpdate(): void;
@@ -59,13 +57,7 @@ export function PresetCard({ name, active, fresh, summary, isTaken, onApply, onU
                         aria-label={`New name for ${name}`}
                         error={taken ? "Another preset has this name" : undefined}
                         onFocus={e => e.currentTarget.select()}
-                        onKeyDown={e => {
-                            if (e.key === "Enter") commit();
-                            else if (e.key === "Escape") {
-                                e.stopPropagation();
-                                setRenaming(false);
-                            }
-                        }}
+                        onKeyDown={submitOrCancel(commit, () => setRenaming(false))}
                     />
                     <div className="vc-so-rename-buttons">
                         <Button size="small" disabled={!clean || taken} onClick={commit}>Rename</Button>

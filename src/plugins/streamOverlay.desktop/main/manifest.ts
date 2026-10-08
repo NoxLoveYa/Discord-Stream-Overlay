@@ -9,15 +9,15 @@ import { readFileSync } from "fs";
 import { dirname, join } from "path";
 
 import { VIRTUAL_KEYS } from "./keys";
-import { clamp, COLOR, finite } from "./values";
+import { clamp, COLOR, finite, text } from "./values";
 
 const MAX_KEYS = 32;
+const MAX_INTERACTIVE = 4;
 const MAX_SETTINGS = 24;
+const MAX_OPTIONS = 20;
 const ID = /^[a-z][a-z0-9-]{0,31}$/;
 const OPTION_VALUE = /^[\w .-]{1,40}$/;
 const UNIT = /^(px|%|em|rem|vw|vh|deg|s|ms)?$/;
-
-const text = (value: unknown, max: number) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
 
 // overlay.json belongs to a folder the user picked: nothing in it is trusted
 function parseSetting(raw: any): OverlaySetting | null {
@@ -54,7 +54,7 @@ function parseSetting(raw: any): OverlaySetting | null {
             const options = (Array.isArray(raw.options) ? raw.options : [])
                 .map((o: any) => typeof o === "string" ? { label: o, value: o } : { label: String(o?.label ?? o?.value), value: String(o?.value) })
                 .filter((o: { value: string; }) => OPTION_VALUE.test(o.value))
-                .slice(0, 20);
+                .slice(0, MAX_OPTIONS);
             if (!options.length) return null;
             return { ...base, type: "select", options, default: options.find((o: { value: string; }) => o.value === raw.default)?.value ?? options[0].value };
         }
@@ -73,7 +73,7 @@ export function readManifest(indexFile: string): Manifest {
         raw = JSON.parse(readFileSync(join(dirname(indexFile), "overlay.json"), "utf-8"));
     } catch { /* no manifest, or an invalid one: the overlay asks for nothing */ }
 
-    const interactive = keyNames(raw?.interactive).slice(0, 4);
+    const interactive = keyNames(raw?.interactive).slice(0, MAX_INTERACTIVE);
     const keys = keyNames([...(Array.isArray(raw?.keys) ? raw.keys : []), ...interactive]);
 
     const seen = new Set<string>();

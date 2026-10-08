@@ -18,7 +18,7 @@ export interface OverlaySetting {
     default: OverlayValue;
     /** not shown in the settings window, the overlay sets it itself (a dragged position) */
     hidden?: boolean;
-    /** the tab of the overlay's settings page it is on; the overlay's settings are all on one tab when none has a group */
+    /** the tab of the overlay's settings page it is on */
     group?: string;
     /** only shown while the setting `id` has this value, like the colors of one theme */
     when?: { id: string; value: OverlayValue; };
@@ -57,7 +57,7 @@ export interface OverlayInfo {
     settings: OverlaySetting[];
 }
 
-/** The track playing in Spotify; `position` was true at `at` (Date.now()), and moves on from there while `playing` */
+/** `position` was true at `at` (Date.now()), and moves on from there while `playing` */
 export interface MediaState {
     id: string;
     title: string;
@@ -71,16 +71,15 @@ export interface MediaState {
     at: number;
 }
 
-/** One overlay's settings under a name; only the values that differ from the defaults are kept */
+/** Only the values that differ from the defaults are kept */
 export interface OverlayPreset {
     name: string;
     values: Record<string, OverlayValue>;
 }
 
-/** Presets of each overlay, by overlay name */
+/** By overlay name */
 export type OverlayPresets = Record<string, OverlayPreset[]>;
 
-/** While this program is in focus, the global preset is applied */
 export interface AppBinding {
     /** the file name of the program, like "game.exe", in lower case */
     app: string;
@@ -89,7 +88,6 @@ export interface AppBinding {
     enabled: boolean;
 }
 
-/** Which overlays are on, and the settings of every overlay, under a name */
 export interface GlobalPreset {
     name: string;
     enabled: string[];

@@ -10,7 +10,6 @@
     --accent2-rgb: 34 211 238;
 }
 
-/* the board of the keyboard, as a row: cover, text, bars */
 .board {
     box-sizing: border-box;
     display: flex;
@@ -97,7 +96,7 @@ html[data-progress="false"] .progress {
     background: rgb(255 255 255 / 10%);
 }
 
-/* only transform is ever animated: the bar grows by scaling, and it is stepped twice a second */
+/* only transform is animated: the bar grows by scaling, stepped every STEP ms by script.js */
 .fill {
     width: 100%;
     height: 100%;

@@ -17,7 +17,7 @@ const logger = new Logger("StreamOverlay");
 const POLL_MS = 300;
 // a program has to stay in focus this long before it counts, so passing through windows with alt + tab changes nothing
 const STABLE_MS = 600;
-const DETECT_MS = 20000;
+const DETECT_MS = 20_000;
 
 let timer: ReturnType<typeof setInterval> | undefined;
 let busy = false;
@@ -28,7 +28,7 @@ let seen = { app: "", since: 0 };
 let focused = "";
 const listeners = new Set<(app: string) => void>();
 
-/** What a binding replaced: where to go back to when its program is no longer in focus. */
+// `before` is where to go back to when the program is no longer in focus
 let applied: { app: string; preset: string; before: ReturnType<typeof snapshotState>; } | null = null;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -45,7 +45,7 @@ function setFocused(app: string) {
     listeners.forEach(listener => listener(app));
 }
 
-/** Whether nobody changed what the binding applied since: only then is it safe to put the old state back. */
+// only if nobody changed what the binding applied is it safe to put the old state back
 async function untouched(presetName: string) {
     const presets: GlobalPreset[] = plain(settings.store.globalPresets);
     const preset = findPreset(presets, presetName);
@@ -119,7 +119,6 @@ export function stopAppPresets() {
     Native.watchFocus(false);
 }
 
-/** The program in focus (not Discord), while the component is on screen. */
 export function useFocusedApp() {
     const [app, setApp] = useState(focused);
 
@@ -136,7 +135,7 @@ export function useFocusedApp() {
     return app;
 }
 
-/** Resolves with the next program that comes into focus (not Discord), or null after a while or when aborted. */
+/** The next program that comes into focus (not Discord), or null after DETECT_MS or when aborted. */
 export async function detectApp(signal: AbortSignal) {
     interest++;
     try {

@@ -12,9 +12,9 @@ import { join, resolve, sep } from "path";
 import { seedDefaults } from "./defaults";
 import { readManifest } from "./manifest";
 
-export const defaultRoot = () => join(app.getPath("userData"), "StreamOverlay", "overlays");
+const defaultRoot = () => join(app.getPath("userData"), "StreamOverlay", "overlays");
 
-/** An empty root means the default folder, which receives the bundled overlays on first use. */
+// an empty root means the default folder, which receives the bundled overlays on first use
 export function resolveRoot(root: string) {
     if (root) return root;
 
@@ -35,11 +35,12 @@ export function listOverlays(root: string): { root: string; overlays: OverlayInf
             .sort((a, b) => a.name.localeCompare(b.name));
         return { root: dir, overlays };
     } catch {
+        // a folder that cannot be read has no overlays
         return { root: dir, overlays: [] };
     }
 }
 
-/** The names come from the renderer: only plain subfolders of the root that contain an index.html are accepted. */
+// the names come from the renderer: only plain subfolders of the root that contain an index.html are accepted
 export function findOverlays(root: string, names: string[]) {
     const dir = resolve(resolveRoot(root));
     return names

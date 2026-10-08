@@ -18,7 +18,7 @@ import { OverlayInput } from "./input";
 import { readManifest, unionKeys } from "./manifest";
 import { SAMPLE_MEDIA } from "./media";
 import type { StreamSink } from "./nvenc";
-import { resolveValue, settingsScript } from "./values";
+import { clamp, resolveValue, settingsScript } from "./values";
 
 const OFFSCREEN_FPS = 30;
 const LAYOUT_FPS = 60;
@@ -32,10 +32,8 @@ interface Entry {
 
 const hostPath = (layout: boolean) => join(app.getPath("temp"), `vencord-streamoverlay-host${layout ? "-layout" : ""}.html`);
 
-/**
- * The transparent, click-through window drawn over the shared screen, and everything that depends on what it shows. In
- * "stream only" mode the window is never on screen: its pixels are rendered offscreen and handed to the stream sink.
- */
+// The transparent, click-through window drawn over the shared screen. In "stream only" mode it is never on screen: its
+// pixels are rendered offscreen and handed to the stream sink.
 export class OverlayWindow {
     private win: BrowserWindow | null = null;
     private offscreen = false;
@@ -43,35 +41,36 @@ export class OverlayWindow {
     private suspended = false;
     private pressed = false;
     private media: MediaState | null = null;
-    /** what is loaded, in iframe order */
+    // in iframe order
     private entries: Entry[] = [];
     private loadedKey = "";
     private display: { key: string; display: Display; match: string; } | null = null;
-    /** bumped by show() and hide(), so an exit animation still playing can tell it was superseded */
+    // bumped by show() and hide(), so an exit animation still playing can tell it was superseded
     private hideToken = 0;
-    /** the page has been played backwards and must be reloaded before it is shown again */
+    // the page has been played backwards and must be reloaded before it is shown again
     private exiting = false;
     private readonly input = new OverlayInput(() => this.live(), () => this.entries.map(e => e.manifest.interactive), () => this.armed());
 
-    /** `layout`: the window of the Layout tab, where the draggable overlays are always ready to be moved */
+    // `layout`: the window of the Layout tab, where the draggable overlays are always ready to be moved
     constructor(private readonly stream: StreamSink, private readonly layout = false) { }
 
-    /** Mouse from the Layout tab, as fractions of the picture (an offscreen page has no real mouse). */
+    // fx/fy are fractions of the picture (an offscreen page has no real mouse)
     pointer(kind: "move" | "down" | "up", fx: number, fy: number) {
         const win = this.live();
         const screenSize = this.display?.display.bounds;
         if (!win || !screenSize || !this.offscreen) return;
 
-        const clamp = (v: number) => Math.min(1, Math.max(0, v));
+        const rx = clamp(fx, 0, 1);
+        const ry = clamp(fy, 0, 1);
         const { width, height } = win.getContentBounds();
-        const x = Math.round(clamp(fx) * width);
-        const y = Math.round(clamp(fy) * height);
+        const x = Math.round(rx * width);
+        const y = Math.round(ry * height);
         const { webContents } = win;
 
         // the page only lets the mouse through to an overlay once it has seen the cursor over it, in the units of the
         // full screen (the window may be smaller); a drag in progress already has it
         if (kind !== "move" || !this.pressed) {
-            webContents.executeJavaScript(`window.__streamOverlayPointer?.(${Math.round(clamp(fx) * screenSize.width)}, ${Math.round(clamp(fy) * screenSize.height)})`).catch(() => { });
+            webContents.executeJavaScript(`window.__streamOverlayPointer?.(${Math.round(rx * screenSize.width)}, ${Math.round(ry * screenSize.height)})`).catch(() => { });
         }
         if (kind !== "move") this.pressed = kind === "down";
         // a move without the button flag reads as a release to the page, and a drag would stop
@@ -84,7 +83,7 @@ export class OverlayWindow {
         return this.display?.display ?? null;
     }
 
-    /** Takes the on-screen window off the screen (the Layout tab shows it instead) until resume(). */
+    // takes the on-screen window off the screen (the Layout tab shows it instead) until resume()
     suspend() {
         this.suspended = true;
         if (!this.offscreen) this.live()?.hide();
@@ -95,7 +94,6 @@ export class OverlayWindow {
         if (this.shown && !this.offscreen) this.live()?.showInactive();
     }
 
-    /** The track that is playing, for the overlays that asked for it. */
     setMedia(state: MediaState | null) {
         this.media = state;
         return this.pushMedia();
@@ -162,13 +160,15 @@ export class OverlayWindow {
         // before it becomes visible, so the first frame already has the right values
         await this.applySettings();
         await this.pushMedia();
+        // hide() may have destroyed the window while the page was loading
+        if (win.isDestroyed()) return null;
         if (!offscreen && !this.suspended) win.showInactive();
         this.shown = true;
         if (fresh) await playEnter(win);
 
         const keys = unionKeys(manifests);
         this.input.sync(keys, manifests.some(m => m.mouse), !offscreen && manifests.some(m => m.interactive.length > 0), fresh);
-        if (this.layout) await win.webContents.executeJavaScript(`window.__streamOverlayKeys?.(${JSON.stringify(this.armed())})`).catch(() => { });
+        if (this.layout) await this.live()?.webContents.executeJavaScript(`window.__streamOverlayKeys?.(${JSON.stringify(this.armed())})`).catch(() => { });
 
         return { match, displayId: display.id, bounds: display.bounds, overlays: found.length, keys: keys.length, streamOnly: offscreen };
     }
@@ -194,7 +194,7 @@ export class OverlayWindow {
         this.input.restart();
     }
 
-    /** Values the overlays asked to save since the last call, validated against what each of them declared. */
+    // validated against what each overlay declared
     async takeChanges() {
         const changes: OverlayValues = {};
         const win = this.live();

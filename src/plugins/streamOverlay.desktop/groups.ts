@@ -8,7 +8,7 @@
 
 import type { OverlaySetting, OverlayValue } from "./types";
 
-export interface SettingsTab {
+interface SettingsTab {
     id: string;
     label: string;
     settings: OverlaySetting[];
@@ -16,19 +16,14 @@ export interface SettingsTab {
 
 const FIRST_TAB = "Settings";
 
-/** What a setting is now: what is stored for it, or its default. */
-export const valueOf = (settings: OverlaySetting[], stored: Record<string, OverlayValue> | undefined, id: string) =>
+const valueOf = (settings: OverlaySetting[], stored: Record<string, OverlayValue> | undefined, id: string) =>
     stored?.[id] ?? settings.find(s => s.id === id)?.default;
 
-/** Settings the user can see: not the hidden ones, and not the ones that belong to another value of a setting (`when`). */
+/** Not the hidden settings, nor the ones that belong to another value of a setting (`when`). */
 export const isShown = (setting: OverlaySetting, settings: OverlaySetting[], stored: Record<string, OverlayValue> | undefined) =>
     !setting.hidden && (!setting.when || valueOf(settings, stored, setting.when.id) === setting.when.value);
 
-/**
- * The tabs of the overlay's page that hold its settings, in the order the groups first appear. A setting without a
- * group goes on the first tab; an overlay that uses no groups has the one tab, "Settings". Tabs with nothing to show
- * (all of it belongs to another value) are left out.
- */
+/** Tabs in the order the groups first appear; a setting without a group goes on the first tab. Tabs with nothing to show are left out. */
 export function settingsTabs(settings: OverlaySetting[], stored: Record<string, OverlayValue> | undefined): SettingsTab[] {
     const shown = settings.filter(s => isShown(s, settings, stored));
     const firstGroup = settings.find(s => s.group)?.group ?? FIRST_TAB;
@@ -43,7 +38,7 @@ export function settingsTabs(settings: OverlaySetting[], stored: Record<string, 
     return [...tabs.values()];
 }
 
-/** Overlays under their heading, the headings in alphabetical order and the ones without a category last. */
+/** Headings in alphabetical order, the empty category last. */
 export function byCategory<T extends { category: string; }>(items: T[]): { category: string; items: T[]; }[] {
     const sections = new Map<string, T[]>();
     for (const item of items) sections.set(item.category, [...(sections.get(item.category) ?? []), item]);

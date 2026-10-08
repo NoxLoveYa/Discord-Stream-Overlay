@@ -50,7 +50,7 @@ body {
     animation: rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-/* data-position comes from the "position" setting; the board scales from the corner it is anchored to */
+/* the board scales from the corner it is anchored to */
 html[data-position="bottom-right"] .board {
     right: var(--margin);
     left: auto;

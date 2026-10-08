@@ -22,13 +22,13 @@ export const findPreset = <T extends Named>(list: T[], name: string) => list.fin
 
 export const presetsOf = (all: OverlayPresets, overlay: string) => has(all, overlay) ? all[overlay] : [];
 
-/** Whether the name belongs to a preset other than `except` (a preset may be renamed to another case of its own name). */
+// `except` lets a preset be renamed to another case of its own name
 export const isTaken = (list: Named[], name: string, except = "") => {
     const other = findPreset(list, name);
     return !!other && !sameName(other.name, except);
 };
 
-/** "Stream" gives "Stream copy", then "Stream copy 2", and so on: the first that is free. */
+// "Stream" gives "Stream copy", then "Stream copy 2"...
 export function copyName(list: Named[], name: string) {
     const base = name.replace(/ copy( \d+)?$/i, "");
     for (let n = 1; ; n++) {
@@ -38,7 +38,6 @@ export function copyName(list: Named[], name: string) {
     }
 }
 
-/** "Preset 1", "Preset 2": the first that is free, as a suggestion for a new one. */
 export function newName(list: Named[]) {
     for (let n = 1; ; n++) if (!findPreset(list, `Preset ${n}`)) return `Preset ${n}`;
 }
@@ -48,22 +47,19 @@ export function renamePreset<T extends Named>(list: T[], from: string, to: strin
     return list.map(p => sameName(p.name, from) ? { ...p, name: to } : p);
 }
 
-/** Saving under a name that is taken replaces that preset where it is. */
 export function withPreset<T extends Named>(list: T[], preset: T): T[] {
     return findPreset(list, preset.name) ? list.map(p => sameName(p.name, preset.name) ? preset : p) : [...list, preset];
 }
 
 export const withoutPreset = <T extends Named>(list: T[], name: string) => list.filter(p => !sameName(p.name, name));
 
-/** Whether two sets of saved values make an overlay look the same: a value that is not saved is its default. */
+// a value that is not saved is its default
 export const sameSettings = (settings: OverlaySetting[], a: Stored, b: Stored) =>
     settings.every(s => (a?.[s.id] ?? s.default) === (b?.[s.id] ?? s.default));
 
-/** The colors an overlay would have with these values, for a preview of a preset. */
 export const colorsOf = (settings: OverlaySetting[], stored: Stored) =>
     settings.filter(s => s.type === "color" && isShown(s, settings, stored)).map(s => String(stored?.[s.id] ?? s.default));
 
-/** How many settings these values change from the defaults. */
 export const changedCount = (settings: OverlaySetting[], stored: Stored) =>
     settings.filter(s => stored?.[s.id] !== undefined && stored[s.id] !== s.default).length;
 
@@ -75,7 +71,7 @@ export function captureGlobal(name: string, overlays: OverlayInfo[], enabled: st
     };
 }
 
-/** Overlays the preset has never seen (added since it was saved) keep their state. */
+// overlays added since the preset was saved keep their state
 export function applyGlobal(preset: GlobalPreset, enabled: string[], values: OverlayValues) {
     const known = Object.keys(preset.values);
     return {

@@ -49,7 +49,7 @@ function OverlayOption({ overlay, setting }: { overlay: string; setting: Overlay
         case "select": {
             const options = (setting.options ?? []).map(o => ({ label: o.label, value: o.value }));
             control = (
-                <div style={{ width: "220px" }}>
+                <div className="vc-so-option-select">
                     <SearchableSelect
                         options={options}
                         value={options.find(o => o.value === value)?.value}
@@ -73,7 +73,7 @@ function OverlayOption({ overlay, setting }: { overlay: string; setting: Overlay
 
 export function OverlayOptionList({ overlay, options }: { overlay: string; options: OverlaySetting[]; }) {
     return (
-        <div className="vc-so-rows">
+        <div>
             {options.map(setting => <OverlayOption key={setting.id} overlay={overlay} setting={setting} />)}
         </div>
     );

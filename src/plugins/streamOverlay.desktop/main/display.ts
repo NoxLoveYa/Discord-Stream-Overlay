@@ -6,10 +6,8 @@
 
 import { desktopCapturer, screen } from "electron";
 
-/**
- * Finds the display being shared. Discord's source ids look like "screen-handle:1339034295" and the name comes from
- * STREAM_START ("Screen 1"), which matches the name Electron gives the same screen.
- */
+// Discord's source ids look like "screen-handle:1339034295" and the name from STREAM_START ("Screen 1") matches the one
+// Electron gives the same screen.
 export async function pickDisplay(sourceId: string | null, sourceName: string | null) {
     const displays = screen.getAllDisplays();
     const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } });

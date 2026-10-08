@@ -66,7 +66,7 @@ progress, animated bars, hide when nothing is playing, scale and position.
 
 ## Stream only
 
-Draws the overlays on the stream and its preview but not on your screen.
+Draws the overlays on the stream and its preview but not on your screen. It is on by default; turn it off in the plugin's settings to see the overlays on your own screen.
 
 ### Requirements
 - Windows, and Discord encoding the stream with **NVENC** (an NVIDIA GPU, the default on NVIDIA) or with **Windows' own

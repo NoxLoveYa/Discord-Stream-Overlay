@@ -9,7 +9,6 @@ import type { GlobalPreset, OverlayInfo, OverlayPreset } from "@plugins/streamOv
 
 const MAX_SHOWN = 4;
 
-/** What a preset of one overlay looks like: its colors, and how much it changes. */
 export function OverlayPresetSummary({ overlay, preset }: { overlay: OverlayInfo; preset: OverlayPreset; }) {
     const colors = colorsOf(overlay.settings, preset.values).slice(0, MAX_SHOWN);
     const changed = changedCount(overlay.settings, preset.values);
@@ -26,7 +25,6 @@ export function OverlayPresetSummary({ overlay, preset }: { overlay: OverlayInfo
     );
 }
 
-/** What a global preset turns on. */
 export function GlobalPresetSummary({ preset, overlays }: { preset: GlobalPreset; overlays: OverlayInfo[]; }) {
     const on = overlays.filter(o => preset.enabled.includes(o.name));
 

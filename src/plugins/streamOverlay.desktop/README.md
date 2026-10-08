@@ -144,7 +144,7 @@ settings (`appBindings`, `appRevert`).
 
 ### Stream only
 
-The setting "Only draw the overlays on the stream" keeps the overlays off your own screen. Windows, with NVENC or Windows' software H.264 encoder.
+The setting "Only draw the overlays on the stream" (on by default) keeps the overlays off your own screen. Windows, with NVENC or Windows' software H.264 encoder.
 Discord encodes the shared screen with NVENC (or, when no graphics card can, with Windows' software encoder) inside its renderer process, so a small native addon (`nvenc/`, built with
 CMake by `scripts/build/nvenc.mjs`, installed into `%APPDATA%\discord\StreamOverlay\nvenc`) hooks the encoder (MinHook) and, just before each frame is
 encoded, blends the overlay over it. The overlays are rendered by an offscreen window (`main/window.ts`) whose pixels

@@ -23,7 +23,6 @@ const COLUMNS = 10;
 const HEX = /^#[0-9a-f]{6}$/i;
 const asHex = (text: string) => HEX.test(text) ? text.toLowerCase() : HEX.test("#" + text) ? "#" + text.toLowerCase() : null;
 
-// the mark on a color has to be readable on it
 const markColor = (hex: string) => {
     const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
     return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? "#1e1f22" : "#fff";
@@ -52,10 +51,8 @@ function DropperIcon() {
 }
 
 interface ColorControlProps {
-    /** what the setting is called, for assistive technology */
     label: string;
     value: string;
-    /** the color the setting has when it was never changed */
     defaultValue?: string;
     onChange(hex: string): void;
 }
@@ -142,7 +139,7 @@ export function ColorControl({ label, value, defaultValue, onChange }: ColorCont
                                 </button>
                             )}
 
-                            <div className="vc-so-tile vc-so-tile-custom" data-selected={isCustom}>
+                            <div className="vc-so-tile" data-selected={isCustom}>
                                 <input
                                     type="color"
                                     className="vc-so-native"

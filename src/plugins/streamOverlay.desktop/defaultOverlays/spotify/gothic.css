@@ -1,6 +1,4 @@
-/* The gothic theme of the Spotify card (the "theme" setting picks which look is on): its own accents, the gems on the
-   corners follow the second accent, and the cover, the text and the bars. The window is in gothic-panel.css.
-   It comes after style.css, which has the layout. */
+/* The gems on the corners follow the second accent. It comes after style.css, which has the layout. */
 html[data-theme="gothic"] {
     --card-accent-rgb: var(--g-accent-rgb);
     --card-accent2-rgb: var(--g-accent2-rgb);
@@ -14,10 +12,8 @@ html[data-theme="gothic"] {
         padding: 18px 18px 20px;
     }
 
-    /* the cover sits in a small silver frame */
     .cover {
         border-radius: 5px;
-        background: linear-gradient(135deg, var(--graphite-500), var(--graphite-900));
         box-shadow:
             inset 0 0 0 1px rgb(var(--silver-rgb) / 30%),
             0 0 0 1px rgb(0 0 0 / 70%),
@@ -28,7 +24,6 @@ html[data-theme="gothic"] {
         border-radius: 4px;
     }
 
-    /* the title in blackletter, the rest in a serif */
     .title {
         font-family: ObnoxiousGothic, "Old English Text MT", Georgia, serif;
         font-size: 23px;

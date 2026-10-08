@@ -40,7 +40,6 @@ function onPlayerState({ track, isPlaying, position }: PlayerState) {
     Native.setMedia(state).catch(e => logger.error("could not pass on the track", e));
 }
 
-/** Hands the track that is playing to the overlays that want it (the ones with "media" in their overlay.json). */
 export function startSpotify() {
     FluxDispatcher.subscribe("SPOTIFY_PLAYER_STATE", onPlayerState);
 }

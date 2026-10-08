@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// Whether "stream only" really puts the overlay in the stream. The overlay is taken off the screen as soon as the hook is
-// in, so if the stream is not encoded by an encoder the hook draws into (NVENC, or Windows' own software H.264 encoder: not a
-// laptop whose screen is on the integrated GPU with an AMD or Intel hardware encoder) nobody would see it at all. No React and no store, so it can be tested alone.
+// Whether "stream only" really puts the overlay in the stream: the overlay leaves the screen as soon as the hook is in, so
+// a stream encoded by something the hook cannot draw into (an AMD or Intel hardware encoder) would show it nowhere.
+// No React and no store, so it can be tested alone.
 
-/** What the native hook reports (see status() in nvenc/hook.cc), summed over the pages that have it. */
-export interface HookStatus {
+// what the native hook reports (see status() in nvenc/hook.cc), summed over the pages that have it
+interface HookStatus {
     /** drawing is on: it switches itself off when a frame cannot be drawn */
     draw: boolean;
     /** frames NVENC was given since drawing went on */
@@ -26,7 +26,7 @@ export const GRACE_MS = 10_000;
 
 export function parseStatus(text: string): HookStatus | null {
     try {
-        const raw = JSON.parse(text);
+        const raw = JSON.parse(text) as Record<string, unknown> | null;
         const count = (v: unknown) => typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : 0;
         return {
             draw: raw?.draw === true,
@@ -40,7 +40,7 @@ export function parseStatus(text: string): HookStatus | null {
     }
 }
 
-/** Adds up what several pages of the app report (the one that encodes has the numbers; any of them may have stopped drawing). */
+// the page that encodes has the numbers; any of them may have stopped drawing
 export function combineStatus(list: (HookStatus | null)[]): HookStatus | null {
     const known = list.filter((s): s is HookStatus => s != null);
     if (!known.length) return null;
@@ -54,19 +54,20 @@ export function combineStatus(list: (HookStatus | null)[]): HookStatus | null {
     };
 }
 
+const switchedOff = (status: HookStatus) => `drawing was switched off${status.error ? `: ${status.error}` : ""}`;
+
 /**
  * Why the overlay is not in the stream, or null when it is (or it is too early to tell). `waited` is how long the overlay
- * has been off the screen. `encoding` is whether Discord says it encodes the stream at all (null: it does not say): with
- * nobody watching it encodes nothing, which gives the hook nothing to see and is no reason to give up.
+ * has been off the screen. `encoding` is whether Discord says it encodes the stream at all (null: it does not say).
  */
 export function judgeHook(status: HookStatus | null, waited: number, encoding: boolean | null = null): string | null {
     if (waited < GRACE_MS) {
         // it switches itself off when a frame cannot be drawn: no need to wait for that
-        return status && !status.draw ? `drawing was switched off${status.error ? `: ${status.error}` : ""}` : null;
+        return status && !status.draw ? switchedOff(status) : null;
     }
 
     if (!status) return "the encoder hook did not answer";
-    if (!status.draw) return `drawing was switched off${status.error ? `: ${status.error}` : ""}`;
+    if (!status.draw) return switchedOff(status);
     if (status.encodes === 0) {
         if (encoding === false) return null;
         return "the stream is not encoded by NVENC or by Windows' software encoder (another encoder, or the screen is on another graphics card)";

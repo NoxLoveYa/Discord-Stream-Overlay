@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { spawn } from "child_process";
+import { spawnPowershell } from "./powershell";
 
 // Whitelist: no key outside this table is ever read. F24 is bound to nothing, so tests can press it safely.
 export const VIRTUAL_KEYS = new Map<string, number>([
@@ -15,10 +15,9 @@ export const VIRTUAL_KEYS = new Map<string, number>([
     ["F24", 0x87]
 ]);
 
-// Prints "K" + a 0/1 per requested key on every change, and, when the mouse is wanted, "M<dx> <dy> <wheel>": the
-// movement and wheel since the previous such line (at most every 16 ms). The mouse comes from raw input rather than
-// the cursor position, which stops moving at the edge of the screen or when a game locks the cursor.
-// It exits once its stdin closes (plugin stopped, Discord dead).
+// Prints "K" + a 0/1 per requested key on every change, and, when the mouse is wanted, "M<dx> <dy> <wheel>" (movement
+// since the previous such line, at most every 16 ms). Raw input is used because the cursor position stops at the screen
+// edge and when a game locks the cursor.
 const POLL_SCRIPT = `
 Add-Type -ReferencedAssemblies System.Windows.Forms -TypeDefinition @'
 using System;
@@ -122,40 +121,19 @@ export function startInputPoll(names: string[], mouse: boolean, on: InputHandler
     const script = POLL_SCRIPT
         .replace("__KEYS__", names.map(n => VIRTUAL_KEYS.get(n)).join(","))
         .replace("__MOUSE__", mouse ? "$true" : "$false");
-    const child = spawn("powershell.exe", [
-        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-        "-EncodedCommand", Buffer.from(script, "utf16le").toString("base64")
-    ], { windowsHide: true, stdio: ["pipe", "pipe", "ignore"] });
 
-    let pending = "";
-    child.stdout.setEncoding("utf-8");
-    child.stdout.on("data", (chunk: string) => {
-        pending += chunk;
-        let end: number;
-        while ((end = pending.indexOf("\n")) >= 0) {
-            const line = pending.slice(0, end).trim();
-            pending = pending.slice(end + 1);
-
-            if (line[0] === "K") {
-                const bits = line.slice(1);
-                if (bits.length === names.length && /^[01]*$/.test(bits))
-                    on.keys(names.filter((_, i) => bits[i] === "1"));
-            } else if (line[0] === "M") {
-                const [dx, dy, wheel] = line.slice(1).split(" ").map(Number);
-                if ([dx, dy, wheel].every(Number.isInteger)) on.mouse(dx, dy, wheel);
-            }
+    const { child, stop } = spawnPowershell(script, line => {
+        if (line[0] === "K") {
+            const bits = line.slice(1);
+            if (bits.length === names.length && /^[01]*$/.test(bits))
+                on.keys(names.filter((_, i) => bits[i] === "1"));
+        } else if (line[0] === "M") {
+            const [dx, dy, wheel] = line.slice(1).split(" ").map(Number);
+            if ([dx, dy, wheel].every(Number.isInteger)) on.mouse(dx, dy, wheel);
         }
     });
-    child.on("error", () => { });
     // whatever ends the helper, nothing may stay "held"
     child.on("exit", () => on.keys([]));
 
-    return {
-        names,
-        mouse,
-        stop() {
-            child.stdin.end();
-            child.kill();
-        }
-    };
+    return { names, mouse, stop };
 }

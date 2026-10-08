@@ -6,14 +6,12 @@
 
 import type { MediaState } from "@plugins/streamOverlay.desktop/types";
 
-import { clamp, finite } from "./values";
+import { clamp, finite, text } from "./values";
 
 const COVER = /^https:\/\/[\w-]+\.scdn\.co\/[\w./-]{1,200}$/i;
 const HOUR_MS = 3_600_000;
 
-const text = (value: unknown, max: number) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
-
-/** Shown in the Layout tab while nothing is playing, so that there is something to drag. */
+// shown in the Layout tab while nothing is playing, so that there is something to drag
 export const SAMPLE_MEDIA = (): MediaState => ({
     id: "sample",
     title: "Song title",
@@ -26,7 +24,7 @@ export const SAMPLE_MEDIA = (): MediaState => ({
     at: Date.now()
 });
 
-/** The state comes from the renderer, and the names in it from Spotify: it is only ever shown as text. */
+// the state comes from the renderer, and the names in it from Spotify: it is only ever shown as text
 export function cleanMedia(raw: any): MediaState | null {
     const title = text(raw?.title, 200);
     if (!title) return null;

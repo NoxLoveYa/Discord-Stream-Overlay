@@ -10,7 +10,7 @@ import { MainSettingsIcon } from "@components/Icons";
 import { openPluginModal } from "@components/settings";
 import { Menu } from "@webpack/common";
 
-// ids of the stream options of the "manage-streams" menu (the one behind the streaming button of the voice panel)
+// the stream options of the "manage-streams" menu, the one behind the streaming button
 const STREAM_OPTION_IDS = ["stream-settings-audio-enable", "stream-settings", "change-windows", "stop-streaming"];
 
 export const manageStreamsPatch: NavContextMenuPatchCallback = children => {

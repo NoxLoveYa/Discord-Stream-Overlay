@@ -13,7 +13,6 @@ import { useCallback, useEffect, useState } from "@webpack/common";
 import { OverlayDetail } from "./OverlayDetail";
 import { OverlayGrid } from "./OverlayGrid";
 
-/** The plugin's settings page: a grid of overlays, and the page of the one that is open. */
 export function OverlayPicker() {
     const { overlayRoot } = settings.use(["overlayRoot"]);
     const [info, setInfo] = useState({ root: overlayRoot, overlays: [] as OverlayInfo[] });

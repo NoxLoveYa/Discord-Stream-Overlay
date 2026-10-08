@@ -4,12 +4,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { spawn } from "child_process";
 import { basename } from "path";
 
-// Prints "F" + the file name of the program of the window in focus (like "game.exe") whenever it changes, and exits once
-// its stdin closes (plugin stopped, Discord dead). It asks Windows for nothing but that name: the right it opens the
-// process with cannot read or change anything of it, and window titles are never looked at.
+import { spawnPowershell } from "./powershell";
+
+const MAX_EXE_LENGTH = 128;
+
+// Prints "F" + the file name of the program in focus whenever it changes. It asks Windows for nothing but that name:
+// the right it opens the process with (0x1000) cannot read or change anything of it, and window titles are never looked at.
 const WATCH_SCRIPT = `
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false
 Add-Type -TypeDefinition @'
@@ -54,42 +56,16 @@ public static class FocusWatch {
 [FocusWatch]::Run()
 `;
 
-export interface FocusWatch {
-    stop(): void;
-}
-
-export function startFocusWatch(onChange: (exe: string) => void): FocusWatch | null {
+function startFocusWatch(onChange: (exe: string) => void) {
     if (process.platform !== "win32") return null;
 
-    const child = spawn("powershell.exe", [
-        "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-        "-EncodedCommand", Buffer.from(WATCH_SCRIPT, "utf16le").toString("base64")
-    ], { windowsHide: true, stdio: ["pipe", "pipe", "ignore"] });
-
-    let pending = "";
-    child.stdout.setEncoding("utf-8");
-    child.stdout.on("data", (chunk: string) => {
-        pending += chunk;
-        let end: number;
-        while ((end = pending.indexOf("\n")) >= 0) {
-            const line = pending.slice(0, end).trim();
-            pending = pending.slice(end + 1);
-            if (line[0] === "F") onChange(line.slice(1, 129));
-        }
+    return spawnPowershell(WATCH_SCRIPT, line => {
+        if (line[0] === "F") onChange(line.slice(1, MAX_EXE_LENGTH + 1));
     });
-    child.on("error", () => { });
-
-    return {
-        stop() {
-            child.stdin.end();
-            child.kill();
-        }
-    };
 }
 
-/** Keeps track of the program in focus while someone is interested in it. */
 export class FocusWatcher {
-    private watch: FocusWatch | null = null;
+    private watch: ReturnType<typeof startFocusWatch> = null;
     private exe = "";
 
     set(on: boolean) {
@@ -104,7 +80,7 @@ export class FocusWatcher {
         }
     }
 
-    /** `self` is Discord's own program: a window of it being in focus says nothing about what the user is doing */
+    // `self` is Discord's own program: a window of it being in focus says nothing about what the user is doing
     read() {
         return { exe: this.exe, self: basename(process.execPath) };
     }

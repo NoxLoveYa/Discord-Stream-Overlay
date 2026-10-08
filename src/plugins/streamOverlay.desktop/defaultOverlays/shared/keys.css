@@ -1,5 +1,5 @@
-/* A key is a well (.key) with a cap sliding in it; --accent is the light under the key, --edge the hairline on the cap.
-   The overlay's style.css defines --key-accent-rgb and --key-edge-rgb (.mod swaps them). */
+/* --accent is the light under the key, --edge the hairline on the cap; the overlay's style.css defines --key-accent-rgb and
+   --key-edge-rgb (.mod swaps them). */
 .key {
     --accent: var(--key-accent-rgb);
     --edge: var(--key-edge-rgb);
@@ -17,7 +17,6 @@
     --edge: var(--key-accent-rgb);
 }
 
-/* ambient bloom behind the key */
 .key::before {
     content: "";
     position: absolute;
@@ -30,7 +29,6 @@
     transition: opacity var(--press-out) ease-out;
 }
 
-/* the lit strip of the well that shows under the cap */
 .key::after {
     content: "";
     position: absolute;
@@ -43,9 +41,8 @@
     transition: opacity var(--press-out) ease-out;
 }
 
-/* Only transform and opacity are ever transitioned: animating shadows or colors repaints every frame, which in a window
-   this large costs hundreds of MB and several % of the GPU while keys are being pressed. The pressed look is therefore
-   layered on top and faded in (.cap::before, .cap::after). */
+/* Only transform and opacity are transitioned: animating shadows or colors repaints every frame, which costs a lot in a
+   window this large. The pressed look is layered on top and faded in (.cap::before, .cap::after). */
 .cap {
     position: absolute;
     inset: 0 0 4px;
@@ -75,7 +72,6 @@
     transition: opacity var(--press-out) ease-out;
 }
 
-/* light rising from the bottom edge of the cap, and a glow behind the label */
 .cap::after {
     content: "";
     position: absolute;

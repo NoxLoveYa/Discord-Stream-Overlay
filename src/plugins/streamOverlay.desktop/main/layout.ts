@@ -9,10 +9,11 @@ import { desktopCapturer, type Display, type NativeImage } from "electron";
 import type { StreamSink } from "./nvenc";
 
 const WAIT_MS = 100;
+const JPEG_QUALITY = 80;
 
 let shooting = false;
 
-/** A JPEG of the display as it is now, at its own resolution. Null while another is being taken; throws when there is none. */
+// null while another is being taken; throws when there is no screen source
 export async function screenshot(display: Display) {
     if (shooting) return null;
     shooting = true;
@@ -24,13 +25,13 @@ export async function screenshot(display: Display) {
         const source = sources.find(s => s.display_id === String(display.id)) ?? (sources.length === 1 ? sources[0] : undefined);
         if (!source) throw new Error(`no screen source for display ${display.id} (sources: ${sources.map(s => `${s.id} / ${s.display_id}`).join(", ") || "none"})`);
         if (source.thumbnail.isEmpty()) throw new Error(`the screenshot of ${source.id} is empty`);
-        return source.thumbnail.toJPEG(80);
+        return source.thumbnail.toJPEG(JPEG_QUALITY);
     } finally {
         shooting = false;
     }
 }
 
-/** Keeps the latest frame of the Layout tab's window until the settings page asks for it. */
+// Keeps the latest frame of the Layout tab's window until the settings page asks for it.
 export class LayoutSink implements StreamSink {
     private image: NativeImage | null = null;
     private version = 0;
@@ -51,10 +52,8 @@ export class LayoutSink implements StreamSink {
         this.image = null;
     }
 
-    /**
-     * The frame at the size it was drawn. When there is nothing new it waits for the next frame, so the page gets each one
-     * as it is drawn instead of looking for it on a timer; null when nothing came in time.
-     */
+    // with nothing new it waits for the next frame, so the page gets each one as drawn instead of polling
+    // null when none came in time
     async take() {
         if (this.stale()) {
             await new Promise<void>(resolve => {
@@ -65,12 +64,14 @@ export class LayoutSink implements StreamSink {
                 };
             });
             this.wake = null;
-            if (this.stale()) return null;
         }
+
+        const { image } = this;
+        if (!image || this.version === this.taken) return null;
         this.taken = this.version;
 
-        const { width, height } = this.image!.getSize();
-        return { bitmap: this.image!.toBitmap(), width, height };
+        const { width, height } = image.getSize();
+        return { bitmap: image.toBitmap(), width, height };
     }
 
     private stale() {

@@ -30,7 +30,7 @@ export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBac
     const current: Record<string, OverlayValue> | undefined = plain(overlayValues[name]);
     const presets: OverlayPreset[] = plain(presetsOf(overlayPresets, name));
 
-    // one tab per group of settings (what is on them can change with a setting, like the colors of a theme), then the presets
+    // which settings a group has can depend on another setting (the colors of a theme)
     const groups = settingsTabs(overlay.settings, current);
     const tabs = [...(groups.length ? groups : [{ id: "settings", label: "Settings", settings: [] }]), { id: PRESETS, label: "Presets", settings: [] }];
     const open = tabs.find(t => t.id === tab) ?? tabs[0];

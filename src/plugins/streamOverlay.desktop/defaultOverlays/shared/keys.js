@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// Lights up every [data-key] element while that key (or mouse button) is held.
 (() => {
     const keys = [...document.querySelectorAll("[data-key]")];
 

@@ -1,10 +1,7 @@
-// Blends the overlay into frames in system memory (NV12, I420, YV12): what the software encoder is given. No Windows
-// headers, so it can be tested alone (test/yuvblend_test.cc).
-//
-// The overlay is B8G8R8A8, premultiplied, of any size; the frame is stretched over it the way the GPU path stretches the
-// overlay over the texture. It is converted once to what the frame is made of (a luma and an alpha per pixel, and a chroma
-// and an alpha per 2x2 pixels) at the size of the frame, so that a frame costs no more than the area the overlay covers.
-// A part of the overlay that changed is converted again alone.
+// Blends the overlay (B8G8R8A8, premultiplied, any size) into frames in system memory (NV12, I420, YV12), stretching it over the
+// frame like the GPU path does. The overlay is converted once to the frame's own format and size and cached, and a changed
+// part of it is converted again alone, so that a frame costs only the area the overlay covers. No Windows headers: see
+// test/yuvblend_test.cc.
 
 #pragma once
 
@@ -52,7 +49,6 @@ inline void rgbToYuv(int r, int g, int b, bool bt709, bool full, uint8_t& y, uin
     v = clampByte(V);
 }
 
-// destination under the source at alpha a (0..255)
 inline uint8_t mix(uint8_t dst, uint8_t src, uint8_t a) { return static_cast<uint8_t>((dst * (255 - a) + src * a + 127) / 255); }
 
 class Cache {
@@ -68,7 +64,6 @@ public:
         built_ = any_ = false;
     }
 
-    // everything, for a frame of this size
     void rebuild(const uint8_t* bgra, uint32_t ow, uint32_t oh, const Frame& f) {
         ow_ = ow; oh_ = oh;
         fw_ = f.width & ~1u; fh_ = f.height & ~1u;
@@ -217,7 +212,6 @@ private:
             const uint32_t oy1 = (std::min<uint32_t>)(oh_, (std::max<uint32_t>)(oy0 + 1, static_cast<uint32_t>((static_cast<uint64_t>(fy + 1) * oh_ + fh_ - 1) / fh_)));
             uint32_t lo, hi;
             const bool any = overlayRange(oy0, oy1, lo, hi);
-            // the frame columns that can have anything in them
             const uint32_t flo = any ? static_cast<uint32_t>((std::max<int64_t>)(0, static_cast<int64_t>(static_cast<uint64_t>(lo) * fw_ / ow_) - 1)) : 0;
             const uint32_t fhi = any ? static_cast<uint32_t>((std::min<uint64_t>)(fw_, (static_cast<uint64_t>(hi) * fw_ + ow_ - 1) / ow_ + 1)) : 0;
 

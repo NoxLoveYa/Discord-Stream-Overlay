@@ -6,7 +6,7 @@
 
 import { pathToFileURL } from "url";
 
-export interface HostOverlay {
+interface HostOverlay {
     file: string;
     keys: string[];
     interactive: boolean;
@@ -14,10 +14,7 @@ export interface HostOverlay {
     media: boolean;
 }
 
-/**
- * The page that holds every overlay as an iframe and bridges them to the main process
- * (the message protocol is described in the README). An overlay only ever receives what it asked for.
- */
+// The page that holds every overlay as an iframe and bridges them to the main process (protocol: see the README).
 export function hostHtml(overlays: HostOverlay[]) {
     const frames = overlays
         .map(o => {

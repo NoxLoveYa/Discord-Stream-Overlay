@@ -9,7 +9,6 @@ import { app, BrowserWindow, ipcMain, type NativeImage, type Rectangle, type Ses
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
-
 const HELLO = "StreamOverlay:nvenc:hello";
 const COMMAND = "StreamOverlay:nvenc:command";
 const RESULT = "StreamOverlay:nvenc:result";
@@ -21,11 +20,10 @@ const ASK_TIMEOUT_MS = 5000;
 
 const dir = () => join(app.getPath("userData"), "StreamOverlay", "nvenc");
 
-/** Where the overlay's pixels go once they are rendered: into the encoder and onto the in-app preview. */
 export interface StreamSink {
-    /** Hooks the encoder and starts drawing into it. False when that is not possible (the overlay then stays on screen). */
+    // false when the encoder cannot be hooked (the overlay then stays on screen)
     start(): Promise<boolean>;
-    /** `dirty`: what changed since the previous frame, in pixels of `image`; left out when that is not known. */
+    // `dirty`: what changed since the previous frame, in pixels of `image`; left out when unknown
     frame(image: NativeImage, dirty?: Rectangle): void;
     stop(): void;
 }
@@ -36,7 +34,7 @@ const union = (a: Rectangle, b: Rectangle): Rectangle => {
     return { x, y, width: Math.max(a.x + a.width, b.x + b.width) - x, height: Math.max(a.y + a.height, b.y + b.height) - y };
 };
 
-/** `rect` inside a picture of width x height, whole pixels; null when nothing of it is left. */
+// whole pixels inside the picture; null when nothing is left
 function clip(rect: Rectangle, width: number, height: number): Rectangle | null {
     const x = Math.max(0, Math.floor(rect.x));
     const y = Math.max(0, Math.floor(rect.y));
@@ -45,8 +43,8 @@ function clip(rect: Rectangle, width: number, height: number): Rectangle | null 
     return right > x && bottom > y ? { x, y, width: right - x, height: bottom - y } : null;
 }
 
-// NVENC lives in Discord's renderer process, where only a preload script has Node: it loads the addon there. It also
-// draws the overlay over the stream preview, a <video> fed natively that the encoder hook never touches.
+// NVENC lives in Discord's renderer, where only a preload script has Node: it loads the addon there. It also draws the
+// overlay over the stream preview, a <video> fed natively that the encoder hook never touches.
 const preload = (addon: string) => `
 const { ipcRenderer } = require("electron");
 
@@ -59,10 +57,8 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         return addon = module.exports;
     };
 
-    // one canvas per preview sits over its <video>. The overlay (premultiplied BGRA) is uploaded to the GPU as it is and
-    // the channels are swapped in a shader: the preview gets the full size picture with no per-pixel work here.
-    // Frames arrive as a rectangle of the picture (or the whole of it): shadow is the whole picture, box what changed in
-    // it since the previews were last drawn, and a preview that has not been drawn yet takes all of it
+    // one canvas per preview sits over its <video>; the premultiplied BGRA overlay is uploaded as is and swizzled in a shader.
+    // shadow is the whole picture, box what changed in it since the previews were last drawn
     const shown = new Map();
     let ratio = 0;
     let raf = 0;
@@ -92,7 +88,6 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         gl.linkProgram(program);
         gl.useProgram(program);
 
-        // one triangle that covers the canvas
         gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
         const position = gl.getAttribLocation(program, "p");
@@ -106,7 +101,7 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         let texW = 0;
         let texH = 0;
 
-        // rect: { l, t, r, b } of what changed, or null for the whole picture
+        // rect: { l, t, r, b }, or null for the whole picture
         return (picture, width, height, rect) => {
             if (canvas.width !== width || canvas.height !== height) {
                 canvas.width = width;
@@ -132,19 +127,18 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         };
     };
 
-    // who the plugin says is using this Discord (it is in the page, which the preload shares with it)
+    // set on the page by the plugin: the user id of this Discord
     const self = () => document.documentElement.getAttribute("data-vc-stream-overlay-self") || "";
 
-    // The call view puts every video in a tile that says whose it is (a user id; for a stream it may be the stream key,
-    // which ends with the id of the one who streams). Somebody else's tile is somebody else's stream or camera. A video
-    // outside a tile, or a tile without an id, says nothing: it stays, so the preview of your own stream is never lost.
+    // A tile is a user id, or a stream key ending with the streamer's id. A video outside a tile, or a tile without an
+    // id, stays, so the preview of your own stream is never lost.
     const ownedByOthers = v => {
         const me = self();
         const owner = v.closest("[data-selenium-video-tile]")?.getAttribute("data-selenium-video-tile");
         return !!me && !!owner && owner !== me && !owner.endsWith(":" + me);
     };
 
-    // videos shaped like the shared screen; the stream is fed natively, media in chats are files loaded over http(s)
+    // the stream is fed natively; media in chats are files loaded over http(s)
     const previews = () => {
         let skipped = 0;
         const kept = [...document.querySelectorAll("video")].filter(v => {
@@ -190,7 +184,6 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
                 canvas.fresh = true;
             }
 
-            // letterboxed inside the element
             const r = video.getBoundingClientRect();
             let w = r.width, h = r.height;
             if (w / h > ratio) w = h * ratio; else h = w / ratio;
@@ -235,12 +228,12 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         ipcRenderer.send(${JSON.stringify(RESULT)}, id, text);
     });
 
-    // the bitmap is the rectangle (x, y, width, height) of a picture of fw x fh; all of it when they are the same size
+    // the bitmap is the rectangle (x, y, width, height) of a picture of fw x fh
     ipcRenderer.on(${JSON.stringify(FRAME)}, (_, bitmap, width, height, x, y, fw, fh) => {
         if (!active) return;
 
         const part = width !== fw || height !== fh;
-        // a rectangle can only go onto a picture that is already here: ask for the whole of it
+        // a rectangle can only go onto a picture that is already here
         if (part && (!shadow || shadow.length !== fw * fh * 4)) {
             ipcRenderer.send(${JSON.stringify(RESYNC)});
             return;
@@ -253,7 +246,7 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         } catch { }
         if (result === "resync") ipcRenderer.send(${JSON.stringify(RESYNC)});
 
-        // the previews are drawn from this copy, and only if one is on screen
+        // the previews are drawn from this copy
         if (!part) {
             if (!shadow || shadow.length !== bitmap.length) shadow = new Uint8Array(bitmap.length);
             shadow.set(bitmap);
@@ -277,7 +270,7 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
 }
 `;
 
-/** Drives the native addon (`nvenc/`) that hooks Discord's NVENC encoder, through a preload script in the renderer. */
+// Drives the native addon (`nvenc/`) that hooks Discord's NVENC encoder, through a preload script in the renderer.
 export class Nvenc implements StreamSink {
     private readonly targets = new Set<WebContents>();
     private readonly pending = new Map<number, (text: string) => void>();
@@ -285,7 +278,7 @@ export class Nvenc implements StreamSink {
     private nextId = 1;
     private started = false;
     private image: NativeImage | null = null;
-    // what changed in the image since the last frame was sent; whole says the next one has to carry all of it
+    // changed since the last frame was sent; whole says the next one has to carry all of it
     private dirty: Rectangle | null = null;
     private whole = true;
     private size = "";
@@ -294,7 +287,7 @@ export class Nvenc implements StreamSink {
 
     constructor() {
         ipcMain.on(HELLO, event => {
-            // a page that was reloaded says hello again: only the first time is a new listener needed
+            // a reloaded page says hello again
             if (!this.targets.has(event.sender)) {
                 this.targets.add(event.sender);
                 event.sender.once("destroyed", () => this.targets.delete(event.sender));
@@ -337,10 +330,7 @@ export class Nvenc implements StreamSink {
         return this.started;
     }
 
-    /**
-     * `dirty`: the part of `image` that changed since the previous frame (pixels). Only that part is sent on, which is
-     * most of the cost of an overlay: a whole screen of pixels is tens of MB, and a bar that moves is a few KB.
-     */
+    // only the `dirty` part is sent on: a whole screen of pixels is tens of MB, a bar that moves a few KB
     frame(image: NativeImage, dirty?: Rectangle) {
         if (!this.started) return;
 
@@ -397,7 +387,6 @@ export class Nvenc implements StreamSink {
         }
     };
 
-    /** What the hook has done since drawing went on, from the pages that have it; null when none answered. */
     async health() {
         if (!this.started) return null;
         return combineStatus((await this.askAll("status")).map(parseStatus));

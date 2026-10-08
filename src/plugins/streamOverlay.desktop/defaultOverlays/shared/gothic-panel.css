@@ -1,8 +1,5 @@
-/* The gothic look of the window of the keyboard, the mouse and the Spotify card: near black, a dim silver frame with a
-   second hairline inside it, and a gem on each corner. They share this file, so they cannot differ.
-   It only applies while the "theme" setting is "gothic" (html[data-theme="gothic"]). The rules are inside :where(), which
-   counts for nothing, so they weigh what they would without the scope. The variables have to beat :root, so they are not.
-   The gems take their color from --gem-rgb, which gothic.css of each widget sets (from one of its accents). */
+/* The rules are inside :where(), which weighs nothing; the variables have to beat :root, so they are not.
+   The gems take their color from --gem-rgb, which the gothic.css of each widget sets. */
 html[data-theme="gothic"] {
     --graphite-900: #030204;
     --graphite-700: #09050c;
@@ -16,7 +13,6 @@ html[data-theme="gothic"] {
 }
 
 :where(html[data-theme="gothic"]) {
-    /* the panel: near black with a dim silver frame, a second hairline inside it and a gem on each corner */
     .board {
         border: 1.6px solid rgb(var(--silver-rgb) / 26%);
         border-radius: 6px;
@@ -55,7 +51,6 @@ html[data-theme="gothic"] {
         pointer-events: none;
     }
 
-    /* the handle and the hint that show while the board can be moved */
     .resize,
     .hint {
         z-index: 2;

@@ -38,7 +38,7 @@ import spotifyCss from "file://../defaultOverlays/spotify/style.css";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
 
-/** Copied into every overlay that looks like the keyboard: each overlay folder has to be complete on its own. */
+// each overlay folder has to be complete on its own, so shared files are copied into every overlay that uses them
 const board = {
     "board.css": boardCss,
     "keys.css": keysCss,
@@ -47,14 +47,13 @@ const board = {
     "move.js": moveScript
 };
 
-/** The gothic theme of the keyboard, the mouse and the Spotify card: the look of their window, and the font it is written in. */
 const gothic = {
     "font.css": obnoxiousFont,
     "FONT-LICENSE.txt": obnoxiousFontLicense,
     "gothic-panel.css": gothicPanel
 };
 
-/** Overlays shipped with the plugin: folder name -> files. To add one, import its files above and list it here. */
+// folder name -> files
 const defaultOverlays: Record<string, Record<string, string>> = {
     "red-border": {
         "index.html": redBorderHtml,
@@ -91,7 +90,6 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "style.css": spotifyCss,
         "overlay.json": spotifyManifest
     },
-    // a gothic frame for the screen, to go with the gothic theme of the others
     "obnoxious-frame": {
         "font.css": obnoxiousFont,
         "FONT-LICENSE.txt": obnoxiousFontLicense,
@@ -102,7 +100,7 @@ const defaultOverlays: Record<string, Record<string, string>> = {
     }
 };
 
-// what the marker says about an overlay that is not one of ours
+// marker value of an overlay that is not one of ours
 const CUSTOM = "custom";
 
 const hashOf = (files: string[], read: (file: string) => string | null) => {
@@ -113,18 +111,17 @@ const hashOf = (files: string[], read: (file: string) => string | null) => {
 
 const shippedHash = (name: string) => hashOf(Object.keys(defaultOverlays[name]), file => defaultOverlays[name][file]);
 
-/** The hash of these files of the copy in `target`. */
 const installedHash = (target: string, files: string[]) => hashOf(files, file => {
     try {
         return readFileSync(join(target, file), "utf-8");
     } catch {
-        return null;
+        return null; // the user deleted it
     }
 });
 
 const filesIn = (target: string) => readdirSync(target, { withFileTypes: true }).filter(d => d.isFile()).map(d => d.name);
 
-/** Overlay name -> the hash of the files written last, or "" when that is not known. */
+// overlay name -> the hash of the files written last, or "" when that is not known
 function readMarker(marker: string): Record<string, string> {
     if (!existsSync(marker)) return {};
 
@@ -136,7 +133,7 @@ function readMarker(marker: string): Record<string, string> {
     return Object.fromEntries(raw.split("\n").filter(Boolean).map(name => [name, ""]));
 }
 
-/** `prune`: files of an older version that this one no longer has are removed (only for a copy that is known to be ours). */
+// `prune` removes files of an older version that this one no longer has (only for a copy known to be ours)
 function install(target: string, name: string, prune = false) {
     mkdirSync(target, { recursive: true });
     for (const [file, content] of Object.entries(defaultOverlays[name]))
@@ -149,13 +146,9 @@ function install(target: string, name: string, prune = false) {
 
 const checked = new Set<string>();
 
-/**
- * Puts the default overlays in `dir`, once per session. A marker file remembers what was written last, so:
- * - a default that is new shows up, and one the user deleted stays deleted;
- * - a copy that was not edited is updated when the plugin ships a newer version;
- * - a copy that was edited is left alone, and an unknown one (written before the marker knew) is updated after a copy of
- *   it is kept in `.<name>.backup`.
- */
+// Once per session. A marker file remembers what was written last, so a new default shows up and a deleted one stays
+// deleted, an unedited copy follows newer versions, an edited one is left alone, and an unknown one (written before the
+// marker existed) is updated after a copy is kept in `.<name>.backup`.
 export function seedDefaults(dir: string) {
     if (checked.has(dir)) return;
     checked.add(dir);
@@ -180,8 +173,7 @@ export function seedDefaults(dir: string) {
             if (installedHash(target, Object.keys(defaultOverlays[name])) === shipped) {
                 seeded[name] = shipped;
             } else if (known === "" || installedHash(target, filesIn(target)) === known) {
-                // what was written last had the files of that version, which are not always the ones of this one (a new
-                // version can add files): so it is what is there that says whether the copy was edited
+                // a new version can add files, so compare against what is there, not against the shipped file list
                 if (known === "") {
                     const backup = join(dir, `.${name}.backup`);
                     rmSync(backup, { recursive: true, force: true });

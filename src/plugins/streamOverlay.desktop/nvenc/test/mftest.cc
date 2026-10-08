@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -24,6 +25,11 @@ using Microsoft::WRL::ComPtr;
 namespace {
 
 const CLSID kH264Encoder = { 0x6ca50344, 0x051a, 0x4ded, { 0x97, 0x79, 0xa4, 0x33, 0x05, 0x16, 0x5e, 0x35 } };
+
+constexpr uint32_t kFps = 30;
+constexpr uint32_t kBitrate = 6'000'000;
+constexpr uint32_t kHighProfile = 100;  // eAVEncH264VProfile_High
+constexpr LONGLONG kFrameDuration = 10'000'000 / kFps;  // in 100 ns
 
 using napi_env = void*;
 using napi_value = void*;
@@ -51,6 +57,10 @@ std::string fail(const char* what, HRESULT hr) {
 
 #define TRY(call) do { HRESULT _hr = (call); if (FAILED(_hr)) return fail(#call, _hr); } while (0)
 
+struct MfSession {
+    ~MfSession() { MFShutdown(); }
+};
+
 // mode: nv12, iyuv, yv12; "2d" after it asks for 2D media buffers (lines padded the way the system likes them)
 std::string encode(const std::string& path, uint32_t w, uint32_t h, uint32_t frames, const std::string& mode) {
     const bool twoD = mode.find("2d") != std::string::npos;
@@ -59,6 +69,7 @@ std::string encode(const std::string& path, uint32_t w, uint32_t h, uint32_t fra
 
     CoInitializeEx(nullptr, COINIT_MULTITHREADED);
     TRY(MFStartup(MF_VERSION));
+    const MfSession session;  // before the objects below, so that it shuts down after them
 
     ComPtr<IMFTransform> mft;
     TRY(CoCreateInstance(kH264Encoder, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&mft)));
@@ -67,12 +78,12 @@ std::string encode(const std::string& path, uint32_t w, uint32_t h, uint32_t fra
     TRY(MFCreateMediaType(&out));
     out->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
     out->SetGUID(MF_MT_SUBTYPE, MFVideoFormat_H264);
-    out->SetUINT32(MF_MT_AVG_BITRATE, 6'000'000);
+    out->SetUINT32(MF_MT_AVG_BITRATE, kBitrate);
     MFSetAttributeSize(out.Get(), MF_MT_FRAME_SIZE, w, h);
-    MFSetAttributeRatio(out.Get(), MF_MT_FRAME_RATE, 30, 1);
+    MFSetAttributeRatio(out.Get(), MF_MT_FRAME_RATE, kFps, 1);
     MFSetAttributeRatio(out.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
     out->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);
-    out->SetUINT32(MF_MT_MPEG2_PROFILE, 100);
+    out->SetUINT32(MF_MT_MPEG2_PROFILE, kHighProfile);
     TRY(mft->SetOutputType(0, out.Get(), 0));
 
     ComPtr<IMFMediaType> in;
@@ -80,7 +91,7 @@ std::string encode(const std::string& path, uint32_t w, uint32_t h, uint32_t fra
     in->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Video);
     in->SetGUID(MF_MT_SUBTYPE, subtype);
     MFSetAttributeSize(in.Get(), MF_MT_FRAME_SIZE, w, h);
-    MFSetAttributeRatio(in.Get(), MF_MT_FRAME_RATE, 30, 1);
+    MFSetAttributeRatio(in.Get(), MF_MT_FRAME_RATE, kFps, 1);
     MFSetAttributeRatio(in.Get(), MF_MT_PIXEL_ASPECT_RATIO, 1, 1);
     in->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive);
     TRY(mft->SetInputType(0, in.Get(), 0));
@@ -102,7 +113,7 @@ std::string encode(const std::string& path, uint32_t w, uint32_t h, uint32_t fra
     TRY(mft->GetOutputStreamInfo(0, &info));
     const bool providesSamples = (info.dwFlags & (MFT_OUTPUT_STREAM_PROVIDES_SAMPLES | MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES)) != 0;
 
-    FILE* file = _wfopen(std::wstring(path.begin(), path.end()).c_str(), L"wb");
+    const std::unique_ptr<FILE, int (*)(FILE*)> file(_wfopen(std::wstring(path.begin(), path.end()).c_str(), L"wb"), fclose);
     if (!file) return "{\"ok\":false,\"error\":\"cannot write the file\"}";
     size_t bytes = 0, packets = 0;
 
@@ -133,7 +144,7 @@ std::string encode(const std::string& path, uint32_t w, uint32_t h, uint32_t fra
             BYTE* data = nullptr;
             DWORD length = 0;
             if (mb && SUCCEEDED(mb->Lock(&data, nullptr, &length))) {
-                fwrite(data, 1, length, file);
+                fwrite(data, 1, length, file.get());
                 bytes += length;
                 packets++;
                 mb->Unlock();
@@ -180,17 +191,16 @@ std::string encode(const std::string& path, uint32_t w, uint32_t h, uint32_t fra
         ComPtr<IMFSample> sample;
         TRY(MFCreateSample(&sample));
         sample->AddBuffer(mb.Get());
-        sample->SetSampleTime(static_cast<LONGLONG>(i) * 333333);
-        sample->SetSampleDuration(333333);
+        sample->SetSampleTime(static_cast<LONGLONG>(i) * kFrameDuration);
+        sample->SetSampleDuration(kFrameDuration);
         TRY(mft->ProcessInput(0, sample.Get(), 0));
         TRY(drain());
         last = sample;
     }
     TRY(mft->ProcessMessage(MFT_MESSAGE_COMMAND_DRAIN, 0));
     TRY(drain());
-    fclose(file);
+    fflush(file.get());
 
-    // whether the frame given to the encoder is as it was
     bool unchanged = true;
     if (last) {
         ComPtr<IMFMediaBuffer> mb;
@@ -212,7 +222,6 @@ std::string encode(const std::string& path, uint32_t w, uint32_t h, uint32_t fra
         }
     }
 
-    MFShutdown();
     char text[200];
     snprintf(text, sizeof text, "{\"ok\":true,\"bytes\":%zu,\"packets\":%zu,\"sourceUnchanged\":%s}", bytes, packets, unchanged ? "true" : "false");
     return text;

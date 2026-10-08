@@ -45,7 +45,6 @@
     transform: rotate(180deg);
 }
 
-/* opens below its row (the row wraps) and takes the whole width of it */
 .vc-so-picker {
     display: flex;
     box-sizing: border-box;
@@ -111,7 +110,7 @@
     color: var(--text-default);
 }
 
-/* the real color input lies invisibly over the custom tile, so that clicking it opens the color chooser right there */
+/* invisible, over the custom tile: a click opens the native color chooser */
 .vc-so-native {
     position: absolute;
     top: 0;

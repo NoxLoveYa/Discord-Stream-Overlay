@@ -8,7 +8,6 @@ import { Paragraph } from "@components/Paragraph";
 import { Slider, useRef } from "@webpack/common";
 
 interface NumberControlProps {
-    /** what the setting is called, for assistive technology */
     label: string;
     value: number;
     min: number;
@@ -23,6 +22,7 @@ const decimals = (step: number) => (String(step).split(".")[1] ?? "").length;
 export function NumberControl({ label, value, min, max, step, unit, onChange }: NumberControlProps) {
     const digits = decimals(step);
     const snap = (v: number) => Number(Math.min(max, Math.max(min, Math.round((v - min) / step) * step + min)).toFixed(digits));
+    const format = (v: number) => `${snap(v).toFixed(digits)}${unit}`;
 
     // Discord's Slider reads initialValue once. A value that changed from outside (a preset, a reset, the overlay saving
     // where it was dragged to) needs a fresh slider, while the user's own changes must not replace it mid-drag.
@@ -42,8 +42,8 @@ export function NumberControl({ label, value, min, max, step, unit, onChange }: 
                     minValue={min}
                     maxValue={max}
                     keyboardStep={step}
-                    onValueRender={(v: number) => `${snap(v).toFixed(digits)}${unit}`}
-                    getAriaValueText={(v: number) => `${snap(v).toFixed(digits)}${unit}`}
+                    onValueRender={format}
+                    getAriaValueText={format}
                     onValueChange={(v: number) => {
                         const next = snap(v);
                         if (next === lastEmitted.current) return;

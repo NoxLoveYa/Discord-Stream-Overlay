@@ -10,11 +10,8 @@ import { type InputHandlers, type InputPoll, startInputPoll } from "./keys";
 
 const POINTER_INTERVAL_MS = 50;
 
-/**
- * Feeds the overlay page with what it cannot see itself because the window never has focus and ignores the mouse:
- * the state of the keys it asked for, how far the mouse moved, and where the cursor is. It also lets the window take
- * the mouse while an interactive overlay's key combo is held.
- */
+// Feeds the overlay page what it cannot see itself (the window never has focus and ignores the mouse): the keys it asked
+// for, mouse movement and the cursor. The window takes the mouse while an interactive overlay's key combo is held.
 export class OverlayInput {
     private poll: InputPoll | null = null;
     private pointerTimer: ReturnType<typeof setInterval> | null = null;
@@ -24,8 +21,7 @@ export class OverlayInput {
     constructor(
         private readonly getWindow: () => BrowserWindow | null,
         private readonly getCombos: () => string[][],
-        /** keys that count as held whatever the keyboard says */
-        private readonly heldAlways: () => string[] = () => []
+        private readonly heldAlways: () => string[]
     ) { }
 
     sync(keys: string[], mouse: boolean, relayPointer: boolean, freshPage: boolean) {
@@ -41,7 +37,7 @@ export class OverlayInput {
         this.setPointerRelay(relayPointer);
     }
 
-    /** A reloaded page has lost the key and cursor state: start over so both are sent again. */
+    // a reloaded page has lost the key and cursor state
     restart() {
         this.lastPointer = "";
         const { poll } = this;

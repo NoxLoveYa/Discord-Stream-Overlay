@@ -18,18 +18,20 @@ const EXIT_SCRIPT = `(() => {
 })()`;
 
 // executeJavaScript works per frame whatever the origin, unlike reaching into the file:// iframes from the host page
-export function runInFrames(win: BrowserWindow, script: string) {
+function runInFrames(win: BrowserWindow, script: string) {
     return Promise.all(win.webContents.mainFrame.framesInSubtree.map(f => f.executeJavaScript(script).catch(() => { })));
 }
 
-/** Restarts the intro: the page may have played it while the window was still hidden. */
+// the page may have played the intro while the window was still hidden
 export function playEnter(win: BrowserWindow) {
     return runInFrames(win, ENTER_SCRIPT);
 }
 
-export function playExit(win: BrowserWindow) {
-    return Promise.race([
+export async function playExit(win: BrowserWindow) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
         runInFrames(win, EXIT_SCRIPT),
-        new Promise(resolve => setTimeout(resolve, EXIT_TIMEOUT_MS))
+        new Promise(resolve => timer = setTimeout(resolve, EXIT_TIMEOUT_MS))
     ]);
+    clearTimeout(timer);
 }

@@ -9,8 +9,6 @@ import { app } from "electron";
 import { closeSync, openSync, readSync, statSync } from "fs";
 import { join } from "path";
 
-// What Discord's own voice log says about the stream: which encoder it uses, and whether it encodes at all.
-
 const VOICE_LOG = "discord-webrtc_0";
 const WHOLE_BELOW = 6 * 1024 * 1024;
 const HEAD_BYTES = 300 * 1024;
@@ -25,11 +23,10 @@ function safeSize(file: string) {
     try {
         return statSync(file).size;
     } catch {
-        return 0;
+        return 0; // no log yet
     }
 }
 
-/** `length` bytes of a file from `start`, as text, or "" when it cannot be read. */
 function readRange(file: string, start: number, length: number) {
     try {
         const count = Math.max(0, Math.min(length, safeSize(file) - start));
@@ -42,16 +39,14 @@ function readRange(file: string, start: number, length: number) {
             closeSync(fd);
         }
     } catch {
+        // the log is Discord's: it may be missing or locked
         return "";
     }
 }
 
 const readTail = (file: string, maxBytes: number) => readRange(file, Math.max(0, safeSize(file) - maxBytes), maxBytes);
 
-/**
- * The lines of the voice log of this run, which say which encoders it found, which it tried and what it encodes the stream
- * with. A long log is read from its start (the probe) and its end (the stream).
- */
+// a long log is read from its start (the encoder probe) and its end (the stream)
 function voiceLogLines() {
     const file = voiceLogFile();
     const size = safeSize(file);
@@ -61,13 +56,10 @@ function voiceLogLines() {
     return text.split(/\r?\n/);
 }
 
-/** The encoder Discord uses for the stream right now; null when its log does not say. */
 export const currentEncoder = (): EncoderInfo | null => latestEncoder(voiceLogLines());
 
-/**
- * Whether Discord encodes the stream right now, from the stats line it writes every 10 s; null when it does not say (no
- * such line, or an old one). Nothing is encoded while nobody watches the stream.
- */
+// from the stats line Discord writes every 10 s; null when there is none or it is old
+// (nothing is encoded while nobody watches the stream)
 export function streamEncoding(): boolean | null {
     const activity = latestActivity(readTail(voiceLogFile(), ACTIVITY_BYTES).split(/\r?\n/));
     if (!activity || Date.now() - activity.at > ACTIVITY_STALE_MS) return null;

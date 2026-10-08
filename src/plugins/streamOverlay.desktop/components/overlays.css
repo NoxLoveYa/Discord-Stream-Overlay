@@ -8,12 +8,11 @@
     color: var(--text-muted, var(--text-default));
 }
 
-/* under .vc-so so that these win over the text reset of Vencord's Paragraph, whatever the order of the stylesheets */
+/* the .vc-so prefix beats the margin reset of Paragraph whatever the stylesheet order */
 .vc-so .vc-so-hint {
     margin: 2px 0 10px;
 }
 
-/* Vencord's tab bar has margins for its own pages: here the page has its gap */
 .vc-so .vc-so-tabs {
     margin: 0;
 }
@@ -36,11 +35,6 @@
     margin-top: 6px;
 }
 
-/* the cards: the whole card opens the overlay (the stretched button), the switch sits above that */
-.vc-so-category + .vc-so-category {
-    margin-top: 20px;
-}
-
 .vc-so .vc-so-group {
     margin: 0 0 8px;
     color: var(--text-muted, var(--text-default));
@@ -49,11 +43,7 @@
     text-transform: uppercase;
 }
 
-/*
- * The categories (Frames, Input, Media) share the rows of the page: each is as wide as the cards it has need, and grows to fill
- * what is left of the row. Inside, the cards fill the category, so no row is half empty. It follows the width of the modal,
- * not of the window.
- */
+/* categories share a row, each sized by its number of cards */
 .vc-so-sections {
     display: flex;
     flex-wrap: wrap;
@@ -61,16 +51,13 @@
     gap: 20px 12px;
 }
 
-.vc-so-sections .vc-so-category {
+.vc-so-category {
     display: flex;
     flex: 1 1 calc(var(--vc-so-count, 4) * 190px);
     flex-direction: column;
     min-width: 0;
-    margin-top: 0;
 }
 
-
-/* the cards of a row are as tall as the tallest of the row, whatever category they are in */
 .vc-so-grid {
     display: grid;
     flex: 1;
@@ -125,6 +112,7 @@
     z-index: 1;
 }
 
+/* the ::after stretches the button over its whole card; the switch sits above it */
 .vc-so-open {
     padding: 0;
     border: 0;
@@ -163,7 +151,6 @@
     font-size: 0.75rem;
 }
 
-/* the page of one overlay */
 .vc-so-nav {
     display: flex;
     align-items: center;
@@ -214,7 +201,7 @@
     margin-bottom: 6px;
 }
 
-/* wraps so that a control can open something below itself (the color picker) */
+/* wraps so that the color picker can open below its control */
 .vc-so-row {
     display: flex;
     flex-wrap: wrap;
@@ -227,6 +214,10 @@
 
 .vc-so-row:last-child {
     border-bottom: 0;
+}
+
+.vc-so-option-select {
+    width: 220px;
 }
 
 .vc-so-number {

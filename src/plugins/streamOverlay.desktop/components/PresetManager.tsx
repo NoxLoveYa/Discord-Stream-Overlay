@@ -14,6 +14,7 @@ import { cleanName, findPreset, isTaken, MAX_NAME, newName } from "@plugins/stre
 import { TextInput, useEffect, useState } from "@webpack/common";
 import type { ReactNode } from "react";
 
+import { submitOrCancel } from "./keys";
 import { NoticeBar, type Undo, useNotice } from "./Notice";
 import { PresetCard } from "./PresetCard";
 
@@ -23,10 +24,9 @@ interface PresetManagerProps<T extends { name: string; }> {
     hint: string;
     emptyText: string;
     presets: T[];
-    /** whether the current state is the one this preset saved */
     isActive(preset: T): boolean;
     summarize(preset: T): ReactNode;
-    /** creates the preset from the current state, or replaces the one with that name */
+    /** replaces the preset with that name, if there is one */
     save(name: string): void;
     rename(preset: T, name: string): void;
     /** returns the name of the copy */
@@ -37,7 +37,6 @@ interface PresetManagerProps<T extends { name: string; }> {
     remove(preset: T): Undo;
 }
 
-/** The presets of something: a card each (click to apply), what is in use, a way to save the current state, and undo. */
 export function PresetManager<T extends { name: string; }>(props: PresetManagerProps<T>) {
     const { presets, isActive } = props;
 
@@ -100,13 +99,7 @@ export function PresetManager<T extends { name: string; }>(props: PresetManagerP
                             placeholder="Preset name"
                             aria-label="Preset name"
                             onFocus={e => e.currentTarget.select()}
-                            onKeyDown={e => {
-                                if (e.key === "Enter") save();
-                                else if (e.key === "Escape") {
-                                    e.stopPropagation();
-                                    setComposing(false);
-                                }
-                            }}
+                            onKeyDown={submitOrCancel(save, () => setComposing(false))}
                         />
                     </div>
                     <Button size="small" disabled={!clean} onClick={save}>{replaces ? "Replace" : "Save"}</Button>

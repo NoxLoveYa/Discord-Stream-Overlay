@@ -29,7 +29,6 @@
     height: var(--btn-h);
 }
 
-/* the outer corners follow the shape of a mouse */
 .btn-left,
 .btn-left .cap {
     border-radius: 28px 7px 7px 9px;
@@ -40,7 +39,6 @@
     border-radius: 7px 28px 9px 7px;
 }
 
-/* the wheel: a well like the keys', with a ribbed roller turning in it */
 .wheel {
     --accent: var(--click-rgb);
 
@@ -52,7 +50,6 @@
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 4%);
 }
 
-/* lit while pressed (the shared .is-down rules fade these in) */
 .wheel::before {
     content: "";
     position: absolute;
@@ -92,7 +89,6 @@
     background: linear-gradient(90deg, var(--graphite-500), var(--graphite-700));
 }
 
-/* depth: the roller curves away at both ends */
 .roller::after {
     content: "";
     position: absolute;
@@ -124,7 +120,7 @@
     will-change: transform;
 }
 
-/* light around the wheel while it turns: --spin is how fast, set by script.js */
+/* --spin is how fast the wheel turns, set by script.js */
 .spin {
     position: absolute;
     inset: -8px -10px;
@@ -162,7 +158,6 @@
     opacity: 1;
 }
 
-/* where the mouse moved: the dot sits in the middle and leans the way the mouse goes */
 .pad {
     position: relative;
     aspect-ratio: 1;
@@ -177,7 +172,7 @@
         inset 0 10px 22px -12px rgb(0 0 0 / 80%);
 }
 
-/* the outer ring is how far the dot can go, the small one is where it rests */
+/* the outer ring is how far the dot can go (script.js reads its inset), the small one is where it rests */
 .pad::before {
     content: "";
     position: absolute;

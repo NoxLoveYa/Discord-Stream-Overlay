@@ -49,8 +49,8 @@ export const settings = definePluginSettings({
     },
     streamOnly: {
         type: OptionType.BOOLEAN,
-        description: "Only draw the overlays on the stream and its preview, not on your own screen (experimental: NVIDIA encoder only, the overlays cannot be dragged while it is on)",
-        default: false
+        description: "Only draw the overlays on the stream and its preview, not on your own screen. Works with NVIDIA's encoder and Windows' software encoder; otherwise the overlays stay on your screen. The overlays cannot be dragged on screen while it is on (use the Layout tab)",
+        default: true
     },
     alwaysShow: {
         type: OptionType.BOOLEAN,
@@ -59,7 +59,6 @@ export const settings = definePluginSettings({
     }
 });
 
-/** The gothic keyboard, mouse and Spotify card are themes of the ones they look like now: carry over what was saved for them. */
 export function migrateOverlays() {
     const { store } = settings;
     const moved = migrateLegacy({
@@ -79,7 +78,7 @@ export function migrateOverlays() {
 // settings.store hands out proxies: work on plain copies and assign them back
 export const plain = <T>(value: T): T => value === undefined ? value : JSON.parse(JSON.stringify(value));
 
-/** Edits a copy of a stored object in place, or returns what should replace it. */
+// `edit` changes the copy in place, or returns what should replace it
 export function updateStored<K extends "overlayValues" | "overlayPresets" | "globalPresets" | "appBindings">(
     key: K,
     edit: (value: (typeof settings.store)[K]) => (typeof settings.store)[K] | void
@@ -95,7 +94,6 @@ export function setOverlayEnabled(name: string, on: boolean) {
     settings.store.enabledOverlays = on ? [...others, name] : others;
 }
 
-/** Which overlays are on and the settings of all of them, as they are now. */
 export const snapshotState = () => ({ enabled: [...settings.store.enabledOverlays], values: plain(settings.store.overlayValues) });
 
 export function restoreState(state: ReturnType<typeof snapshotState>) {
@@ -103,7 +101,7 @@ export function restoreState(state: ReturnType<typeof snapshotState>) {
     settings.store.overlayValues = plain(state.values);
 }
 
-/** Sets the toggles and the settings of every overlay the preset knows. Returns what puts everything back. */
+/** Returns what puts everything back. */
 export function applyGlobalPreset(preset: GlobalPreset) {
     const before = snapshotState();
     const next = applyGlobal(preset, before.enabled, plain(before.values));

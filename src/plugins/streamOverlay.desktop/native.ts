@@ -15,8 +15,7 @@ import { currentEncoder, streamEncoding as discordEncoding } from "./main/voiceL
 import { OverlayWindow } from "./main/window";
 import type { OverlayValues } from "./types";
 
-// What the renderer can call: every export is an IPC method. The logic lives in ./main.
-
+// every export is an IPC method the renderer can call; the logic lives in ./main
 const nvenc = new Nvenc();
 const overlay = new OverlayWindow(nvenc);
 const layoutSink = new LayoutSink();
@@ -52,13 +51,10 @@ export function takeChanges() {
     return overlay.takeChanges();
 }
 
-/** The track playing in Spotify (null when none), for the overlays that ask for it. */
 export function setMedia(_: IpcMainInvokeEvent, state: unknown) {
     const media = cleanMedia(state);
     return Promise.all([overlay.setMedia(media), layout.setMedia(media)]).then(() => { });
 }
-
-// The Layout tab: the overlays rendered offscreen and shown on the settings page, where the draggable ones can be moved.
 
 export function layoutShow(_: IpcMainInvokeEvent, sourceId: string | null, root: string, names: string[], values: OverlayValues) {
     // or it would be in the screenshot behind the layout too
@@ -66,18 +62,15 @@ export function layoutShow(_: IpcMainInvokeEvent, sourceId: string | null, root:
     return layout.show(sourceId, null, root, names, values, true);
 }
 
-/** A JPEG of the screen being drawn on. */
 export function layoutBackground() {
     const display = layout.currentDisplay();
     return display ? screenshot(display) : null;
 }
 
-/** The newest picture, or null when it has not changed. */
 export function layoutFrame() {
     return layoutSink.take();
 }
 
-/** What the overlays saved since the last call. */
 export function layoutChanges() {
     return layout.takeChanges();
 }
@@ -91,7 +84,6 @@ export function layoutHide() {
     return layout.hide(false);
 }
 
-/** Starts or stops following which program is in focus. Nothing runs while nobody asked for it. */
 export function watchFocus(_: IpcMainInvokeEvent, on: boolean) {
     focus.set(on);
 }
@@ -100,25 +92,19 @@ export function getFocus() {
     return focus.read();
 }
 
-/** The encoder Discord uses for the stream right now, from its own log (null when it does not say yet). */
 export function streamEncoder() {
     return currentEncoder();
 }
 
-/** Whether Discord encodes the stream at all right now (it does not while nobody watches it); null when its log does not say. */
 export function streamEncoding() {
     return discordEncoding();
 }
 
-/** Whether the overlay really reaches the stream: what the hook has done since drawing went on, or null. */
 export function streamHealth() {
     return nvenc.health();
 }
 
-/**
- * Hooks the encoder ahead of the stream: it only knows which texture an encoded frame is by watching Discord register
- * them, so a stream that started before the hook cannot be drawn on. True once the hook is in.
- */
+// the hook tells encoded textures apart by watching Discord register them, so a stream that started before it cannot be drawn on
 export function prepareStream(event: IpcMainInvokeEvent) {
     nvenc.register(event.sender.session);
     return nvenc.start();

@@ -8,14 +8,12 @@ import { TabBar } from "@webpack/common";
 import type { PropsWithChildren } from "react";
 
 interface TabsProps<T extends string> {
-    /** what the tabs are for, for assistive technology */
     label: string;
     tabs: ReadonlyArray<{ id: T; label: string; }>;
     current: T;
     onChange(tab: T): void;
 }
 
-/** Discord's tab bar (with the look of Vencord's own settings pages), and the content of the tab that is open below it. */
 export function Tabs<T extends string>({ label, tabs, current, onChange, children }: PropsWithChildren<TabsProps<T>>) {
     return (
         <>

@@ -12,12 +12,11 @@ const NOTICE_MS = 8000;
 
 export type Undo = () => void;
 
-export interface NoticeState {
+interface NoticeState {
     text: string;
     undo?: Undo;
 }
 
-/** What just happened, for a few seconds, with a way to take it back instead of asking first. */
 export function useNotice() {
     const [notice, setNotice] = useState<NoticeState | null>(null);
 
@@ -37,11 +36,13 @@ export function useNotice() {
 export function NoticeBar({ notice, onDismiss }: { notice: NoticeState | null; onDismiss(): void; }) {
     if (!notice) return null;
 
+    const { text, undo } = notice;
+
     return (
         <div className="vc-so-notice" role="status">
-            <span>{notice.text}</span>
-            {notice.undo && (
-                <button className="vc-so-undo" onClick={() => { notice.undo!(); onDismiss(); }}>Undo</button>
+            <span>{text}</span>
+            {undo && (
+                <button className="vc-so-undo" onClick={() => { undo(); onDismiss(); }}>Undo</button>
             )}
             <button className="vc-so-notice-close" aria-label="Dismiss" onClick={onDismiss}>×</button>
         </div>

@@ -9,7 +9,7 @@
     flex-direction: column;
     gap: 8px;
     padding: 14px 14px 8px;
-    transition: border-color 120ms ease-out, opacity 120ms ease-out;
+    transition: border-color 120ms ease-out;
 }
 
 .vc-so-app:hover {
@@ -59,7 +59,6 @@
     color: var(--text-feedback-critical, #f23f43);
 }
 
-/* the form to add an app: a field after the other, each with what it is for, and the actions at the end */
 .vc-so-form {
     display: flex;
     flex-direction: column;
@@ -75,7 +74,7 @@
     gap: 6px;
 }
 
-/* the field takes what the button leaves; the button stays at the top when an error shows under the field */
+/* top-aligned so that an error under the field does not push the button down */
 .vc-so-field-row {
     display: flex;
     align-items: flex-start;
@@ -119,7 +118,6 @@
     }
 }
 
-/* what to do first, when the field cannot be filled yet */
 .vc-so-callout {
     display: flex;
     flex-wrap: wrap;
@@ -137,13 +135,11 @@
     gap: 8px;
 }
 
-/* a row with a longer explanation: the text takes what is left, the control stays on its side */
 .vc-so-row-text {
     flex: 1 1 280px;
     min-width: 0;
 }
 
-/* a program in focus that is not one of these: nothing to do, so no color */
 .vc-so-status[data-state="idle"] .vc-so-status-dot {
     background: var(--primary-400, #80848e);
 }

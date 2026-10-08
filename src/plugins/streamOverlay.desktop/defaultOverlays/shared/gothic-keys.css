@@ -1,6 +1,4 @@
-/* The gothic look of the keys (the keyboard and the mouse buttons); the window is in gothic-panel.css.
-   Only applies while the "theme" setting is "gothic". It comes before the widget's style.css, which keeps the shapes of
-   the mouse buttons. */
+/* It comes before the widget's style.css, which keeps the shapes of the mouse buttons. */
 :where(html[data-theme="gothic"]) {
     .key {
         border-radius: 6px;

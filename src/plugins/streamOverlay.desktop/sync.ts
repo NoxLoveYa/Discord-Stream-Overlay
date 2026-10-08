@@ -12,7 +12,7 @@ import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore, UserStore 
 import { startAppPresets, stopAppPresets } from "./appPresets";
 import { explainEncoder } from "./encoders";
 import { GRACE_MS, judgeHook } from "./health";
-import { Native, settings, updateValues } from "./settings";
+import { Native, plain, settings, updateValues } from "./settings";
 import { startSpotify, stopSpotify } from "./spotify";
 import { streamState } from "./streamState";
 
@@ -32,8 +32,7 @@ let collectTimer: ReturnType<typeof setInterval> | undefined;
 let lastKey = "";
 let lastState = "";
 let sourceName: string | null = null;
-// Stream only takes the overlay off the screen, so it has to be seen reaching the stream: when this stream is not encoded
-// by NVENC it would be in neither place. Then the overlays go back on the screen, for this stream.
+// stream only takes the overlay off the screen: when this stream is not encoded by NVENC it would be in neither place
 let lastHealth = 0;
 let lastStreamOnly = false;
 // one sync at a time, so quick successive changes (dragging a color picker) cannot be applied out of order
@@ -43,13 +42,11 @@ const onStreamStart = (e: { sourceName?: string; }) => {
     sourceName = e.sourceName ?? null;
 };
 
-/** Tells the preview overlay whose Discord this is, so that it only goes on your own stream (not on the ones you watch). */
 function publishSelf() {
     const id = UserStore.getCurrentUser()?.id;
     if (id) document.documentElement.setAttribute(SELF_ATTRIBUTE, id);
 }
 
-/** Looks at whether the overlay reaches the stream; if not, the next sync puts it on the screen. */
 async function checkHook() {
     if (!streamState.offscreenSince || streamState.failed || Date.now() - lastHealth < HEALTH_INTERVAL_MS) return;
     lastHealth = Date.now();
@@ -57,12 +54,11 @@ async function checkHook() {
     const waited = Date.now() - streamState.offscreenSince;
     const status = await Native.streamHealth();
 
-    // Discord only encodes a stream while somebody watches it: with nobody the hook has nothing to see, which is no reason to give up
+    // with nobody watching, Discord encodes nothing and the hook has nothing to see: no reason to give up
     const encoding = status?.encodes === 0 && waited >= GRACE_MS ? await Native.streamEncoding().catch(() => null) : null;
     const reason = judgeHook(status, waited, encoding);
     if (!reason) return;
 
-    // Discord's own log says which encoder it is, which is more useful to the user than "NVENC saw nothing"
     const encoder = await Native.streamEncoder().catch(() => null);
     streamState.failed = reason;
     lastKey = "";
@@ -74,7 +70,6 @@ async function checkHook() {
     });
 }
 
-/** Shows, updates or hides the overlay window to match the stream and the settings. */
 async function doSync() {
     if (!running) return;
 
@@ -100,7 +95,7 @@ async function doSync() {
 
     // the store hands out proxies, which cannot cross IPC
     const overlays = [...settings.store.enabledOverlays];
-    const values = JSON.parse(JSON.stringify(settings.store.overlayValues));
+    const values = plain(settings.store.overlayValues);
 
     const shouldShow = overlays.length > 0 && (alwaysShow || (active != null && sourceId?.startsWith("screen") === true));
     const state = JSON.stringify([shouldShow, sourceId, sourceName, overlayRoot, overlays, streamOnly]);
@@ -130,7 +125,7 @@ async function doSync() {
 
 const sync = () => queue = queue.then(doSync).catch(e => logger.error("sync failed", e));
 
-/** Overlays can save values themselves (the keyboard saves where it was dragged to): they end up in the settings. */
+// overlays save values themselves (where the keyboard was dragged to): they end up in the settings
 async function collect() {
     if (!running || !visible) return;
 

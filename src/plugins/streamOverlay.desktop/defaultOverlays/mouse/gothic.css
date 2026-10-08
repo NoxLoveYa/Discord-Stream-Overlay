@@ -1,6 +1,5 @@
-/* The gothic theme of the mouse: its own accents (the "theme" setting picks which look is on), the gems on the corners
-   follow the accent of the movement and the wheel, and the roller, the wheel and the pad are silver rather than white.
-   It comes after style.css, which has the layout and the shapes. */
+/* The gems on the corners follow the accent of the movement and the wheel; the roller, the wheel and the pad are silver
+   rather than white. It comes after style.css, which has the layout and the shapes. */
 html[data-theme="gothic"] {
     --click-rgb: var(--g-click-accent-rgb);
     --motion-rgb: var(--g-motion-accent-rgb);
@@ -40,9 +39,5 @@ html[data-theme="gothic"] {
 
     .pad::after {
         border-color: rgb(var(--silver-rgb) / 22%);
-    }
-
-    .dot {
-        background: radial-gradient(circle at 35% 30%, #fff, rgb(var(--motion-rgb)) 62%);
     }
 }

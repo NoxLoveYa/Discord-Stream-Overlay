@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <cstdio>
-#include <cstdlib>
 #include <random>
 
 #include "../yuvblend.h"
@@ -81,7 +80,6 @@ static void exactValues() {
     CHECK(changed == wanted, "only the rectangle changes");
     CHECK(img.y(49, 50) == 100 && img.y(150, 50) == 100 && img.y(100, 24) == 100 && img.y(100, 75) == 100, "pixels just outside the rectangle are untouched");
 
-    // full alpha replaces, zero alpha leaves
     rect(overlay, ow, 400, 200, 440, 240, 0, 255, 0, 255);
     c.rebuild(overlay.data(), ow, oh, f);
     Img img2(320, 180, Layout::NV12);
@@ -106,7 +104,7 @@ static void updateEqualsRebuild(uint32_t ow, uint32_t oh, uint32_t fw, uint32_t 
         const uint32_t x0 = rng() % ow, y0 = rng() % oh;
         const uint32_t x1 = std::min<uint32_t>(ow, x0 + 1 + rng() % 120), y1 = std::min<uint32_t>(oh, y0 + 1 + rng() % 60);
         if (rng() % 4 == 0) {
-            for (uint32_t y = y0; y < y1; y++) memset(&overlay[(static_cast<size_t>(y) * ow + x0) * 4], 0, (x1 - x0) * 4);  // erase
+            for (uint32_t y = y0; y < y1; y++) memset(&overlay[(static_cast<size_t>(y) * ow + x0) * 4], 0, (x1 - x0) * 4);
         } else {
             rect(overlay, ow, x0, y0, x1, y1, rng() % 256, rng() % 256, rng() % 256, 1 + rng() % 255);
         }
@@ -158,7 +156,6 @@ static void layouts() {
     for (uint32_t j = 0; j < fh / 2; j++) for (uint32_t i = 0; i < fw / 2; i++) eq2 &= padded.u(i, j) == nv.u(i, j) && padded.v(i, j) == nv.v(i, j);
     CHECK(eq2, "a padded frame gets the same picture");
 
-    // BT.601 and BT.709 are not the same colour
     Frame f601{ fw, fh, false, true }, f709{ fw, fh, true, true };
     Cache c601, c709;
     c601.rebuild(overlay.data(), ow, oh, f601);

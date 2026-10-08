@@ -19,9 +19,9 @@ import type { AppBinding, GlobalPreset } from "@plugins/streamOverlay.desktop/ty
 import { SearchableSelect, TextInput, useEffect, useState } from "@webpack/common";
 
 import { IconButton } from "./IconButton";
+import { submitOrCancel } from "./keys";
 import { NoticeBar, useNotice } from "./Notice";
 
-/** Which preset to switch to while a program is in focus. */
 export function AppBindings({ presets, onShowPresets }: { presets: GlobalPreset[]; onShowPresets(): void; }) {
     const { appBindings, appRevert } = settings.use(["appBindings", "appRevert"]);
     const bindings: AppBinding[] = plain(appBindings);
@@ -122,13 +122,7 @@ export function AppBindings({ presets, onShowPresets }: { presets: GlobalPreset[
                                 placeholder={detecting ? "Waiting for an app…" : "game.exe"}
                                 aria-label="App"
                                 error={invalid ? "Use the name of the program, like game.exe" : undefined}
-                                onKeyDown={e => {
-                                    if (e.key === "Enter") add();
-                                    else if (e.key === "Escape") {
-                                        e.stopPropagation();
-                                        stopComposing();
-                                    }
-                                }}
+                                onKeyDown={submitOrCancel(add, stopComposing)}
                             />
                             <Button variant="secondary" onClick={detect}>
                                 <span className="vc-so-btn-content">

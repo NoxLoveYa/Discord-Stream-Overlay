@@ -13,13 +13,16 @@
     const NOTCH_PX = 14; // how far the roller turns per notch
     const WHEEL_FOLLOW = 0.07; // s: how smoothly the roller catches up with the wheel
     const FULL_SPIN = 420; // px/s of roller speed that lights the wheel completely
+    const PAD_INSET = 22; // px between the edge of the pad and the ring the dot can reach, as in style.css
+    const MAX_DT = 0.05; // s: a longer pause between frames counts as this long
+    const REST = 0.05; // px: below this a movement counts as stopped
 
     const pad = document.querySelector(".pad");
     const dots = [...pad.querySelectorAll(".dot")];
     const wheel = document.querySelector(".wheel");
     const ribs = wheel.querySelector(".ribs");
     const rib = parseFloat(getComputedStyle(ribs).getPropertyValue("--rib"));
-    const reach = pad.offsetWidth / 2 - 22;
+    const reach = pad.offsetWidth / 2 - PAD_INSET;
 
     let sensitivity = 1;
     const push = { x: 0, y: 0 };
@@ -31,7 +34,7 @@
 
     function tick(now) {
         frame = 0;
-        const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
+        const dt = last ? Math.min((now - last) / 1000, MAX_DT) : 1 / 60;
         last = now;
 
         const decay = Math.exp(-dt / RETURN);
@@ -42,20 +45,20 @@
         const squash = length ? reach * Math.tanh(length / reach) / length : 0;
 
         let target = { x: push.x * squash, y: push.y * squash };
-        let moving = length > 0.05;
+        let moving = length > REST;
         dots.forEach((dot, i) => {
             const at = shown[i];
             const k = 1 - Math.exp(-dt / FOLLOW[i]);
             at.x += (target.x - at.x) * k;
             at.y += (target.y - at.y) * k;
             dot.style.transform = `translate(${at.x}px, ${at.y}px)`;
-            moving ||= Math.hypot(at.x, at.y) > 0.05;
+            moving ||= Math.hypot(at.x, at.y) > REST;
             target = at;
         });
 
         const step = (rolling - rolled) * (1 - Math.exp(-dt / WHEEL_FOLLOW));
         rolled += step;
-        const turning = Math.abs(rolling - rolled) > 0.05;
+        const turning = Math.abs(rolling - rolled) > REST;
         const spin = turning ? Math.min(1, Math.abs(step / dt) / FULL_SPIN) : 0;
         ribs.style.transform = `translateY(${-(rolled % rib)}px)`;
         wheel.style.setProperty("--spin", spin.toFixed(3));

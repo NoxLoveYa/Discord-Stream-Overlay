@@ -20,8 +20,7 @@ body {
     --glow: 0.8;
 }
 
-/* ---- the dark edge: its mask arrives from script.js, without it this would be solid ---- */
-
+/* the mask arrives from script.js: without it this would be solid */
 .ink {
     position: fixed;
     inset: 0;
@@ -38,8 +37,6 @@ html:not([data-ink-ready]) .ink,
 html[data-edge="false"] .ink {
     display: none;
 }
-
-/* ---- drawing ---- */
 
 svg {
     position: fixed;
@@ -108,7 +105,7 @@ svg {
     animation: fade 1.2s 0.9s both;
 }
 
-/* flapping: each wing swings around its shoulder (script.js sets the origin) and its membrane stretches and folds */
+/* script.js sets the transform origin, the shoulder */
 .wing {
     transform-box: view-box;
     will-change: transform;
@@ -233,14 +230,13 @@ html[data-skulls="false"] .skull {
     from { opacity: 0; }
 }
 
-/* the name comes out of the dark */
 @keyframes name-in {
     from { opacity: 0; filter: blur(12px); transform: scale(1.12); }
     55% { opacity: 0.9; filter: blur(3px); }
     to { opacity: 1; filter: none; transform: none; }
 }
 
-/* up: raised and folded, down: lowered and stretched; the downstroke is quicker than the way back up */
+/* 0%: raised and folded, 38%: lowered and stretched; the downstroke is quicker than the way back up */
 @keyframes flap {
     0%, 100% { transform: rotate(calc(var(--dir) * 6deg)) scaleY(0.72); animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); }
     38% { transform: rotate(calc(var(--dir) * -9deg)) scaleY(1.05); animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); }

@@ -28,7 +28,7 @@ Discord's Go Live, so viewers see them. Windows desktop client only.
 - **Presets by app**: bind a global preset to a program (`game.exe`); it is applied while that program is in focus and
   put back afterwards.
 
-**Stream only** (experimental)
+**Stream only** (on by default)
 - Keeps the overlays off your own screen: they are blended into the video that Discord encodes, so viewers see them and
   you don't. The in-app preview of your stream gets a matching overlay on top.
-- Needs an NVIDIA GPU (NVENC), and a small native addon built from `nvenc/`.
+- Needs NVENC (an NVIDIA GPU) or Windows' software H.264 encoder, and a small native addon built from `nvenc/`. When the stream cannot be drawn into, the overlays stay on your screen.

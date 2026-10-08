@@ -1,4 +1,4 @@
-/* the picture sits on a checkerboard so the transparent parts of the overlays can be told from the screen */
+/* the checkerboard shows which parts of the overlays are transparent */
 .vc-so-stage {
     position: relative;
     border: 1px solid var(--border-subtle, rgb(255 255 255 / 12%));
@@ -9,7 +9,7 @@
         #0b0d12;
 }
 
-/* the picture, as big as the window allows; also what the browser's own full screen is */
+/* covers the window when the real full screen is refused */
 .vc-so-stage.vc-so-expanded,
 .vc-so-stage:fullscreen {
     position: fixed;
@@ -27,7 +27,6 @@
     position: relative;
 }
 
-/* the screen behind the overlays: it takes the size of the canvas, which has the shape of the screen */
 .vc-so-stage-background {
     position: absolute;
     inset: 0;
@@ -38,7 +37,7 @@
     user-select: none;
 }
 
-/* no source yet: no broken image icon */
+/* no broken image icon before the screenshot arrives */
 .vc-so-stage-background:not([src]) {
     display: none;
 }
@@ -72,7 +71,7 @@
     color: inherit;
 }
 
-.vc-so-stage:hover .vc-so-expand,
-.vc-so-expand:focus-within {
+.vc-so-expand:focus-within,
+.vc-so-stage:hover .vc-so-expand {
     opacity: 1;
 }

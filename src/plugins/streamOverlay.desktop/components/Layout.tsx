@@ -11,27 +11,29 @@ import { Native, plain, settings, updateValues } from "@plugins/streamOverlay.de
 import type { OverlayInfo } from "@plugins/streamOverlay.desktop/types";
 import { Logger } from "@utils/Logger";
 import { MediaEngineStore, useEffect, useRef, useState } from "@webpack/common";
-import type { SVGProps } from "react";
+import type { PointerEvent, SVGProps } from "react";
 
 import { IconButton } from "./IconButton";
 
 const logger = new Logger("StreamOverlay");
 
 const CHANGES_MS = 150;
+const RETRY_MS = 200;
 
-const ExpandIcon = (props: SVGProps<SVGSVGElement>) => (
+const strokeIcon = (path: string) => (props: SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+        <path d={path} />
     </svg>
 );
 
-const CollapseIcon = (props: SVGProps<SVGSVGElement>) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
-    </svg>
-);
+const ExpandIcon = strokeIcon("M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7");
+const CollapseIcon = strokeIcon("M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7");
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
+
+const leaveFullscreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
+};
 
 // The picture arrives as premultiplied BGRA bytes: the GPU uploads them as they are, swaps the channels in the shader
 // and the page composites the premultiplied result, which keeps this cheap enough to run on every frame.
@@ -77,7 +79,6 @@ function createPainter(canvas: HTMLCanvasElement) {
     };
 }
 
-/** The enabled overlays as drawn over the shared screen (or the main one), rendered offscreen; the mouse is handed to that window. */
 export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const { overlayRoot, enabledOverlays, overlayValues } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues"]);
     const canvas = useRef<HTMLCanvasElement>(null);
@@ -129,7 +130,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
                     painter.current ??= createPainter(canvas.current);
                     painter.current?.(frame.bitmap, frame.width, frame.height);
                 } catch {
-                    await new Promise(resolve => setTimeout(resolve, 200));
+                    await new Promise(resolve => setTimeout(resolve, RETRY_MS));
                 }
             }
         };
@@ -150,13 +151,13 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
             alive = false;
             clearInterval(changesTimer);
             if (backgroundUrl.current) URL.revokeObjectURL(backgroundUrl.current);
-            if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
+            leaveFullscreen();
             Native.layoutHide();
         };
     }, []);
 
     // as fractions of the picture, kept inside it: a captured pointer goes on outside the canvas, and the overlay stops at the edge
-    const send = (kind: "move" | "down" | "up", e: React.PointerEvent<HTMLCanvasElement>) => {
+    const send = (kind: "move" | "down" | "up", e: PointerEvent<HTMLCanvasElement>) => {
         const r = e.currentTarget.getBoundingClientRect();
         Native.layoutPointer(kind, clamp((e.clientX - r.left) / r.width), clamp((e.clientY - r.top) / r.height));
     };
@@ -164,7 +165,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     // the real full screen when Discord allows it, the window covered by the picture otherwise
     const toggleExpanded = () => {
         if (expanded) {
-            if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
+            leaveFullscreen();
             setExpanded(false);
         } else {
             setExpanded(true);
@@ -182,7 +183,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         };
         const onKey = (e: KeyboardEvent) => {
             if (e.key !== "Escape") return;
-            if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
+            leaveFullscreen();
             setExpanded(false);
         };
 

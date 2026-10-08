@@ -4,10 +4,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// Draws the frame for the size of the screen: filigree vines down both sides, bat wings either side of the name plate,
-// cobwebs in the corners with skulls at the bottom, and a ragged dark edge. The shapes are in index.html; this gives
-// them their coordinates and draws the mask of the edge.
+// The shapes are in index.html; this gives them their coordinates for the size of the screen and draws the mask of the
+// ragged dark edge.
 (() => {
+    const THREADS = 7; // of a cobweb
+    const RINGS = [0.2, 0.36, 0.54, 0.74, 1]; // of a cobweb, as fractions of its reach
+    const MASK_WIDTH = 448; // px of the noise mask of the edge, which the browser scales up
+    const EDGE_DELAY = 120; // ms to wait after a resize before drawing the mask again
+
     const root = document.documentElement;
     const $ = id => document.getElementById(id);
     const all = selector => [...document.querySelectorAll(selector)];
@@ -19,6 +23,7 @@
 
     const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
     const lerp = (a, b, t) => a + (b - a) * t;
+    const fade = t => t * t * (3 - 2 * t);
     const num = v => +v.toFixed(1);
     const P = (x, y) => `${num(x)} ${num(y)}`;
     const at = p => P(p[0], p[1]);
@@ -57,7 +62,7 @@
     }
 
     // a curl that starts at angle `a0` on a circle and winds inwards
-    function spiral(cx, cy, R, a0, turns, dir, map = p => p) {
+    function spiral(cx, cy, R, a0, turns, dir, map) {
         const steps = Math.round(turns * 18);
         let d = "";
         for (let i = 0; i <= steps; i++) {
@@ -75,10 +80,8 @@
         return `M${to(-w / 2, 0)}Q${to(-w * 0.15 + skew * 0.3, n * 0.45)} ${to(skew, n)}Q${to(w * 0.3 + skew * 0.3, n * 0.4)} ${to(w / 2, 0)}Z`;
     };
 
-    // ---- cobweb: threads from a corner, and rings that sag between them ----
+    // threads from a corner, and rings that sag between them
     function web(x0, y0, sx, sy, reach, hang) {
-        const THREADS = 7;
-        const RINGS = [0.2, 0.36, 0.54, 0.74, 1];
         const dir = i => {
             const a = i / (THREADS - 1) * Math.PI / 2;
             return [sx * Math.cos(a), sy * Math.sin(a)];
@@ -96,7 +99,6 @@
             for (let i = 1; i < THREADS; i++) {
                 const a = spot(i - 1, f, j);
                 const b = spot(i, f, j);
-                // the thread sags toward the corner
                 const c = [lerp((a[0] + b[0]) / 2, x0, 0.2), lerp((a[1] + b[1]) / 2, y0, 0.2)];
                 d += `Q${at(c)} ${at(b)}`;
             }
@@ -110,7 +112,7 @@
         return d;
     }
 
-    // ---- bat wing: an arm along the top, four fingers and a scalloped membrane between their tips ----
+    // an arm along the top, four fingers and a scalloped membrane between their tips
     function wing(s, L, ox, oy, depth, k) {
         const pt = (u, v) => [ox + s * u * L, oy + v * L];
         const S = pt(0, 0.02);
@@ -164,7 +166,6 @@
         const rwTop = m * 0.15;
         const rwBottom = m * 0.115;
 
-        // ---- the name plate: straight sides, then a point ----
         const depth = Math.round(size + 10);
         const point = Math.round(depth * 0.9);
         const half = text.offsetWidth / 2 + size * 0.95;
@@ -181,7 +182,6 @@
         [-1, 1].forEach((s, i) => stars[i].setAttribute("transform", `translate(${P(cx + s * side, t + depth / 2)}) scale(${num(sc)})`));
         $("name").style.top = `${num(t + depth / 2 + size * 0.04)}px`;
 
-        // ---- wings ----
         const winged = wings > 0.02;
         document.querySelector(".wings").style.display = winged ? "" : "none";
         if (winged) {
@@ -194,17 +194,14 @@
                 el.querySelector(".membrane").setAttribute("d", parts.membrane);
                 el.querySelector(".veins").setAttribute("d", parts.veins);
                 el.querySelector(".bones").setAttribute("d", parts.bones);
-                // a wing flaps around its shoulder, where it meets the plate
                 el.style.transformOrigin = `${num(cx + s * half)}px ${num(t)}px`;
             });
         }
 
-        // ---- cobwebs ----
         path("webs",
             web(l, t, 1, 1, rwTop, 46 * unit) + web(r, t, -1, 1, rwTop, 46 * unit) +
             web(l, b, 1, -1, rwBottom, 0) + web(r, b, -1, -1, rwBottom, 0));
 
-        // ---- vines down both sides ----
         const yStart = t + rwTop * 0.6;
         const yEnd = b - rwBottom * 0.62;
         const length = Math.max(1, yEnd - yStart);
@@ -245,7 +242,6 @@
                 thorns += spike(X(xc - A), y, 0, 1, mirror ? 1 : -1, 0, 4.5 * unit, (11 + 6 * rnd(k, 4)) * unit, (even ? 1 : -1) * 6 * unit);
             }
 
-            // a leaf where the stems cross, with a rib
             for (let k = 0; k <= halfWaves; k++) {
                 const y = yStart + k * step;
                 const Ll = (12 + 8 * rnd(k, 5)) * unit;
@@ -254,7 +250,6 @@
                 curls += `M${pt(xc, y - Ll * 0.7)}L${pt(xc, y + Ll * 0.7)}`;
             }
 
-            // the flourish along the bottom, ending in a curl
             const xs = l + 80 * unit;
             const yb = b - 14 * unit;
             const Lf = clamp(W * 0.13, 140, 300);
@@ -275,19 +270,16 @@
         path("thorns", thorns);
         path("leaves", leaves);
 
-        // ---- skulls in the bottom corners ----
-        const s = (0.95 * unit).toFixed(2);
-        skulls[0].setAttribute("transform", `translate(${P(l + 46 * unit, b - 46 * unit)}) rotate(-10) scale(${s})`);
-        skulls[1].setAttribute("transform", `translate(${P(r - 46 * unit, b - 46 * unit)}) rotate(10) scale(${s})`);
+        const skullScale = (0.95 * unit).toFixed(2);
+        skulls[0].setAttribute("transform", `translate(${P(l + 46 * unit, b - 46 * unit)}) rotate(-10) scale(${skullScale})`);
+        skulls[1].setAttribute("transform", `translate(${P(r - 46 * unit, b - 46 * unit)}) rotate(10) scale(${skullScale})`);
     }
 
-    // ---- the dark edge: a noise mask at a low resolution, drawn once for the size of the screen ----
     const hash = (x, y, s) => {
         let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(s, 1274126177);
         h = Math.imul(h ^ (h >>> 13), 1274126177);
         return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
     };
-    const fade = t => t * t * (3 - 2 * t);
     const value = (x, y, s) => {
         const xi = Math.floor(x);
         const yi = Math.floor(y);
@@ -309,7 +301,7 @@
 
     // `shape(d, n)` -> alpha, from the distance to the edge of the screen (in pixels) and the noise there
     function mask(W, H, seed, freq, shape) {
-        const w = 448;
+        const w = MASK_WIDTH;
         const h = Math.max(1, Math.round(w * H / W));
         const canvas = document.createElement("canvas");
         canvas.width = w;
@@ -349,7 +341,6 @@
         inkSize = `${W}x${H}`;
         const m = Math.min(W, H);
 
-        // a ragged black edge, with a soft dark fall-off inside it
         const ink = (d, n) => {
             const reach = m * 0.045 * (0.1 + 2.2 * (n - 0.2));
             const ragged = clamp((reach - d) / (m * 0.01), 0, 1);
@@ -364,7 +355,7 @@
     let edgeTimer;
     const later = () => {
         clearTimeout(edgeTimer);
-        edgeTimer = setTimeout(edge, 120);
+        edgeTimer = setTimeout(edge, EDGE_DELAY);
     };
 
     addEventListener("resize", () => {

@@ -4,22 +4,21 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-// The gothic keyboard, mouse and Spotify card used to be overlays of their own. They are now the "gothic" theme of the
-// keyboard, the mouse and the Spotify card: this turns what was saved for the old ones into the new ones. No React and no
-// store, so it can be tested alone.
+// The gothic keyboard, mouse and Spotify card used to be overlays of their own; they are now the "gothic" theme of the
+// keyboard, mouse and Spotify overlays. No React and no store, so it can be tested alone.
 
 import type { GlobalPreset, OverlayPreset, OverlayPresets, OverlayValue, OverlayValues } from "./types";
 
 type Values = Record<string, OverlayValue>;
 
-/** Old overlay -> the overlay it is a theme of, and what its settings are called there (the colors of the gothic theme have their own). */
+// old overlay -> the overlay it is a theme of, and what its settings are called there
 const LEGACY: Record<string, { to: string; rename: Record<string, string>; }> = {
     "obnoxious-keyboard": { to: "keyboard", rename: { "letter-accent": "g-letter-accent", "modifier-accent": "g-modifier-accent" } },
     "obnoxious-mouse": { to: "mouse", rename: { "click-accent": "g-click-accent", "motion-accent": "g-motion-accent" } },
     "obnoxious-spotify": { to: "spotify", rename: { accent: "g-accent", accent2: "g-accent2" } }
 };
 
-export interface MigratableState {
+interface MigratableState {
     enabled: string[];
     values: OverlayValues;
     presets: OverlayPresets;
@@ -42,7 +41,7 @@ function uniqueName(taken: OverlayPreset[], name: string) {
     }
 }
 
-/** What was saved with the old overlays, moved to the ones they are a theme of. Null when there was nothing to move. */
+/** Null when there was nothing to move. */
 export function migrateLegacy(state: MigratableState): MigratableState | null {
     const names = Object.keys(LEGACY);
     const used = (list: string[]) => list.some(n => names.includes(n));
@@ -58,7 +57,6 @@ export function migrateLegacy(state: MigratableState): MigratableState | null {
     for (const legacy of names) {
         const { to } = LEGACY[legacy];
 
-        // one that was on becomes the gothic theme of the overlay it belongs to, with its settings
         if (enabled.includes(legacy)) {
             values[to] = { ...values[to], ...convert(legacy, values[legacy]) };
             if (!enabled.includes(to)) enabled.push(to);

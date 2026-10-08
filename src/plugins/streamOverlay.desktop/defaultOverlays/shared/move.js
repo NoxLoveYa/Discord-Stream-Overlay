@@ -9,6 +9,8 @@
     const MOVE_KEYS = ["ALT", "CAPS"]; // "interactive" in overlay.json
     const MIN_SCALE = 0.6; // min / max of the "scale" setting in overlay.json
     const MAX_SCALE = 2;
+    const HINT_GAP = 12; // px between the board and its hint, as in move.css
+    const HINT_MARGIN = 8; // px the hint keeps from the edge of the screen
 
     const root = document.documentElement;
     const board = document.querySelector(".board");
@@ -36,7 +38,7 @@
 
     // the hint sits above the board when it does not fit below (its size is constant, its gap scales with the board)
     function setFlip(bottom, scale) {
-        hint.classList.toggle("flip", bottom + hintHeight + 12 * scale + 8 > innerHeight);
+        hint.classList.toggle("flip", bottom + hintHeight + HINT_GAP * scale + HINT_MARGIN > innerHeight);
     }
 
     function placeHint() {
@@ -53,8 +55,7 @@
         if (!on) endDrag();
     }
 
-    // Dragging follows the pointer live: one update per frame, on variables of the board itself (so only it is restyled),
-    // from sizes measured when the drag started. Nothing is saved before the release.
+    // one update per frame, on variables of the board itself (so only it is restyled), from sizes measured when the drag started
     function frame(d = drag) {
         if (!d) return;
         d.frame = 0;

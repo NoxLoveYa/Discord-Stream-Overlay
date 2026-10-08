@@ -10,26 +10,24 @@ export const COLOR = /^#[0-9a-f]{6}$/i;
 
 export const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 export const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+export const text = (value: unknown, max: number) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
 
-/** Values come from the renderer or from an overlay page: anything no longer valid for the setting becomes its default. */
+// values come from the renderer or from an overlay page: anything no longer valid for the setting becomes its default
 export function resolveValue(setting: OverlaySetting, stored: unknown): OverlayValue {
     switch (setting.type) {
         case "color":
             return typeof stored === "string" && COLOR.test(stored) ? stored.toLowerCase() : setting.default;
         case "number":
-            return finite(stored) ? clamp(stored, setting.min!, setting.max!) : setting.default;
+            return finite(stored) ? clamp(stored, setting.min ?? -Infinity, setting.max ?? Infinity) : setting.default;
         case "boolean":
             return typeof stored === "boolean" ? stored : setting.default;
         case "select":
-            return setting.options!.some(o => o.value === stored) ? stored as string : setting.default;
+            return setting.options?.some(o => o.value === stored) ? stored as string : setting.default;
     }
 }
 
-/**
- * Script that applies the settings inside an overlay's frame:
- * a CSS variable and a data attribute per setting on <html> (colors also get `--id-rgb`, "r g b"),
- * and a `streamoverlay:settings` event carrying every value.
- */
+// Applies the settings inside an overlay's frame: a CSS variable and a data attribute per setting on <html> (colors also
+// get `--id-rgb`, "r g b"), and a `streamoverlay:settings` event with every value.
 export function settingsScript(settings: OverlaySetting[], stored: Record<string, unknown> = {}) {
     const vars: Record<string, string> = {};
     const attrs: Record<string, string> = {};

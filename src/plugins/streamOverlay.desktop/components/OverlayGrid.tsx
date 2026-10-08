@@ -31,6 +31,8 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
+const MAX_CARDS_PER_ROW = 4;
+
 interface OverlayGridProps {
     info: { root: string; overlays: OverlayInfo[]; };
     refresh(): void;
@@ -63,8 +65,7 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
                                 Turn an overlay on or off with its switch, or open it to change its settings.
                             </Paragraph>
                             {overlays.length > 0 ? <div className="vc-so-sections">{sections.map(({ category, items }) => (
-                                // the width of a category, in cards: the categories share the rows when the window is wide
-                                <div key={category} className="vc-so-category" style={{ "--vc-so-count": Math.min(items.length, 4) } as CSSProperties}>
+                                <div key={category} className="vc-so-category" style={{ "--vc-so-count": Math.min(items.length, MAX_CARDS_PER_ROW) } as CSSProperties}>
                                     {/* no headings when everything is in the same place (or has no category at all) */}
                                     {sections.length > 1 && <Heading tag="h3" className="vc-so-group">{category || "Other"}</Heading>}
                                     <div className="vc-so-grid">
