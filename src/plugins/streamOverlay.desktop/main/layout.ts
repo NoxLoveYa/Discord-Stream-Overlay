@@ -10,7 +10,7 @@ import type { StreamSink } from "./nvenc";
 
 let shooting = false;
 
-/** A JPEG of the display as it is now, at its own resolution, or null. */
+/** A JPEG of the display as it is now, at its own resolution. Null while another is being taken; throws when there is none. */
 export async function screenshot(display: Display) {
     if (shooting) return null;
     shooting = true;
@@ -18,9 +18,11 @@ export async function screenshot(display: Display) {
         const w = Math.max(1, Math.round(display.size.width * display.scaleFactor));
         const h = Math.max(1, Math.round(display.size.height * display.scaleFactor));
         const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: w, height: h } });
-        return sources.find(s => s.display_id === String(display.id))?.thumbnail.toJPEG(80) ?? null;
-    } catch {
-        return null;
+
+        const source = sources.find(s => s.display_id === String(display.id)) ?? (sources.length === 1 ? sources[0] : undefined);
+        if (!source) throw new Error(`no screen source for display ${display.id} (sources: ${sources.map(s => `${s.id} / ${s.display_id}`).join(", ") || "none"})`);
+        if (source.thumbnail.isEmpty()) throw new Error(`the screenshot of ${source.id} is empty`);
+        return source.thumbnail.toJPEG(80);
     } finally {
         shooting = false;
     }

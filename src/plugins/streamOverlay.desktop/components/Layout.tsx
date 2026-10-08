@@ -9,10 +9,13 @@ import "./layout.css";
 import { Paragraph } from "@components/Paragraph";
 import { Native, plain, settings, updateValues } from "@plugins/streamOverlay.desktop/settings";
 import type { OverlayInfo } from "@plugins/streamOverlay.desktop/types";
+import { Logger } from "@utils/Logger";
 import { MediaEngineStore, useEffect, useRef, useState } from "@webpack/common";
 import type { SVGProps } from "react";
 
 import { IconButton } from "./IconButton";
+
+const logger = new Logger("StreamOverlay");
 
 const PICTURE_WIDTH = 1280;
 const EXPANDED_WIDTH = 1920;
@@ -99,7 +102,10 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         if (backgroundTaken.current) return;
         backgroundTaken.current = true;
 
-        const jpeg = await Native.layoutBackground();
+        const jpeg = await Native.layoutBackground().catch(e => {
+            logger.error("no screenshot for the layout", e);
+            return null;
+        });
         if (!jpeg || !background.current) {
             backgroundTaken.current = false;
             return;

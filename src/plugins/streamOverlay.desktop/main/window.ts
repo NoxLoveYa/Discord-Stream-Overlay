@@ -119,9 +119,10 @@ export class OverlayWindow {
         const { display, match } = await this.displayFor(sourceId, sourceName);
         const win = this.window();
 
-        // The page keeps the layout of the full screen: a smaller window with a matching zoom shows it in fewer pixels
+        // the Layout window is smaller than the screen, so that fewer pixels are painted; the page still lays out for the screen
         const scale = this.layout && renderWidth ? Math.min(1, renderWidth / (display.bounds.width * screen.getPrimaryDisplay().scaleFactor)) : 1;
         win.setBounds({ ...display.bounds, width: Math.max(1, Math.round(display.bounds.width * scale)), height: Math.max(1, Math.round(display.bounds.height * scale)) });
+        const view = scale < 1 ? { width: display.bounds.width, height: display.bounds.height, scale } : undefined;
         if (offscreen) win.webContents.frameRate = this.layout ? LAYOUT_FPS : OFFSCREEN_FPS;
 
         if (this.exiting) {
@@ -135,14 +136,13 @@ export class OverlayWindow {
             interactive: manifests[i].interactive.length > 0,
             mouse: manifests[i].mouse
         }));
-        const key = JSON.stringify(overlays);
+        const key = JSON.stringify([overlays, view]);
         const fresh = key !== this.loadedKey;
         if (fresh) {
-            writeFileSync(hostPath(this.layout), hostHtml(overlays));
+            writeFileSync(hostPath(this.layout), hostHtml(overlays, view));
             await win.loadURL(pathToFileURL(hostPath(this.layout)).href);
             this.loadedKey = key;
         }
-        if (this.layout) win.webContents.zoomFactor = scale;
 
         // before it becomes visible, so the first frame already has the right values
         await this.applySettings();
@@ -220,8 +220,7 @@ export class OverlayWindow {
             skipTaskbar: true,
             fullscreenable: false,
             alwaysOnTop: true,
-            // its own session: the zoom of the Layout window must not reach the overlay window
-            webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, offscreen: this.offscreen, partition: this.layout ? "streamoverlay-layout" : undefined }
+            webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, offscreen: this.offscreen }
         });
         win.setAlwaysOnTop(true, "screen-saver");
         win.setIgnoreMouseEvents(true);

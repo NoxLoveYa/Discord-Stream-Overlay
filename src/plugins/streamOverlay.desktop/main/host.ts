@@ -13,11 +13,18 @@ export interface HostOverlay {
     mouse: boolean;
 }
 
+/** The screen the overlays are laid out for, shown in a window that is `scale` times its size (the Layout tab). */
+export interface HostView {
+    width: number;
+    height: number;
+    scale: number;
+}
+
 /**
  * The page that holds every overlay as an iframe and bridges them to the main process
  * (the message protocol is described in the README). An overlay only ever receives what it asked for.
  */
-export function hostHtml(overlays: HostOverlay[]) {
+export function hostHtml(overlays: HostOverlay[], view?: HostView) {
     const frames = overlays
         .map(o => {
             const attrs = [
@@ -30,10 +37,16 @@ export function hostHtml(overlays: HostOverlay[]) {
         })
         .join("");
 
+    // the overlays measure the screen, not the window: a smaller window shows them through a scaled stage
+    const stage = view
+        ? `left:0;top:0;width:${view.width}px;height:${view.height}px;transform:scale(${view.scale});transform-origin:0 0`
+        : "inset:0";
+
     return `<!doctype html><meta charset="utf-8"><style>
 html,body{margin:0;background:transparent;overflow:hidden;color-scheme:normal}
-iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none}
-</style>${frames}<script>
+#stage{position:fixed;${stage}}
+iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;pointer-events:none}
+</style><div id="stage">${frames}</div><script>
 let down = [];
 let pointer = null;
 const saves = [];

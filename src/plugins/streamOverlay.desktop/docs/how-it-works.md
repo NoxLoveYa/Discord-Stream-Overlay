@@ -97,9 +97,9 @@ a transparent canvas positioned over the video:
 
 A second `OverlayWindow` (created with `layout = true`, fed to a `LayoutSink` instead of the encoder) renders the enabled
 overlays offscreen at 60 Hz (the stream's own window only runs at 30 fps). It keeps the layout of the full screen but is rendered in far fewer pixels: its window is
-smaller and its zoom factor matches, so the page still measures the real screen while about 1280 px (1920 when full
-screen) are painted instead of 2560 × 1440. It has its own session (`partition`) so that this zoom cannot reach the
-overlay window. The settings page (`components/Layout.tsx`) is in the renderer and cannot be pushed to, so it asks
+smaller and the host page (`main/host.ts`) puts the overlays in a stage that has the size of the screen and is scaled
+down with a CSS transform, so the overlays still measure the real screen (their saved positions mean the same thing)
+while about 1280 px (1920 when full screen) are painted instead of 2560 × 1440. The settings page (`components/Layout.tsx`) is in the renderer and cannot be pushed to, so it asks
 `Native.layoutFrame` for the newest frame once per animation frame; the BGRA bytes are uploaded to a WebGL texture and
 the channels swapped in a shader, so no per-pixel work runs in JavaScript. What the overlays saved is collected
 separately every 150 ms (`Native.layoutChanges` asks the overlay page, which is slower than a frame). Behind the canvas is a screenshot of the display
