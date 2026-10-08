@@ -52,10 +52,10 @@ export function takeChanges() {
 
 // The Layout tab: the overlays rendered offscreen and shown on the settings page, where the draggable ones can be moved.
 
-export function layoutShow(_: IpcMainInvokeEvent, sourceId: string | null, root: string, names: string[], values: OverlayValues) {
+export function layoutShow(_: IpcMainInvokeEvent, sourceId: string | null, root: string, names: string[], values: OverlayValues, width: number) {
     // or it would be in the screenshot behind the layout too
     overlay.suspend();
-    return layout.show(sourceId, null, root, names, values, true);
+    return layout.show(sourceId, null, root, names, values, true, width);
 }
 
 /** A JPEG of the screen being drawn on. */
@@ -64,9 +64,14 @@ export function layoutBackground(_: IpcMainInvokeEvent, width: number) {
     return display ? screenshot(display, width) : null;
 }
 
-/** The newest picture (null when unchanged) and what the overlays saved since the last call. */
-export async function layoutFrame(_: IpcMainInvokeEvent, width: number) {
-    return { frame: layoutSink.take(width), changes: await layout.takeChanges() };
+/** The newest picture, or null when it has not changed. */
+export function layoutFrame(_: IpcMainInvokeEvent, width: number) {
+    return layoutSink.take(width);
+}
+
+/** What the overlays saved since the last call. */
+export function layoutChanges() {
+    return layout.takeChanges();
 }
 
 export function layoutPointer(_: IpcMainInvokeEvent, kind: "move" | "down" | "up", x: number, y: number) {

@@ -17,6 +17,7 @@ import { IconButton } from "./IconButton";
 const PICTURE_WIDTH = 1280;
 const EXPANDED_WIDTH = 1920;
 const BACKGROUND_MS = 750;
+const CHANGES_MS = 150;
 
 const ExpandIcon = (props: SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -32,47 +33,55 @@ const CollapseIcon = (props: SVGProps<SVGSVGElement>) => (
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
-// reused while the size stays the same: this runs once per frame
-let pixels = new Uint32Array(0);
-let image: ImageData | null = null;
+// The picture arrives as premultiplied BGRA bytes: the GPU uploads them as they are, swaps the channels in the shader
+// and the page composites the premultiplied result, which keeps this cheap enough to run on every frame.
+const VERTEX = "attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}";
+const FRAGMENT = "precision mediump float;varying vec2 uv;uniform sampler2D t;void main(){gl_FragColor=texture2D(t,uv).bgra;}";
 
-/** The overlay arrives as premultiplied BGRA; a canvas wants RGBA that is not premultiplied. */
-function paint(canvas: HTMLCanvasElement, bitmap: Uint8Array, width: number, height: number) {
-    const bytes = bitmap.byteOffset & 3 ? bitmap.slice() : bitmap;
-    const src = new Uint32Array(bytes.buffer, bytes.byteOffset, width * height);
+function createPainter(canvas: HTMLCanvasElement) {
+    const gl = canvas.getContext("webgl", { premultipliedAlpha: true, antialias: false });
+    if (!gl) return null;
 
-    if (!image || image.width !== width || image.height !== height) {
-        pixels = new Uint32Array(width * height);
-        image = new ImageData(new Uint8ClampedArray(pixels.buffer), width, height);
+    const program = gl.createProgram()!;
+    for (const [type, source] of [[gl.VERTEX_SHADER, VERTEX], [gl.FRAGMENT_SHADER, FRAGMENT]] as const) {
+        const shader = gl.createShader(type)!;
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        gl.attachShader(program, shader);
     }
-    if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
-        canvas.style.setProperty("--ratio", String(width / height));
-    }
+    gl.linkProgram(program);
+    gl.useProgram(program);
 
-    for (let i = 0; i < pixels.length; i++) {
-        const v = src[i];
-        const a = v >>> 24;
-        if (a === 255) {
-            pixels[i] = (v & 0xff00ff00) | ((v & 0xff) << 16) | ((v >>> 16) & 0xff);
-        } else if (a) {
-            const r = Math.min(255, (((v >>> 16) & 0xff) * 255 / a) | 0);
-            const g = Math.min(255, (((v >>> 8) & 0xff) * 255 / a) | 0);
-            const b = Math.min(255, ((v & 0xff) * 255 / a) | 0);
-            pixels[i] = ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
-        } else {
-            pixels[i] = 0;
+    // one triangle that covers the canvas
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const position = gl.getAttribLocation(program, "p");
+    gl.enableVertexAttribArray(position);
+    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+
+    gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    return (bitmap: Uint8Array, width: number, height: number) => {
+        if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.setProperty("--ratio", String(width / height));
         }
-    }
-
-    canvas.getContext("2d")!.putImageData(image, 0, 0);
+        gl.viewport(0, 0, width, height);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+    };
 }
 
 /** The enabled overlays as drawn over the shared screen (or the main one), rendered offscreen; the mouse is handed to that window. */
 export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const { overlayRoot, enabledOverlays, overlayValues } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues"]);
     const canvas = useRef<HTMLCanvasElement>(null);
+    const painter = useRef<ReturnType<typeof createPainter>>(null);
     const background = useRef<HTMLImageElement>(null);
     const pending = useRef<{ x: number; y: number; } | null>(null);
     const raf = useRef(0);
@@ -88,8 +97,8 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const state = JSON.stringify([overlayRoot, enabled, plain(overlayValues)]);
     useEffect(() => {
         const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
-        Native.layoutShow(sourceId, overlayRoot, enabled, plain(overlayValues));
-    }, [state]);
+        Native.layoutShow(sourceId, overlayRoot, enabled, plain(overlayValues), expanded ? EXPANDED_WIDTH : PICTURE_WIDTH);
+    }, [state, expanded]);
 
     useEffect(() => {
         let alive = true;
@@ -99,19 +108,26 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
 
         const tick = async () => {
             try {
-                const { frame, changes } = await Native.layoutFrame(pictureWidth.current);
-                if (!alive) return;
+                const frame = await Native.layoutFrame(pictureWidth.current);
+                if (!alive || !frame || !canvas.current) return;
 
-                if (Object.keys(changes).length) {
-                    updateValues(values => {
-                        for (const [name, saved] of Object.entries(changes)) Object.assign(values[name] ??= {}, saved);
-                    });
-                }
-                if (frame && canvas.current) paint(canvas.current, frame.bitmap, frame.width, frame.height);
+                painter.current ??= createPainter(canvas.current);
+                painter.current?.(frame.bitmap, frame.width, frame.height);
             } finally {
                 if (alive) frameRequest = requestAnimationFrame(tick);
             }
         };
+
+        // not with every frame: it asks the overlay page, which is slower than the picture
+        const collect = async () => {
+            const changes = await Native.layoutChanges();
+            if (!alive || !Object.keys(changes).length) return;
+
+            updateValues(values => {
+                for (const [name, saved] of Object.entries(changes)) Object.assign(values[name] ??= {}, saved);
+            });
+        };
+        const changesTimer = setInterval(collect, CHANGES_MS);
 
         const refreshBackground = async () => {
             try {
@@ -134,6 +150,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
             alive = false;
             cancelAnimationFrame(frameRequest);
             clearTimeout(backgroundTimer);
+            clearInterval(changesTimer);
             if (backgroundUrl) URL.revokeObjectURL(backgroundUrl);
             cancelAnimationFrame(raf.current);
             if (document.fullscreenElement) document.exitFullscreen().catch(() => { });

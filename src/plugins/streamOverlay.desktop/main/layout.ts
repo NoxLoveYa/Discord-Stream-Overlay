@@ -52,9 +52,10 @@ export class LayoutSink implements StreamSink {
         this.taken = this.version;
         this.takenWidth = width;
 
+        // the window is already rendered at about this size; resizing is only for when it came out a lot bigger
         const full = this.image.getSize();
-        const scaled = this.image.resize({ width: Math.min(Math.max(1, Math.round(width)), full.width), quality: "good" });
-        const { width: w, height: h } = scaled.getSize();
-        return { bitmap: scaled.toBitmap(), width: w, height: h };
+        const picture = full.width > width * 1.25 ? this.image.resize({ width: Math.round(width), quality: "good" }) : this.image;
+        const { width: w, height: h } = picture.getSize();
+        return { bitmap: picture.toBitmap(), width: w, height: h };
     }
 }

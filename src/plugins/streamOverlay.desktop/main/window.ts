@@ -5,7 +5,7 @@
  */
 
 import type { Manifest, OverlayValue, OverlayValues } from "@plugins/streamOverlay.desktop/types";
-import { app, BrowserWindow, type Display } from "electron";
+import { app, BrowserWindow, type Display, screen } from "electron";
 import { writeFileSync } from "fs";
 import { join } from "path";
 import { pathToFileURL } from "url";
@@ -20,6 +20,7 @@ import type { StreamSink } from "./nvenc";
 import { resolveValue, settingsScript } from "./values";
 
 const OFFSCREEN_FPS = 30;
+const MIN_LAYOUT_FPS = 60;
 const MAX_FRAME_RATE = 240; // what an offscreen window can be asked for
 
 interface Entry {
@@ -40,6 +41,7 @@ export class OverlayWindow {
     private offscreen = false;
     private shown = false;
     private suspended = false;
+    private pressed = false;
     /** what is loaded, in iframe order */
     private entries: Entry[] = [];
     private loadedKey = "";
@@ -56,15 +58,21 @@ export class OverlayWindow {
     /** Mouse from the Layout tab, as fractions of the picture (an offscreen page has no real mouse). */
     pointer(kind: "move" | "down" | "up", fx: number, fy: number) {
         const win = this.live();
-        if (!win || !this.offscreen) return;
+        const screenSize = this.display?.display.bounds;
+        if (!win || !screenSize || !this.offscreen) return;
 
+        const clamp = (v: number) => Math.min(1, Math.max(0, v));
         const { width, height } = win.getContentBounds();
-        const x = Math.round(Math.min(1, Math.max(0, fx)) * width);
-        const y = Math.round(Math.min(1, Math.max(0, fy)) * height);
+        const x = Math.round(clamp(fx) * width);
+        const y = Math.round(clamp(fy) * height);
         const { webContents } = win;
 
-        // the page only lets the mouse through to an overlay once it has seen the cursor over it
-        webContents.executeJavaScript(`window.__streamOverlayPointer?.(${x}, ${y})`).catch(() => { });
+        // the page only lets the mouse through to an overlay once it has seen the cursor over it, in the units of the
+        // full screen (the window may be smaller); a drag in progress already has it
+        if (kind !== "move" || !this.pressed) {
+            webContents.executeJavaScript(`window.__streamOverlayPointer?.(${Math.round(clamp(fx) * screenSize.width)}, ${Math.round(clamp(fy) * screenSize.height)})`).catch(() => { });
+        }
+        if (kind !== "move") this.pressed = kind === "down";
         webContents.sendInputEvent(kind === "move"
             ? { type: "mouseMove", x, y }
             : { type: kind === "down" ? "mouseDown" : "mouseUp", x, y, button: "left", clickCount: 1 });
@@ -89,7 +97,8 @@ export class OverlayWindow {
         return this.layout ? this.entries.flatMap(e => e.manifest.draggable ? e.manifest.interactive : []) : [];
     }
 
-    async show(sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false) {
+    /** `renderWidth`: the Layout window is rendered about this many pixels wide instead of at the size of the screen. */
+    async show(sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false, renderWidth = 0) {
         this.hideToken++;
 
         const found = findOverlays(root, names);
@@ -110,8 +119,11 @@ export class OverlayWindow {
 
         const { display, match } = await this.displayFor(sourceId, sourceName);
         const win = this.window();
-        win.setBounds(display.bounds);
-        if (offscreen) win.webContents.setFrameRate(this.layout ? Math.min(MAX_FRAME_RATE, Math.max(1, display.displayFrequency || 60)) : OFFSCREEN_FPS);
+
+        // The page keeps the layout of the full screen: a smaller window with a matching zoom shows it in fewer pixels
+        const scale = this.layout && renderWidth ? Math.min(1, renderWidth / (display.bounds.width * screen.getPrimaryDisplay().scaleFactor)) : 1;
+        win.setBounds({ ...display.bounds, width: Math.max(1, Math.round(display.bounds.width * scale)), height: Math.max(1, Math.round(display.bounds.height * scale)) });
+        if (offscreen) win.webContents.setFrameRate(this.layout ? Math.min(MAX_FRAME_RATE, Math.max(MIN_LAYOUT_FPS, display.displayFrequency)) : OFFSCREEN_FPS);
 
         if (this.exiting) {
             this.exiting = false;
@@ -131,6 +143,7 @@ export class OverlayWindow {
             await win.loadURL(pathToFileURL(hostPath(this.layout)).href);
             this.loadedKey = key;
         }
+        if (offscreen) win.webContents.setZoomFactor(scale);
 
         // before it becomes visible, so the first frame already has the right values
         await this.applySettings();
@@ -208,7 +221,8 @@ export class OverlayWindow {
             skipTaskbar: true,
             fullscreenable: false,
             alwaysOnTop: true,
-            webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, offscreen: this.offscreen }
+            // its own session: the zoom of the Layout window must not reach the overlay window
+            webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, offscreen: this.offscreen, partition: this.layout ? "streamoverlay-layout" : undefined }
         });
         win.setAlwaysOnTop(true, "screen-saver");
         win.setIgnoreMouseEvents(true);
