@@ -58,6 +58,8 @@
                 { "label": "Bold", "value": "700" }
             ]
         },
+        { "id": "letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0.01 },
+        { "id": "g-letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "when": { "theme": "gothic" }, "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0 },
         { "id": "accent", "type": "color", "label": "Accent", "group": "Look", "when": { "theme": "default" }, "default": "#8b5cf6" },
         { "id": "g-accent", "type": "color", "label": "Accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#e4def0" },
         { "id": "accent2", "type": "color", "label": "Second accent", "group": "Look", "when": { "theme": "default" }, "default": "#22d3ee" },

@@ -69,7 +69,7 @@ Custom fonts are added on the same tab: **Add font file…** imports a `.woff2`,
 (ex. `Segoe UI`). A chip next to the picker removes a custom again; an overlay that used it falls back to a readable
 font until another is picked.
 
-**Font weight** (Regular to Bold, one value per theme), **Letter spacing** (keyboard and mouse labels) and **Text
+**Font weight** (Regular to Bold, one value per theme), **Letter spacing** (key labels and Spotify title) and **Text
 size** (a multiplier for every label, in the Layout tab) tune the text itself. They are saved per preset like any
 other setting.
 
