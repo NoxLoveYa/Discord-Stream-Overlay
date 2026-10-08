@@ -1,0 +1,96 @@
+/* Alt + Caps held: the board can be dragged, and the resize handle and the hint appear */
+.armed .board {
+    outline: 1px dashed rgb(var(--letter-accent-rgb) / 55%);
+    outline-offset: 5px;
+    cursor: move;
+}
+
+/* the handle and the hint keep their size whatever the scale of the board */
+.resize {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 1px solid rgb(255 255 255 / 14%);
+    border-radius: 8px;
+    background: rgb(20 21 26 / 96%);
+    color: var(--text);
+    box-shadow:
+        0 8px 16px rgb(var(--shadow-rgb) / 50%),
+        inset 0 1px 0 rgb(255 255 255 / 8%);
+    cursor: nesw-resize;
+    scale: calc(0.8 / var(--scale));
+    opacity: 0;
+    visibility: hidden;
+    transition:
+        opacity 140ms ease-out,
+        scale 140ms ease-out,
+        visibility 0s 140ms;
+}
+
+.armed .resize {
+    scale: calc(1 / var(--scale));
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+}
+
+.hint {
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 50%;
+    padding: 7px 12px;
+    border: 1px solid rgb(255 255 255 / 8%);
+    border-radius: 9px;
+    background: rgb(13 14 17 / 92%);
+    color: var(--text-muted);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    pointer-events: none;
+    translate: -50% 4px;
+    scale: calc(1 / var(--scale));
+    transform-origin: top center;
+    opacity: 0;
+    transition:
+        opacity 160ms ease-out,
+        translate 160ms ease-out;
+}
+
+.hint.flip {
+    top: auto;
+    bottom: calc(100% + 12px);
+    translate: -50% -4px;
+    transform-origin: bottom center;
+}
+
+.armed .hint,
+.hovered .hint {
+    translate: -50% 0;
+    opacity: 1;
+}
+
+.hint kbd {
+    padding: 1px 6px;
+    border: 1px solid rgb(255 255 255 / 12%);
+    border-radius: 5px;
+    background: var(--graphite-700);
+    color: var(--text);
+    font: inherit;
+    font-weight: 600;
+}
+
+.hint-armed {
+    display: none;
+}
+
+.armed .hint-armed {
+    display: inline;
+}
+
+.armed .hint-idle {
+    display: none;
+}

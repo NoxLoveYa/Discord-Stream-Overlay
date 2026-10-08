@@ -1,28 +1,23 @@
 :root {
-    /* layout: --key scales the whole board, --margin moves it (it sits in the bottom-left corner) */
     --key: 54px;
     --gap: 7px;
     --margin: 56px;
     --pitch: calc(var(--key) + var(--gap));
-
-    /* palette */
     --graphite-900: #0a0b0e;
     --graphite-700: #181a1f;
     --graphite-500: #292c34;
     --text: #eceef3;
     --text-muted: #8f94a3;
+    --press-in: 55ms;
+    --press-out: 190ms;
 
-    /* defaults; the overlay's settings (overlay.json) override them: --letter-accent-rgb is "r g b" for rgb(... / alpha) */
+    /* defaults: the settings in overlay.json override them (colors also come as "r g b" for rgb(... / alpha)) */
     --letter-accent-rgb: 139 92 246;
     --modifier-accent-rgb: 34 211 238;
-    --shadow-rgb: 0 0 0; /* the drop shadows of the board, the keys and the resize handle */
+    --shadow-rgb: 0 0 0;
     --scale: 1;
     --x: 0px;
     --y: 0px;
-
-    /* presses land fast, releases ease out */
-    --press-in: 55ms;
-    --press-out: 190ms;
 }
 
 html,
@@ -58,14 +53,7 @@ body {
     animation: rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-/* Alt + Caps is held: the board can be dragged */
-.armed .board {
-    outline: 1px dashed rgb(var(--letter-accent-rgb) / 55%);
-    outline-offset: 5px;
-    cursor: move;
-}
-
-/* the "position" setting arrives as data-position on <html>; the board scales from the corner it is anchored to */
+/* data-position comes from the "position" setting; the board scales from the corner it is anchored to */
 html[data-position="bottom-right"] .board {
     right: var(--margin);
     left: auto;
@@ -83,225 +71,17 @@ html[data-position="top-right"] .board {
     transform-origin: top right;
 }
 
-/* moved by hand (hold Alt + Caps): --x / --y is the top-left corner of the board in screen pixels */
+/* moved by hand: --x / --y is the top left corner of the board in screen pixels */
 html[data-position="custom"] .board {
     inset: 0 auto auto 0;
     translate: var(--x) var(--y);
     transform-origin: top left;
 }
 
-/* rows are left-aligned; the stagger of a real keyboard comes from the width of the first key of each row (Tab, Caps, Shift) */
+/* the stagger of a real keyboard comes from the width of the first key of each row (Tab, Caps, Shift) */
 .row {
     display: flex;
     gap: var(--gap);
-}
-
-/* the well the cap sits in; --accent is the light under the key, --edge the hairline on the cap */
-.key {
-    --accent: var(--letter-accent-rgb);
-    --edge: var(--modifier-accent-rgb);
-
-    position: relative;
-    width: calc(var(--pitch) * var(--span, 1) - var(--gap));
-    height: var(--key);
-    border-radius: 9px;
-    background: var(--graphite-900);
-    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 4%);
-}
-
-.mod {
-    --accent: var(--modifier-accent-rgb);
-    --edge: var(--letter-accent-rgb);
-}
-
-/* ambient bloom behind the key */
-.key::before {
-    content: "";
-    position: absolute;
-    inset: -12px -10px -8px;
-    z-index: -1;
-    border-radius: 18px;
-    background: radial-gradient(closest-side, rgb(var(--accent) / 38%), rgb(var(--accent) / 0%));
-    filter: blur(10px);
-    opacity: 0;
-    transition: opacity var(--press-out) ease-out;
-}
-
-/* the lit strip of the well that shows under the cap */
-.key::after {
-    content: "";
-    position: absolute;
-    inset: auto 5px 0;
-    height: 4px;
-    border-radius: 0 0 9px 9px;
-    background: rgb(var(--accent) / 82%);
-    box-shadow: 0 2px 14px 1px rgb(var(--accent) / 55%);
-    opacity: 0;
-    transition: opacity var(--press-out) ease-out;
-}
-
-.cap {
-    position: absolute;
-    inset: 0 0 4px;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border: 1px solid rgb(255 255 255 / 8%);
-    border-radius: 9px 9px 7px 7px;
-    background: linear-gradient(180deg, var(--graphite-500), var(--graphite-700));
-    box-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 8%),
-        inset 0 -12px 16px -12px rgb(0 0 0 / 55%),
-        0 3px 5px rgb(var(--shadow-rgb) / 45%);
-    transition:
-        transform var(--press-out) cubic-bezier(0.25, 0.8, 0.25, 1),
-        border-color var(--press-out) ease-out,
-        box-shadow var(--press-out) ease-out;
-    will-change: transform;
-}
-
-/* illumination of the cap, rising from the bottom edge */
-.cap::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background:
-        radial-gradient(90% 85% at 50% 115%, rgb(var(--accent) / 62%), rgb(var(--accent) / 0%) 70%),
-        linear-gradient(180deg, rgb(var(--accent) / 0%) 55%, rgb(var(--accent) / 14%));
-    opacity: 0;
-    transition: opacity var(--press-out) ease-out;
-}
-
-.cap span {
-    position: relative;
-    z-index: 1;
-    color: var(--text);
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    transition:
-        color var(--press-out) ease-out,
-        text-shadow var(--press-out) ease-out;
-}
-
-.mod .cap span {
-    color: var(--text-muted);
-    font-size: 10px;
-    letter-spacing: 0.16em;
-}
-
-.is-down::before,
-.is-down::after,
-.is-down .cap::after {
-    opacity: 1;
-    transition-duration: var(--press-in);
-}
-
-.is-down .cap {
-    border-color: rgb(var(--accent) / 50%);
-    box-shadow:
-        inset 0 1px 0 rgb(var(--edge) / 55%),
-        inset 0 -12px 16px -12px rgb(0 0 0 / 35%),
-        0 1px 2px rgb(var(--shadow-rgb) / 45%);
-    transform: translateY(2px) scale(0.985);
-    transition-duration: var(--press-in);
-}
-
-.is-down .cap span {
-    color: #fff;
-    text-shadow: 0 0 12px rgb(var(--accent) / 70%);
-    transition-duration: var(--press-in);
-}
-
-/* the resize handle only exists while Alt + Caps is held; it and the hint keep their size whatever the board's scale */
-.resize {
-    position: absolute;
-    top: -12px;
-    right: -12px;
-    display: grid;
-    width: 28px;
-    height: 28px;
-    place-items: center;
-    border: 1px solid rgb(255 255 255 / 14%);
-    border-radius: 8px;
-    background: rgb(20 21 26 / 96%);
-    color: var(--text);
-    box-shadow:
-        0 8px 16px rgb(var(--shadow-rgb) / 50%),
-        inset 0 1px 0 rgb(255 255 255 / 8%);
-    cursor: nesw-resize;
-    scale: calc(0.8 / var(--scale));
-    opacity: 0;
-    visibility: hidden;
-    transition:
-        opacity 140ms ease-out,
-        scale 140ms ease-out,
-        visibility 0s 140ms;
-}
-
-.armed .resize {
-    scale: calc(1 / var(--scale));
-    opacity: 1;
-    visibility: visible;
-    transition-delay: 0s;
-}
-
-/* explains the shortcut; shown under the board while hovering it (above it when there is no room below) */
-.hint {
-    position: absolute;
-    top: calc(100% + 12px);
-    left: 50%;
-    padding: 7px 12px;
-    border: 1px solid rgb(255 255 255 / 8%);
-    border-radius: 9px;
-    background: rgb(13 14 17 / 92%);
-    color: var(--text-muted);
-    font-size: 11px;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-    pointer-events: none;
-    translate: -50% 4px;
-    scale: calc(1 / var(--scale));
-    transform-origin: top center;
-    opacity: 0;
-    transition:
-        opacity 160ms ease-out,
-        translate 160ms ease-out;
-}
-
-.hint.flip {
-    top: auto;
-    bottom: calc(100% + 12px);
-    translate: -50% -4px;
-    transform-origin: bottom center;
-}
-
-.armed .hint,
-.hovered .hint {
-    translate: -50% 0;
-    opacity: 1;
-}
-
-.hint kbd {
-    padding: 1px 6px;
-    border: 1px solid rgb(255 255 255 / 12%);
-    border-radius: 5px;
-    background: var(--graphite-700);
-    color: var(--text);
-    font: inherit;
-    font-weight: 600;
-}
-
-.hint-armed {
-    display: none;
-}
-
-.armed .hint-armed {
-    display: inline;
-}
-
-.armed .hint-idle {
-    display: none;
 }
 
 @keyframes rise {

@@ -6,17 +6,15 @@
 
 import { spawn } from "child_process";
 
-// The only keys an overlay can ask for (via the "keys" array of its overlay.json): nothing outside this table is ever read.
+// Whitelist: no key outside this table is ever read. F24 is bound to nothing, so tests can press it safely.
 export const VIRTUAL_KEYS = new Map<string, number>([
     ...[..."ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"].map(c => [c, c.charCodeAt(0)] as const),
     ["SHIFT", 0x10], ["CTRL", 0x11], ["ALT", 0x12], ["CAPS", 0x14], ["SPACE", 0x20], ["TAB", 0x09], ["ENTER", 0x0d], ["ESC", 0x1b],
     ["LEFT", 0x25], ["UP", 0x26], ["RIGHT", 0x27], ["DOWN", 0x28],
-    // F24 is unused by anything, which makes it safe for tests to press
     ["F24", 0x87]
 ]);
 
-// Prints one line of 0/1 (in the order of the requested keys) whenever any of them changes.
-// It exits by itself when its stdin closes, i.e. when the plugin stops or Discord dies.
+// Prints a line of 0/1 (one per requested key) on every change, and exits once its stdin closes (plugin stopped, Discord dead).
 const POLL_SCRIPT = `
 Add-Type -TypeDefinition @'
 using System;
@@ -74,7 +72,7 @@ export function startKeyPoll(names: string[], onChange: (down: string[]) => void
         }
     });
     child.on("error", () => { });
-    // however the helper ends, report "nothing pressed" so nothing is left stuck in a held state
+    // whatever ends the helper, nothing may stay "held"
     child.on("exit", () => onChange([]));
 
     return {

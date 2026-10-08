@@ -6,19 +6,10 @@
 
 import { pathToFileURL } from "url";
 
-// Every overlay is an iframe, so each keeps its own CSS, scripts and relative assets.
-//
-// The main process talks to the overlays through this page:
-//   window.__streamOverlayKeys(["Q", "SHIFT"])   forwarded to every overlay as { type: "streamoverlay:keys", down }
-//                                                (each overlay also gets the latest state once it loads)
-//   window.__streamOverlayTakeSaves()            returns what overlays posted as { type: "streamoverlay:save", values }
-//                                                ({ i: iframe index, values }) since the last call
-//   window.__streamOverlayPointer(x, y)          the cursor position in window coordinates, forwarded to interactive overlays
-//                                                as { type: "streamoverlay:pointer", x, y }
-// The window ignores the mouse until the key combo of an interactive overlay (overlay.json "interactive") is held, and
-// Electron does not forward mouse moves from a window in that state, so the cursor position is relayed this way: it is
-// how overlays know they are being hovered.
-// Interactive overlays also get real mouse events (pointer-events) once the window takes the mouse.
+/**
+ * The page that holds every overlay as an iframe and bridges them to the main process
+ * (the message protocol is described in the README).
+ */
 export function hostHtml(files: string[], interactive: boolean[] = []) {
     const frames = files
         .map((f, i) => `<iframe src="${pathToFileURL(f).href.replace(/&/g, "&amp;")}"${interactive[i] ? " data-interactive" : ""}></iframe>`)

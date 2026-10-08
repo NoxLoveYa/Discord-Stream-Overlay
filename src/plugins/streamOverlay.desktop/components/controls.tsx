@@ -30,7 +30,6 @@ const field = {
     color: "var(--text-normal, #dbdee1)"
 } as const;
 
-// "#ff8800" or "ff8800"
 const asHex = (text: string) => HEX.test(text) ? text.toLowerCase() : HEX.test("#" + text) ? "#" + text.toLowerCase() : null;
 
 export function ColorControl({ value, onChange }: { value: string; onChange(hex: string): void; }) {
@@ -60,7 +59,6 @@ export function ColorControl({ value, onChange }: { value: string; onChange(hex:
                 value={text}
                 maxLength={7}
                 spellCheck={false}
-                // typing replaces the current color
                 onFocus={e => e.currentTarget.select()}
                 onChange={e => edit(e.currentTarget.value)}
                 style={{
