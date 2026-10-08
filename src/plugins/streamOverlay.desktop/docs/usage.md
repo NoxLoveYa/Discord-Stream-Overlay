@@ -80,6 +80,16 @@ run `node scripts/build/nvenc.mjs` by hand. `VENCORD_SKIP_NVENC=1` turns it off.
 
 So on a fresh machine: clone, `pnpm install`, `pnpm build`, `pnpm inject`.
 
+### An installer for other machines
+`pnpm package` builds `dist/package/Vencord-StreamOverlay-Setup-<version>.exe` (needs Inno Setup 6: `winget install
+JRSoftware.InnoSetup`). It contains this checkout's build, the prebuilt addon and the Vencord patcher, so the machine it
+is installed on needs no Node, pnpm or Visual Studio. The setup installs to `%LOCALAPPDATA%\VencordStreamOverlay`, and
+for each Discord you tick (Stable, PTB, Canary: the ones that are installed are listed) it patches Discord to load that
+copy and puts the addon in that Discord's data folder (a running Discord keeps its old addon until it restarts).
+Uninstalling unpatches those Discords again. `patch.cmd` in the install folder does the same as `pnpm inject` by hand
+(`patch.cmd -install -branch stable`, `-repair`, `-uninstall`). The installed Vencord keeps its settings in the install
+folder, separate from a checkout's. The addon only works on NVIDIA GPUs; the rest works anywhere.
+
 ### Turn it on
 1. **Quit Discord completely** and start it again.
 2. In the plugin settings turn on **"Only draw the overlays on the stream and its preview, not on your own screen"**. The
