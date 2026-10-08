@@ -29,6 +29,8 @@ The defaults in `defaultOverlays/` (`red-border`, `keyboard`, `mouse`) are copie
 
 ```json
 {
+    "title": "My overlay",
+    "description": "What it shows, in a sentence.",
     "keys": ["W", "SHIFT"],
     "mouse": true,
     "interactive": ["ALT", "CAPS"],
@@ -42,7 +44,9 @@ The defaults in `defaultOverlays/` (`red-border`, `keyboard`, `mouse`) are copie
 }
 ```
 
-- `settings`: a control per entry in the plugin settings while the overlay is active (`hidden` ones are only set by the
+- `title`, `description`: shown on the overlay's card in the plugin settings (the folder name is the title when there is
+  none).
+- `settings`: a control per entry on the overlay's page in the plugin settings (`hidden` ones are only set by the
   overlay itself). Each value reaches the page as:
   - a CSS variable on `<html>`: `--id` (numbers get their `unit`, booleans are `1` / `0`); colors also get `--id-rgb`
     (`"139 92 246"`), which allows `rgb(var(--accent-rgb) / 50%)`
@@ -76,6 +80,14 @@ Sent by the page:
   over the whole screen, so the window only passes the mouse to an overlay while it says it has something to grab
   (`move.js` does this while the cursor is over the board or a drag is going on). Send `on: false` when it lets go.
 
+### The settings page
+
+The plugin settings show a card per overlay: its switch turns it on or off, and the card opens the overlay's own page
+(its settings, and its presets). A preset of an overlay keeps all its settings, including where it was dragged to and
+its size. The presets on the first page are global: they keep which overlays are on and the settings of all of them
+(an overlay added after a global preset was saved is left as it is when that preset is applied). The preset that matches
+what is set right now is highlighted. Presets are stored in the plugin settings (`overlayPresets`, `globalPresets`).
+
 ### Animations
 
 Finite CSS animations replay when the overlay appears and play in reverse when the share stops (use
@@ -86,7 +98,8 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | | |
 |---|---|
 | `index.tsx` | the plugin definition |
-| `settings.ts`, `components/` | settings and the settings window (native color/slider controls on purpose: Discord's are filled in lazily) |
+| `settings.ts`, `presets.ts` | the stored settings and helpers to edit them; the preset logic (no React, no store) |
+| `components/` | the settings page: `OverlayPicker` switches between `OverlayGrid` (cards, global presets, folder tools) and `OverlayDetail` (one overlay: its presets and settings); Discord's `TextInput`, `Slider` and select; the color picker is built here (like Discord's role color picker) because Discord's own `ColorPicker` is only filled in once Discord has loaded it |
 | `sync.ts` | keeps the overlay window in line with the stream and the settings; collects what overlays save |
 | `menu.tsx` | "Overlay Settings" in the stream menu |
 | `types.ts` | types shared by both sides, no runtime code |

@@ -4,14 +4,15 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { Button } from "@components/Button";
+import { Paragraph } from "@components/Paragraph";
 import { Switch } from "@components/Switch";
 import { settings, updateValues } from "@plugins/streamOverlay.desktop/settings";
 import type { OverlaySetting, OverlayValue } from "@plugins/streamOverlay.desktop/types";
-import { Forms, SearchableSelect } from "@webpack/common";
+import { SearchableSelect } from "@webpack/common";
 import type { ReactNode } from "react";
 
-import { ColorControl, NumberControl } from "./controls";
+import { ColorControl } from "./ColorControl";
+import { NumberControl } from "./NumberControl";
 
 function OverlayOption({ overlay, setting }: { overlay: string; setting: OverlaySetting; }) {
     const { overlayValues } = settings.use(["overlayValues"]);
@@ -23,11 +24,12 @@ function OverlayOption({ overlay, setting }: { overlay: string; setting: Overlay
     let control: ReactNode;
     switch (setting.type) {
         case "color":
-            control = <ColorControl value={String(value)} onChange={set} />;
+            control = <ColorControl label={setting.label} value={String(value)} defaultValue={String(setting.default)} onChange={set} />;
             break;
         case "number":
             control = (
                 <NumberControl
+                    label={setting.label}
                     value={Number(value)}
                     min={setting.min ?? 0}
                     max={setting.max ?? 100}
@@ -38,7 +40,11 @@ function OverlayOption({ overlay, setting }: { overlay: string; setting: Overlay
             );
             break;
         case "boolean":
-            control = <Switch checked={value === true} onChange={set} />;
+            control = (
+                <div role="group" aria-label={setting.label}>
+                    <Switch checked={value === true} onChange={set} />
+                </div>
+            );
             break;
         case "select": {
             const options = (setting.options ?? []).map(o => ({ label: o.label, value: o.value }));
@@ -58,21 +64,17 @@ function OverlayOption({ overlay, setting }: { overlay: string; setting: Overlay
     }
 
     return (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", padding: "6px 0" }}>
-            <Forms.FormText>{setting.label}</Forms.FormText>
+        <div className="vc-so-row">
+            <Paragraph>{setting.label}</Paragraph>
             {control}
         </div>
     );
 }
 
-export function OverlayOptions({ overlay, options }: { overlay: string; options: OverlaySetting[]; }) {
+export function OverlayOptionList({ overlay, options }: { overlay: string; options: OverlaySetting[]; }) {
     return (
-        <section style={{ marginTop: "20px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <Forms.FormTitle tag="h3" style={{ margin: 0 }}>{overlay} settings</Forms.FormTitle>
-                <Button variant="secondary" size="small" onClick={() => updateValues(values => void delete values[overlay])}>Reset</Button>
-            </div>
+        <div className="vc-so-rows">
             {options.map(setting => <OverlayOption key={setting.id} overlay={overlay} setting={setting} />)}
-        </section>
+        </div>
     );
 }

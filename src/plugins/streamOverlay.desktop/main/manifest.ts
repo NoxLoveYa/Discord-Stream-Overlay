@@ -56,6 +56,8 @@ function parseSetting(raw: any): OverlaySetting | null {
     }
 }
 
+const text = (value: unknown, max: number) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
+
 const keyNames = (list: unknown) =>
     [...new Set<string>((Array.isArray(list) ? list : []).map(k => String(k).toUpperCase()))].filter(k => VIRTUAL_KEYS.has(k));
 
@@ -77,7 +79,14 @@ export function readManifest(indexFile: string): Manifest {
         settings.push(setting);
     }
 
-    return { keys, mouse: raw?.mouse === true, interactive, settings: settings.slice(0, MAX_SETTINGS) };
+    return {
+        title: text(raw?.title, 40),
+        description: text(raw?.description, 160),
+        keys,
+        mouse: raw?.mouse === true,
+        interactive,
+        settings: settings.slice(0, MAX_SETTINGS)
+    };
 }
 
 export function unionKeys(manifests: Manifest[]) {

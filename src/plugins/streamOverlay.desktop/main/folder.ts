@@ -28,7 +28,10 @@ export function listOverlays(root: string): { root: string; overlays: OverlayInf
     try {
         const overlays = readdirSync(dir, { withFileTypes: true })
             .filter(d => d.isDirectory() && existsSync(join(dir, d.name, "index.html")))
-            .map(d => ({ name: d.name, settings: readManifest(join(dir, d.name, "index.html")).settings }))
+            .map(d => {
+                const { title, description, settings } = readManifest(join(dir, d.name, "index.html"));
+                return { name: d.name, title: title || d.name, description, settings };
+            })
             .sort((a, b) => a.name.localeCompare(b.name));
         return { root: dir, overlays };
     } catch {

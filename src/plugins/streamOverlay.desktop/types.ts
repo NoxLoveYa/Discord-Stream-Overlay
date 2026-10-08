@@ -26,6 +26,9 @@ export interface OverlaySetting {
 }
 
 export interface Manifest {
+    /** shown on the overlay's card in the settings, instead of the folder name */
+    title: string;
+    description: string;
     keys: string[];
     /** the overlay receives how far the mouse moved and the wheel turned (not where the cursor is) */
     mouse: boolean;
@@ -35,6 +38,25 @@ export interface Manifest {
 }
 
 export interface OverlayInfo {
+    /** the folder name */
     name: string;
+    title: string;
+    description: string;
     settings: OverlaySetting[];
+}
+
+/** One overlay's settings under a name; only the values that differ from the defaults are kept */
+export interface OverlayPreset {
+    name: string;
+    values: Record<string, OverlayValue>;
+}
+
+/** Presets of each overlay, by overlay name */
+export type OverlayPresets = Record<string, OverlayPreset[]>;
+
+/** Which overlays are on, and the settings of every overlay, under a name */
+export interface GlobalPreset {
+    name: string;
+    enabled: string[];
+    values: OverlayValues;
 }

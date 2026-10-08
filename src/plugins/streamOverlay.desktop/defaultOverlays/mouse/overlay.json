@@ -1,4 +1,6 @@
 {
+    "title": "Mouse",
+    "description": "The mouse buttons, wheel and movement. Hold Alt + Caps to move or resize it.",
     "keys": ["LMB", "RMB", "MMB"],
     "mouse": true,
     "interactive": ["ALT", "CAPS"],
