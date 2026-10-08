@@ -123,9 +123,7 @@ travel to the renderer (`main/nvenc.ts`); a preload script loads the addon there
 - The hook only knows which texture a frame is by watching Discord set the encoder up, so it is installed when the plugin
   starts: a stream that was already running has to be restarted. If the hook cannot be reached the overlays stay on screen.
 - Discord has to be restarted (and the page reloaded once) after the preload script is registered for the first time.
-- The keyboard and mouse overlays are moved on the in-app preview of the stream: hold Alt + Caps and drag them there
-  (the preview then takes the mouse, which is fed to the offscreen page with `sendInputEvent`). Viewers see the move and
-  the hint while you do it.
+- The overlays cannot be dragged while it is on: switch it off to move the keyboard or mouse overlay.
 - The preview overlay goes on any video with the shape of the shared screen that is not a file loaded over http(s) (so
   not the media in chats) and assumes the picture is letterboxed; someone else's stream of the same shape gets it too.
 - A Discord update can change the voice module and break the hook; failures are written to

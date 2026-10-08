@@ -93,20 +93,6 @@ a transparent canvas positioned over the video:
 - a video matches when it is not an http(s) file (those are the media in chat, embeds and the lightbox), is not inside
   the chat message list, has the aspect ratio of the overlay and is visible and large enough.
 
-### Moving an overlay from the preview
-
-The overlay page moves itself (`defaultOverlays/shared/move.js`): while its `interactive` keys (Alt + Caps) are held it
-is "armed", hover is tracked from a relayed cursor position, and a real `pointerdown` / `pointermove` / `pointerup` on
-the board drags it, saving the result. An offscreen window has no real mouse, so the preview supplies one:
-
-1. `main/input.ts` already knows when a move combo is held (it polls the keys). In offscreen mode it tells the sink
-   (`interactive(on)`), and the preload script turns `pointer-events` on for the preview canvases.
-2. The canvases report `down` / `move` / `up` as fractions of the picture (`StreamOverlay:nvenc:pointer`).
-3. `OverlayWindow.pointer` scales them to the page's size, tells the page where the cursor is (so it lets the mouse
-   through to the overlay under it) and injects the matching event with `webContents.sendInputEvent`.
-4. The page drags and saves as usual; the new position comes back through `takeChanges`, and every repaint reaches both
-   the stream and the preview.
-
 ### Lifecycle
 
 - `startSync` (plugin start): if "stream only" is on, `Native.prepareStream` registers the preload script on Discord's
