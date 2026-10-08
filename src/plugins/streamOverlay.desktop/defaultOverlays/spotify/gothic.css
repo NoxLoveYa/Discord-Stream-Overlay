@@ -6,6 +6,7 @@ html[data-theme="gothic"] {
     --card-accent2-rgb: var(--g-accent2-rgb);
     --move-rgb: var(--g-accent-rgb);
     --gem-rgb: var(--g-accent2-rgb);
+    --card-font-weight: var(--g-font-weight);
 }
 
 :where(html[data-theme="gothic"]) {
@@ -28,28 +29,22 @@ html[data-theme="gothic"] {
         border-radius: 4px;
     }
 
-    /* the title in blackletter, the rest in a serif */
+    /* the title in the overlay's font (blackletter while it follows the gothic theme), the rest smaller */
     .title {
-        font-family: ObnoxiousGothic, "Old English Text MT", Georgia, serif;
-        font-size: 23px;
-        font-weight: 700;
+        font-size: calc(23px * var(--text-scale, 1));
+        font-weight: var(--card-font-weight, 700);
         letter-spacing: 0;
         line-height: 1.15;
         text-shadow: 0 2px 0 rgb(0 0 0 / 85%), 0 0 12px rgb(var(--silver-rgb) / 22%);
     }
 
-    .artist,
-    .times {
-        font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
-    }
-
     .artist {
-        font-size: 13px;
+        font-size: calc(13px * var(--text-scale, 1));
         font-style: italic;
     }
 
     .times {
-        font-size: 11px;
+        font-size: calc(11px * var(--text-scale, 1));
         letter-spacing: 0.08em;
     }
 

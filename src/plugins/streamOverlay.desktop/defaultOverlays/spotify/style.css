@@ -5,6 +5,9 @@
     --card-accent-rgb: var(--accent-rgb);
     --card-accent2-rgb: var(--accent2-rgb);
 
+    /* typography: the weight follows the active theme (font-weight / g-font-weight), the size is multiplied */
+    --card-font-weight: var(--font-weight);
+
     /* defaults: the settings in overlay.json override them */
     --accent-rgb: 139 92 246;
     --accent2-rgb: 34 211 238;
@@ -71,15 +74,15 @@ html[data-cover="false"] .cover {
 
 .title {
     color: var(--text);
-    font-size: 15px;
-    font-weight: 650;
+    font-size: calc(15px * var(--text-scale, 1));
+    font-weight: var(--card-font-weight, 600);
     letter-spacing: 0.01em;
 }
 
 .artist {
     margin-top: 2px;
     color: var(--text-muted);
-    font-size: 12.5px;
+    font-size: calc(12.5px * var(--text-scale, 1));
 }
 
 .progress {
@@ -127,7 +130,7 @@ html[data-progress="false"] .progress {
     justify-content: space-between;
     margin-top: 5px;
     color: var(--text-muted);
-    font-size: 10.5px;
+    font-size: calc(10.5px * var(--text-scale, 1));
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.04em;
 }

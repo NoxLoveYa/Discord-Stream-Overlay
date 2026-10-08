@@ -13,7 +13,7 @@ export type OverlayValues = Record<string, Record<string, OverlayValue>>;
 
 export interface OverlaySetting {
     id: string;
-    type: "color" | "number" | "boolean" | "select";
+    type: "color" | "number" | "boolean" | "select" | "font";
     label: string;
     default: OverlayValue;
     /** not shown in the settings window, the overlay sets it itself (a dragged position) */
@@ -69,6 +69,16 @@ export interface MediaState {
     position: number;
     playing: boolean;
     at: number;
+}
+
+/** A font the user added: a file imported into the fonts folder, or a system font by name (`file` is null). */
+export interface FontEntry {
+    /** shown in the font picker */
+    name: string;
+    /** the CSS family, like "ObnoxiousGothic" or "Consolas" */
+    family: string;
+    /** the file in the fonts folder, or null for a system font */
+    file: string | null;
 }
 
 /** One overlay's settings under a name; only the values that differ from the defaults are kept */

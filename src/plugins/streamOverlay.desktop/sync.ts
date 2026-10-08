@@ -11,7 +11,7 @@ import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore, UserStore 
 
 import { startAppPresets, stopAppPresets } from "./appPresets";
 import { judgeHook } from "./health";
-import { Native, settings, updateValues } from "./settings";
+import { Native, settings, updateValues, withGlobalFont } from "./settings";
 import { startSpotify, stopSpotify } from "./spotify";
 
 const logger = new Logger("StreamOverlay");
@@ -94,7 +94,7 @@ async function doSync() {
 
     // the store hands out proxies, which cannot cross IPC
     const overlays = [...settings.store.enabledOverlays];
-    const values = JSON.parse(JSON.stringify(settings.store.overlayValues));
+    const values = withGlobalFont(JSON.parse(JSON.stringify(settings.store.overlayValues)), overlays);
 
     const shouldShow = overlays.length > 0 && (alwaysShow || (active != null && sourceId?.startsWith("screen") === true));
     const state = JSON.stringify([shouldShow, sourceId, sourceName, overlayRoot, overlays, streamOnly]);

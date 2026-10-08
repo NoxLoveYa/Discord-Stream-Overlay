@@ -55,6 +55,24 @@ progress, animated bars, hide when nothing is playing, scale and position.
   overlay was switched on, it says "Nothing playing" until the next of those.
 - In the Layout tab it shows a sample track, so that there is something to drag while no music is playing.
 
+### Fonts
+
+The **Fonts** tab of the settings picks the font of the overlays. **Default font** applies to every overlay that has
+no font of its own; the keyboard, the mouse and the Spotify card have their own **Font** setting (Look tab) which
+overrides it. That choice is saved per preset like any other, so a game gets its own font by saving a global preset
+with it and binding the game to that preset on the Apps tab. A font that is not picked follows the gothic theme
+(blackletter) or the default stack: picking one overrides it everywhere, and clearing the choice hands back to the
+theme. The picker says what an unset font follows.
+
+Custom fonts are added on the same tab: **Add font file…** imports a `.woff2`, `.woff`, `.ttf` or `.otf` file (up to
+5 MB, copied into the plugin's fonts folder), **Add system font…** registers a font installed on the machine by name
+(ex. `Segoe UI`). A chip next to the picker removes a custom again; an overlay that used it falls back to a readable
+font until another is picked.
+
+**Font weight** (Regular to Bold, one value per theme), **Letter spacing** (keyboard and mouse labels) and **Text
+size** (a multiplier for every label, in the Layout tab) tune the text itself. They are saved per preset like any
+other setting.
+
 ### Presets
 
 - **Per overlay**: on an overlay's page, the **Presets** tab saves its settings, including where it was dragged to.

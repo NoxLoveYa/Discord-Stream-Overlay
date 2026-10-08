@@ -13,12 +13,13 @@ import { pathToFileURL } from "url";
 import { playEnter, playExit } from "./animations";
 import { pickDisplay } from "./display";
 import { findOverlays } from "./folder";
+import { fontFaceCssFor, fontStyleScript } from "./fonts";
 import { hostHtml } from "./host";
 import { OverlayInput } from "./input";
 import { readManifest, unionKeys } from "./manifest";
 import { SAMPLE_MEDIA } from "./media";
 import type { StreamSink } from "./nvenc";
-import { resolveValue, settingsScript } from "./values";
+import { effectiveFontValue, resolveValue, settingsScript } from "./values";
 
 const OFFSCREEN_FPS = 30;
 const LAYOUT_FPS = 60;
@@ -281,7 +282,13 @@ export class OverlayWindow {
             const url = pathToFileURL(file).href.toLowerCase();
             const frame = frames.find(f => f.url.toLowerCase() === url);
             if (!frame || !manifest.settings.length) return;
-            return frame.executeJavaScript(settingsScript(manifest.settings, values)).catch(() => { });
+
+            const code = settingsScript(manifest.settings, values);
+            // an imported font file lives in the fonts folder, not the overlay's: its @font-face is injected.
+            // The family is the effective one (stored, global or theme default), like --font above.
+            const font = manifest.settings.find(s => s.type === "font");
+            const css = font ? fontFaceCssFor(effectiveFontValue(font, manifest.settings, values)) : null;
+            return frame.executeJavaScript(code + fontStyleScript(css)).catch(() => { });
         }));
     }
 }

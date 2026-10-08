@@ -7,7 +7,7 @@
 import "./layout.css";
 
 import { Paragraph } from "@components/Paragraph";
-import { Native, plain, settings, updateValues } from "@plugins/streamOverlay.desktop/settings";
+import { Native, plain, settings, updateValues, withGlobalFont } from "@plugins/streamOverlay.desktop/settings";
 import type { OverlayInfo } from "@plugins/streamOverlay.desktop/types";
 import { Logger } from "@utils/Logger";
 import { MediaEngineStore, useEffect, useRef, useState } from "@webpack/common";
@@ -79,7 +79,7 @@ function createPainter(canvas: HTMLCanvasElement) {
 
 /** The enabled overlays as drawn over the shared screen (or the main one), rendered offscreen; the mouse is handed to that window. */
 export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
-    const { overlayRoot, enabledOverlays, overlayValues } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues"]);
+    const { overlayRoot, enabledOverlays, overlayValues } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues", "globalFont"]);
     const canvas = useRef<HTMLCanvasElement>(null);
     const painter = useRef<ReturnType<typeof createPainter>>(null);
     const background = useRef<HTMLImageElement>(null);
@@ -110,10 +110,10 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     };
 
     // also when a drag has just been saved
-    const state = JSON.stringify([overlayRoot, enabled, plain(overlayValues)]);
+    const state = JSON.stringify([overlayRoot, enabled, plain(overlayValues), settings.store.globalFont]);
     useEffect(() => {
         const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
-        Native.layoutShow(sourceId, overlayRoot, enabled, plain(overlayValues)).then(takeBackground);
+        Native.layoutShow(sourceId, overlayRoot, enabled, withGlobalFont(plain(overlayValues), enabled)).then(takeBackground);
     }, [state]);
 
     useEffect(() => {

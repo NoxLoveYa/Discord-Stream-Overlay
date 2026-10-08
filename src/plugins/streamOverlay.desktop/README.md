@@ -49,6 +49,7 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
         { "id": "width", "type": "number", "label": "Width", "group": "Layout", "min": 1, "max": 32, "step": 1, "unit": "px", "default": 4 },
         { "id": "glow", "type": "boolean", "label": "Glow", "group": "Layout", "default": true },
         { "id": "corner", "type": "select", "label": "Corner", "default": "left", "options": ["left", "right"] },
+        { "id": "font", "type": "font", "label": "Font", "group": "Look", "default": "default", "options": ["default", "Consolas", "Georgia"] },
         { "id": "x", "type": "number", "label": "X", "min": 0, "max": 20000, "default": 0, "hidden": true }
     ]
 }
@@ -59,7 +60,9 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
 - `category`: the heading the card is listed under in the Overlays tab (the built-in ones use `Input`, `Media` and `Frames`).
   The headings only show when the overlays are in more than one category; those without one are listed last.
 - `settings`: a control per entry on the overlay's page in the plugin settings (`hidden` ones are only set by the
-  overlay itself). Each value reaches the page as:
+  overlay itself). Types are `color`, `number`, `boolean`, `select` and `font` (a font picker over its `options`,
+  plus the user's custom fonts from the Fonts tab; the value is the family, `"default"` keeps the old look).
+  Each value reaches the page as:
   - a CSS variable on `<html>`: `--id` (numbers get their `unit`, booleans are `1` / `0`); colors also get `--id-rgb`
     (`"139 92 246"`), which allows `rgb(var(--accent-rgb) / 50%)`
   - a `data-id` attribute on `<html>`, for selectors like `html[data-corner="right"]`
@@ -80,6 +83,21 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
 
 Everything in `overlay.json` is validated (`main/manifest.ts`, `main/values.ts`): invalid entries are dropped, invalid
 values fall back to the default.
+
+### Fonts
+
+The **Fonts** tab picks the default font of every overlay and manages the custom fonts: imported font files
+(`.woff2`, `.woff`, `.ttf`, `.otf`, up to 5 MB, copied into `%APPDATA%\discord\StreamOverlay\fonts`) and system
+fonts by name. The keyboard, the mouse and the Spotify card have their own **Font** setting (Look tab) which
+overrides the default; like any setting it is saved per preset, so a game gets its own font through a global preset
+bound to it on the Apps tab. A font that is not picked follows the gothic theme (blackletter) or the default stack:
+picking one overrides it everywhere, deleting the choice hands back to the theme. An imported file is served to the
+overlay with `@font-face`; a custom that was deleted afterwards falls back to a readable font until another is picked.
+
+The keyboard, the mouse and the Spotify card also tune the text itself: **Font weight** (Regular to Bold, one value
+per theme, like the accent colors), **Letter spacing** (keyboard and mouse labels), and **Text size** (a multiplier
+for every label, next to Scale in the Layout tab). Like any setting they are saved per preset, so a game gets its own
+typography through the Apps tab.
 
 ### Themes
 
@@ -178,6 +196,8 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `index.tsx` | the plugin definition |
 | `settings.ts`, `presets.ts` | the stored settings and helpers to edit them; the preset logic (no React, no store) |
 | `apps.ts`, `appPresets.ts` | presets by app: matching a program to its binding (no React, no store); following the program in focus and applying / going back |
+| `main/fonts.ts` | the custom fonts: the fonts folder, importing / adding / removing, the @font-face for the overlays |
+| `components/FontControl.tsx`, `components/Fonts.tsx` | the font picker (built-ins, customs, adding more) and the Fonts tab |
 | `components/` | the settings page: `OverlayPicker` switches between `OverlayGrid` (tabs: cards and folder tools, layout, global presets, presets by app) and `OverlayDetail` (one overlay: tabs for its settings and its presets); Discord's `TextInput`, `Slider` and select; the color picker is built here (like Discord's role color picker) because Discord's own `ColorPicker` is only filled in once Discord has loaded it |
 | `health.ts` | whether "stream only" really puts the overlay in the stream (what the hook reports, and the verdict) (no React, no store) |
 | `groups.ts`, `migrate.ts` | how an overlay's settings are split into tabs and which are shown (`group`, `when`) and the grouping of the cards; moving what was saved for the old gothic overlays to the theme (no React, no store) |

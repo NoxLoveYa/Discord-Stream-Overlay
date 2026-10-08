@@ -1,5 +1,17 @@
 /* A key is a well (.key) with a cap sliding in it; --accent is the light under the key, --edge the hairline on the cap.
-   The overlay's style.css defines --key-accent-rgb and --key-edge-rgb (.mod swaps them). */
+   The overlay's style.css defines --key-accent-rgb and --key-edge-rgb (.mod swaps them).
+   Typography comes from the overlay's settings: --key-font-weight / --key-letter-spacing pick the values of the
+   active theme (font-weight / g-font-weight), --text-scale multiplies every label size. */
+:root {
+    --key-font-weight: var(--font-weight);
+    --key-letter-spacing: var(--letter-spacing);
+}
+
+html[data-theme="gothic"] {
+    --key-font-weight: var(--g-font-weight);
+    --key-letter-spacing: var(--g-letter-spacing);
+}
+
 .key {
     --accent: var(--key-accent-rgb);
     --edge: var(--key-edge-rgb);
@@ -92,14 +104,15 @@
     position: relative;
     z-index: 1;
     color: var(--text);
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+    font-size: calc(15px * var(--text-scale, 1));
+    font-weight: var(--key-font-weight, 600);
+    letter-spacing: var(--key-letter-spacing, 0.04em);
 }
 
 .mod .cap span {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
+    font-weight: var(--key-font-weight, 600);
     letter-spacing: 0.16em;
 }
 

@@ -24,7 +24,9 @@ body {
     margin: 0;
     background: transparent;
     overflow: hidden;
-    font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+
+    /* --font comes from the "font" setting (its default is this stack) */
+    font-family: var(--font, "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif);
 }
 
 .board {

@@ -9,7 +9,7 @@ import { readFileSync } from "fs";
 import { dirname, join } from "path";
 
 import { VIRTUAL_KEYS } from "./keys";
-import { clamp, COLOR, finite } from "./values";
+import { clamp, COLOR, finite, FONT_FAMILY } from "./values";
 
 const MAX_KEYS = 32;
 const MAX_SETTINGS = 24;
@@ -57,6 +57,16 @@ function parseSetting(raw: any): OverlaySetting | null {
                 .slice(0, 20);
             if (!options.length) return null;
             return { ...base, type: "select", options, default: options.find((o: { value: string; }) => o.value === raw.default)?.value ?? options[0].value };
+        }
+
+        case "font": {
+            // the family's own names: customs a user added are merged in by the settings page, not the manifest
+            const options = (Array.isArray(raw.options) ? raw.options : [])
+                .map((o: any) => typeof o === "string" ? { label: o, value: o } : { label: String(o?.label ?? o?.value).slice(0, 40), value: String(o?.value) })
+                .filter((o: { value: string; }) => FONT_FAMILY.test(o.value))
+                .slice(0, 20);
+            if (!options.length) return null;
+            return { ...base, type: "font", options, default: options.find((o: { value: string; }) => o.value === raw.default)?.value ?? options[0].value };
         }
 
         default:

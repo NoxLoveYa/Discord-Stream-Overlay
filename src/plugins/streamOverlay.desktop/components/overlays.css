@@ -200,6 +200,12 @@
     border-bottom: 0;
 }
 
+/* a control that manages its own list takes the whole row: label on top, control below */
+.vc-so-row-stack {
+    flex-direction: column;
+    align-items: stretch;
+}
+
 .vc-so-number {
     display: flex;
     align-items: center;
@@ -228,5 +234,55 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+/* the font picker: select, custom chips, and adding more */
+.vc-so-font {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.vc-so-row-stack .vc-so-font {
+    align-items: stretch;
+}
+
+.vc-so-font-customs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.vc-so-row-stack .vc-so-font-customs {
+    justify-content: flex-start;
+}
+
+.vc-so-font-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 4px 3px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    font-size: 0.8125rem;
+}
+
+.vc-so-font-chip .vc-so-icon-btn {
+    width: 22px;
+    height: 22px;
+}
+
+.vc-so-font-addrow {
+    display: flex;
+    gap: 8px;
+    width: 320px;
+    max-width: 100%;
+}
+
+.vc-so-font-addrow > :first-child {
+    flex: 1;
+    min-width: 0;
 }
 
