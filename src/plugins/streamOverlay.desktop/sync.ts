@@ -49,16 +49,6 @@ function publishSelf() {
     if (id) document.documentElement.setAttribute(SELF_ATTRIBUTE, id);
 }
 
-/** The encoder of this stream, written to the log once (it takes Discord a few seconds to have one). */
-async function logEncoder() {
-    if (streamState.encoderLogged) return;
-    streamState.encoderLogged = true;
-
-    const encoder = await Native.streamEncoder().catch(() => null);
-    logger.info("the stream is encoded with", encoder?.label ?? "(Discord's log does not say)");
-    Native.note(explainEncoder(encoder));
-}
-
 /** Looks at whether the overlay reaches the stream; if not, the next sync puts it on the screen. */
 async function checkHook() {
     if (!streamState.offscreenSince || streamState.failed || Date.now() - lastHealth < HEALTH_INTERVAL_MS) return;
@@ -70,28 +60,16 @@ async function checkHook() {
     // Discord only encodes a stream while somebody watches it: with nobody the hook has nothing to see, which is no reason to give up
     const encoding = status?.encodes === 0 && waited >= GRACE_MS ? await Native.streamEncoding().catch(() => null) : null;
     const reason = judgeHook(status, waited, encoding);
-    if (!reason) {
-        const idle = encoding === false;
-        if (idle !== streamState.idle) {
-            streamState.idle = idle;
-            Native.note(idle
-                ? "stream only is waiting: Discord encodes nothing yet (nobody is watching the stream), so there is nothing to draw on"
-                : "the stream is being encoded");
-        }
-        if (waited > GRACE_MS && status && status.encodes > 0) await logEncoder();
-        return;
-    }
+    if (!reason) return;
 
     // Discord's own log says which encoder it is, which is more useful to the user than "NVENC saw nothing"
     const encoder = await Native.streamEncoder().catch(() => null);
     streamState.failed = reason;
     lastKey = "";
     logger.warn("stream only does not work with this stream, the overlays go back on the screen", reason, encoder?.label);
-    Native.note(`stream only given up: ${reason}. ${explainEncoder(encoder)}`);
     showNotification({
         title: "StreamOverlay",
-        body: `"Stream only" does not work with this stream (${reason}), so the overlays are on your screen instead. ${explainEncoder(encoder)}. ` +
-            "\"Copy diagnostics\" in the settings (Overlays tab) collects what is needed to look into it.",
+        body: `"Stream only" does not work with this stream (${reason}), so the overlays are on your screen instead. ${explainEncoder(encoder)}.`,
         noPersist: true
     });
 }
@@ -136,8 +114,6 @@ async function doSync() {
         // the next stream is tried again
         streamState.offscreenSince = 0;
         streamState.failed = "";
-        streamState.encoderLogged = false;
-        streamState.idle = false;
         return Native.hide();
     }
 
@@ -148,7 +124,6 @@ async function doSync() {
     if (streamOnly && result && !result.streamOnly) lastKey = "";
     if (state !== lastState) {
         logger.info("showing overlay", { sourceId, sourceName, ...result });
-        Native.note(`showing: source ${sourceId}, "stream only" ${streamOnly ? "on" : settings.store.streamOnly ? "on but given up for this stream" : "off"}, overlays ${overlays.join(", ")}`);
     }
     lastState = state;
 }

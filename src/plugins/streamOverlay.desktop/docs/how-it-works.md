@@ -179,17 +179,13 @@ rows and columns the overlay covers, so a frame costs a few tenths of a millisec
 the GPU path stretches the overlay over the texture. `test/mftest.cc` is a node addon that feeds frames to the real encoder, so that
 the hook can be tried without Discord: load both in node, draw, decode the stream with ffmpeg and look at the pixels.
 
-### Logs and diagnostics
+### The log
 
-The hook writes `%TEMP%\streamoverlay-nvenc.log` from inside Discord's renderer (thread-safe, rotated at 1 MB). Besides the five
-hooks it needs it hooks `NvEncOpenEncodeSessionEx`, `NvEncInitializeEncoder` and `NvEncDestroyEncoder`, only to log: which API
-a session is opened on (Direct3D, CUDA, OpenGL), on which graphics card, which codec (H264, HEVC, AV1), the size and frame rate.
-Registered resources are logged with their type, format, size and card (the first 16), a texture that cannot be opened on the
-overlay's device is logged with its Windows error code, and while drawing is on a stats line is written every 10 s. `diagnose()`
-returns all this as JSON (the cards with how many screens each has, the loaded video libraries, the sessions) and works without
-the hooks being on. The main process keeps its own log (`main/log.ts`) of what it decides, and `main/diagnostics.ts` puts
-everything in one report (`report.ts` words the hook's JSON and the hints, and condenses Discord's voice log; `encoders.ts` tells
-which encoder the stream uses from that log, and whether it is one the overlay can be drawn into).
+The hook writes `%TEMP%\streamoverlay-nvenc.log` from inside Discord's renderer (thread-safe, rotated at 1 MB), only for what goes
+wrong: why drawing was switched off, a texture that cannot be opened on the overlay's device (with its Windows error code), a
+frame whose texture the hook never saw registered, an encoder that could not be hooked. `main/voiceLog.ts` reads Discord's own
+voice log (`discord-webrtc_0`): `encoders.ts` tells which encoder the stream uses and whether it is one the overlay can be drawn
+into, and whether it encodes at all.
 
 ### Does it reach the stream?
 
@@ -201,8 +197,8 @@ addon counts the frames NVENC was given since drawing went on and the ones it dr
 - drawing switched itself off (any time): a verdict;
 - nothing encoded in 10 s: a verdict that the stream is not NVENC or Windows' software encoder (a laptop whose screen is on the integrated GPU, AMD, Intel,
   software), *unless Discord itself encodes nothing either*. Discord only encodes a stream while somebody watches it, and its
-  voice log says so (`frames encoded: 0, encoded frame rate: 0`, read by `streamEncoding()` in `main/diagnostics.ts`); then there
-  is nothing to draw on yet, so the plugin waits and writes "stream only is waiting" in its log;
+  voice log says so (`frames encoded: 0, encoded frame rate: 0`, read by `streamEncoding()` in `main/voiceLog.ts`); then there
+  is nothing to draw on yet, so the plugin waits;
 - frames but none drawn: a verdict (the stream began before the hook, or a texture that cannot be drawn on).
 
 On a verdict the next sync shows the overlays on the screen instead, with a notice (which names the encoder, from Discord's

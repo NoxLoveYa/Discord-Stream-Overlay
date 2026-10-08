@@ -9,7 +9,6 @@ import { app, BrowserWindow, ipcMain, type NativeImage, type Rectangle, type Ses
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
-import { note } from "./log";
 
 const HELLO = "StreamOverlay:nvenc:hello";
 const COMMAND = "StreamOverlay:nvenc:command";
@@ -145,15 +144,6 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         return !!me && !!owner && owner !== me && !owner.endsWith(":" + me);
     };
 
-    // a console note when the videos that get the overlay change, to see what was picked and what was left alone
-    let noted = "";
-    const note = (kept, skipped) => {
-        const text = kept + " / " + skipped;
-        if (text === noted) return;
-        noted = text;
-        console.info("[StreamOverlay] the preview overlay is on " + kept + " video(s) and was left off " + skipped + " of somebody else's");
-    };
-
     // videos shaped like the shared screen; the stream is fed natively, media in chats are files loaded over http(s)
     const previews = () => {
         let skipped = 0;
@@ -169,7 +159,6 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
             const r = v.getBoundingClientRect();
             return r.width > 120 && r.height > 60 && getComputedStyle(v).visibility !== "hidden";
         });
-        note(kept.length, skipped);
         return kept;
     };
 
@@ -310,7 +299,6 @@ export class Nvenc implements StreamSink {
                 this.targets.add(event.sender);
                 event.sender.once("destroyed", () => this.targets.delete(event.sender));
             }
-            note(`a page loaded the hook script (${this.targets.size} page(s) have it, drawing is ${this.started ? "on" : "off"})`);
 
             // the new page does not know that drawing is on (the addon, which stays loaded, does): tell it, or it drops every frame
             if (this.started) void this.ask(event.sender, "drawOn");
@@ -343,14 +331,9 @@ export class Nvenc implements StreamSink {
         if (!this.targets.size) return false;
 
         const started = await this.askAll("start");
-        if (!started.some(text => text.startsWith("on") || text.startsWith("already on"))) {
-            note(`the encoder hook could not be started: ${started.join(" | ")}`);
-            return false;
-        }
+        if (!started.some(text => text.startsWith("on") || text.startsWith("already on"))) return false;
 
-        const drawing = await this.askAll("drawOn");
-        this.started = drawing.some(text => text.startsWith("drawing on"));
-        note(`the encoder hook is in (${started.join(" | ")}); drawing: ${drawing.join(" | ")}`);
+        this.started = (await this.askAll("drawOn")).some(text => text.startsWith("drawing on"));
         return this.started;
     }
 
@@ -370,7 +353,6 @@ export class Nvenc implements StreamSink {
     stop() {
         if (!this.started) return;
 
-        note("drawing stopped");
         this.started = false;
         this.image = null;
         this.dirty = null;
@@ -415,15 +397,6 @@ export class Nvenc implements StreamSink {
         }
     };
 
-    /** What every page that has the native hook says about this machine and the streams (diagnose() of the addon), as JSON text. */
-    diagnose() {
-        return this.targets.size ? this.askAll("diagnose") : Promise.resolve([] as string[]);
-    }
-
-    describe() {
-        return { drawing: this.started, pages: this.targets.size, picture: this.size || "none yet" };
-    }
-
     /** What the hook has done since drawing went on, from the pages that have it; null when none answered. */
     async health() {
         if (!this.started) return null;
@@ -439,7 +412,6 @@ export class Nvenc implements StreamSink {
         return new Promise<string>(resolve => {
             const timer = setTimeout(() => {
                 this.pending.delete(id);
-                note(`no answer to "${command}" within ${ASK_TIMEOUT_MS / 1000} s`);
                 resolve("no answer");
             }, ASK_TIMEOUT_MS);
             this.pending.set(id, text => {

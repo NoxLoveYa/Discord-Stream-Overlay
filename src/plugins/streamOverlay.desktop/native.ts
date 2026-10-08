@@ -6,13 +6,12 @@
 
 import { BrowserWindow, type IpcMainInvokeEvent, shell } from "electron";
 
-import { buildReport, currentEncoder, streamEncoding as discordEncoding } from "./main/diagnostics";
 import { FocusWatcher } from "./main/focus";
 import { listOverlays as listOverlayFolder, pickFolder as pickOverlayFolder, resolveRoot } from "./main/folder";
 import { LayoutSink, screenshot } from "./main/layout";
-import { note as writeNote } from "./main/log";
 import { cleanMedia } from "./main/media";
 import { Nvenc } from "./main/nvenc";
+import { currentEncoder, streamEncoding as discordEncoding } from "./main/voiceLog";
 import { OverlayWindow } from "./main/window";
 import type { OverlayValues } from "./types";
 
@@ -109,21 +108,6 @@ export function streamEncoder() {
 /** Whether Discord encodes the stream at all right now (it does not while nobody watches it); null when its log does not say. */
 export function streamEncoding() {
     return discordEncoding();
-}
-
-/** Everything that helps to see why "stream only" works or not on this machine, as text. `extra` is what the page adds. */
-export async function diagnostics(_: IpcMainInvokeEvent, extra: string) {
-    return buildReport({
-        extra: typeof extra === "string" ? extra.slice(0, 4000) : "",
-        hook: await nvenc.diagnose(),
-        nvenc: nvenc.describe(),
-        overlay: overlay.describe()
-    });
-}
-
-/** A line in the plugin's log, from the settings page. */
-export function note(_: IpcMainInvokeEvent, message: string) {
-    if (typeof message === "string") writeNote(`page: ${message.slice(0, 500)}`);
 }
 
 /** Whether the overlay really reaches the stream: what the hook has done since drawing went on, or null. */

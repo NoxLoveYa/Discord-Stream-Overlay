@@ -135,45 +135,23 @@ Viewers now see the overlay; your monitor does not. In Discord, your own stream 
 - It reaches into Discord's media pipeline, which is further than Vencord's usual patches. Discord could treat it as
   tampering and anti-cheat software may dislike it. Use it at your own risk.
 
-### Diagnostics
+### Log
 
-When "stream only" does not work on a machine, the settings page can collect what is needed to see why: **Overlays** tab,
-**Diagnostics**. It says which encoder Discord uses for the stream right now (from Discord's own voice log) and whether "stream
-only" can draw into it, and **Copy diagnostics** puts a report on the clipboard:
-
-- *What this points to*: the facts put in words (for instance "Hybrid graphics: the screens are on AMD Radeon, and the NVIDIA
-  card has none").
-- the graphics cards, and **how many screens are attached to each** (a laptop whose screen is on the integrated card has an
-  NVIDIA card with none, and Discord then cannot feed the screen to NVENC), Electron's own view of the GPUs and the displays;
-- the video libraries loaded in Discord (`amfrt64.dll` is AMD's encoder, `nvcuda.dll` CUDA, and so on);
-- what the native hook saw: every NVENC session (opened on Direct3D, CUDA or OpenGL, on which card, which codec and size,
-  frames encoded and drawn on) and the first textures that were registered;
-- the part of Discord's voice log about encoding: which encoders it found at startup, the codecs the stream tried in order,
-  how its `MultiEncoder` built the encoder (it lists the encoders it can use and tries them), and what the stream was encoded
-  with;
-- the last lines of the two logs below.
-
-Start a stream with an overlay on, wait about 15 seconds, then copy it. The logs it ends with are also on disk:
-
-| Log | Where | What |
-|---|---|---|
-| plugin | `%APPDATA%\discord\StreamOverlay\streamoverlay.log` (`discordcanary` for Canary) | what the plugin decided and why: the display it chose, whether the hook is in, the encoder of each stream, why "stream only" was given up |
-| native hook | `%TEMP%\streamoverlay-nvenc.log` | the machine (graphics cards, video modules), every encoder session and texture, a stats line every 10 s, and the error codes when a texture cannot be drawn on |
-
-Both are rotated (kept as `.old` once they pass 512 KB and 1 MB).
+The hook writes `%TEMP%\streamoverlay-nvenc.log` (rotated at 1 MB) when something goes wrong: why drawing was switched off, a texture
+that cannot be drawn on (with the Windows error code), a frame the hook could not tell, the encoder it could not hook.
 
 ### Troubleshooting
 
 | Symptom | Likely cause |
 |---|---|
 | Overlay stays on your screen with "stream only" on | the addon is missing (`%APPDATA%\discord\StreamOverlay\nvenc\streamoverlay_nvenc.node`: `pnpm build` prints why it could not be built), or the page was not reloaded since Discord started (Ctrl + R) |
-| A notice says "Stream only does not work with this stream" | the plugin saw that nothing reached the stream and put the overlays on your screen: the reason is in the notice (the stream is not encoded by NVENC; it began before the hook; drawing was switched off). The next stream is tried again |
-| "Stream only" is on but nobody sees the overlay in the stream | Discord only encodes a stream while somebody is watching it, so until a viewer joins there is nothing to draw on. The plugin waits (the overlay stays off your screen, the plugin log says "stream only is waiting") and draws as soon as the first frame is encoded. Your own preview of the stream carries the overlay either way |
+| A notice says "Stream only does not work with this stream" | the plugin saw that nothing reached the stream and put the overlays on your screen: the reason is in the notice (the stream is not encoded by NVENC or Windows' software encoder; it began before the hook; drawing was switched off). The next stream is tried again |
+| "Stream only" is on but nobody sees the overlay in the stream | Discord only encodes a stream while somebody is watching it, so until a viewer joins there is nothing to draw on. The plugin waits (the overlay stays off your screen) and draws as soon as the first frame is encoded. Your own preview of the stream carries the overlay either way |
 | Nothing on screen and nothing on the stream | the share started before the hook: stop and start the share again |
-| Viewers see nothing, still nothing after restarting the share | read `%TEMP%\streamoverlay-nvenc.log`: it states why drawing was switched off (not an NVIDIA encoder, texture not shared, GPU timeout, ...) |
+| Viewers see nothing, still nothing after restarting the share | read `%TEMP%\streamoverlay-nvenc.log`: it states why drawing was switched off (not an encoder the hook covers, texture not shared, GPU timeout, ...) |
 | Overlay on the stream but not in your preview | the preview video was not recognised: it must be a non-http(s) `<video>` with the aspect ratio of the shared screen |
 | Overlay shows on videos in chat | a video in the chat list or loaded over http(s) is skipped on purpose; update to the latest build |
 
-To see which encoder a stream uses, look in `%APPDATA%\discord\logs\discord-webrtc_0` for "Outbound video stats": `codec: H264 (nvidia: direct3d)` is NVENC, anything else (`amd`, `intel`, `software`...) is not covered.
+To see which encoder a stream uses, look in `%APPDATA%\discord\logs\discord-webrtc_0` for "Outbound video stats": `codec: H264 (nvidia: direct3d)` is NVENC and `H264 (MediaFoundation SW)` is Windows' software encoder, which are covered; anything else (`amd`, `intel`...) is not.
 
 To go back to normal: turn the setting off. The overlays return to your screen on the next sync (about a second).

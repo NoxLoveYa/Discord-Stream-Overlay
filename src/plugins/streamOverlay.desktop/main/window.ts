@@ -15,7 +15,6 @@ import { pickDisplay } from "./display";
 import { findOverlays } from "./folder";
 import { hostHtml } from "./host";
 import { OverlayInput } from "./input";
-import { note } from "./log";
 import { readManifest, unionKeys } from "./manifest";
 import { SAMPLE_MEDIA } from "./media";
 import type { StreamSink } from "./nvenc";
@@ -43,7 +42,6 @@ export class OverlayWindow {
     private shown = false;
     private suspended = false;
     private pressed = false;
-    private lastNote = "";
     private media: MediaState | null = null;
     /** what is loaded, in iframe order */
     private entries: Entry[] = [];
@@ -172,34 +170,10 @@ export class OverlayWindow {
         this.input.sync(keys, manifests.some(m => m.mouse), !offscreen && manifests.some(m => m.interactive.length > 0), fresh);
         if (this.layout) await win.webContents.executeJavaScript(`window.__streamOverlayKeys?.(${JSON.stringify(this.armed())})`).catch(() => { });
 
-        // what was decided, once for every change of it (this is called again every second while the hook is not reachable)
-        if (!this.layout) {
-            const summary = `overlay window: display ${display.id} (found by ${match}, ${display.bounds.width}x${display.bounds.height}, scale ${display.scaleFactor}), ${found.length} overlay(s), ${offscreen ? "offscreen, drawn into the stream" : streamOnly ? "on the screen (stream only was asked for but the hook is not reachable)" : "on the screen"}`;
-            if (summary !== this.lastNote) {
-                this.lastNote = summary;
-                note(summary);
-            }
-        }
-
         return { match, displayId: display.id, bounds: display.bounds, overlays: found.length, keys: keys.length, streamOnly: offscreen };
     }
 
-    describe() {
-        const shown = this.display?.display;
-        return {
-            layout: this.layout,
-            shown: this.shown,
-            offscreen: this.offscreen,
-            overlays: this.entries.map(e => e.name),
-            display: shown ? { id: shown.id, bounds: shown.bounds, scaleFactor: shown.scaleFactor, foundBy: this.display?.match, source: this.display?.key } : null
-        };
-    }
-
     async hide(animate = true) {
-        if (!this.layout && this.shown) {
-            this.lastNote = "";
-            note("overlay window hidden");
-        }
         const token = ++this.hideToken;
         const win = this.live();
 
