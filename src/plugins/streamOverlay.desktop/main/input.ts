@@ -23,7 +23,8 @@ export class OverlayInput {
 
     constructor(
         private readonly getWindow: () => BrowserWindow | null,
-        private readonly getCombos: () => string[][]
+        private readonly getCombos: () => string[][],
+        private readonly onCapture?: (capture: boolean) => void
     ) { }
 
     sync(keys: string[], mouse: boolean, relayPointer: boolean, freshPage: boolean) {
@@ -73,6 +74,7 @@ export class OverlayInput {
         if (capture === this.mouseCaptured) return;
         this.mouseCaptured = capture;
         this.getWindow()?.setIgnoreMouseEvents(!capture);
+        this.onCapture?.(capture);
     }
 
     // Electron 42 delivers no mouse moves to a window that ignores the mouse, so hovering is relayed from here

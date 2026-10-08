@@ -15,8 +15,12 @@ the folder tools (pick another folder, open it).
 
 ### Moving the keyboard and mouse overlays
 
-Hold **Alt + Caps** and drag the panel; drag the corner to resize. It is saved when you let go. This needs the overlay on
-screen, so it does not work while "stream only" is on.
+Hold **Alt + Caps** and drag the panel; drag the corner to resize. It is saved when you let go.
+
+With "stream only" on the overlay is not on your screen, so do it on the **preview of your stream** in Discord: hold
+Alt + Caps, move the cursor over the overlay in the preview (the panel highlights) and drag. While the keys are held the
+preview takes the mouse; let go of them and it behaves as usual. The move is live in the stream too, so viewers see the
+panel and its hint move while you do it. The preview has to be visible (open your stream tile).
 
 ### Presets
 
@@ -63,7 +67,8 @@ Then build Vencord as usual (`pnpm build`) and inject it.
 Viewers now see the overlay; your monitor does not. In Discord, your own stream preview shows the overlay on top.
 
 ### Limits
-- Overlays cannot be dragged while it is on. Turn it off, position them, turn it back on.
+- Overlays are moved on the preview of your stream (Alt + Caps, see above), at about 30 fps, so dragging lags a little.
+  Without a visible preview you can still turn "stream only" off, position them, and turn it back on.
 - NVIDIA / NVENC only, monitor shares only. If the hook cannot attach, the overlays stay on your screen.
 - The overlay is rendered at 30 fps and sent frame by frame to Discord's renderer; expect some extra CPU use.
 - The preview overlay goes on any non-http(s) video with the shape of the shared screen, so someone else's stream of

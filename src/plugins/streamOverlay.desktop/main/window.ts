@@ -46,9 +46,32 @@ export class OverlayWindow {
     private hideToken = 0;
     /** the page has been played backwards and must be reloaded before it is shown again */
     private exiting = false;
-    private readonly input = new OverlayInput(() => this.live(), () => this.entries.map(e => e.manifest.interactive));
+    private readonly input = new OverlayInput(
+        () => this.live(),
+        () => this.entries.map(e => e.manifest.interactive),
+        capture => { if (this.offscreen) this.stream.interactive(capture); }
+    );
 
-    constructor(private readonly stream: StreamSink) { }
+    constructor(private readonly stream: StreamSink) {
+        stream.onPointer = (kind, x, y) => this.pointer(kind, x, y);
+    }
+
+    /** Mouse from the preview of the stream, as fractions of the picture: the offscreen page has no real mouse. */
+    private pointer(kind: "move" | "down" | "up", fx: number, fy: number) {
+        const win = this.live();
+        if (!win || !this.offscreen) return;
+
+        const { width, height } = win.getContentBounds();
+        const x = Math.round(fx * width);
+        const y = Math.round(fy * height);
+        const { webContents } = win;
+
+        // the page only lets the mouse through to an overlay once it has seen the cursor over it
+        webContents.executeJavaScript(`window.__streamOverlayPointer?.(${x}, ${y})`).catch(() => { });
+        webContents.sendInputEvent(kind === "move"
+            ? { type: "mouseMove", x, y }
+            : { type: kind === "down" ? "mouseDown" : "mouseUp", x, y, button: "left", clickCount: 1 });
+    }
 
     async show(sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false) {
         this.hideToken++;

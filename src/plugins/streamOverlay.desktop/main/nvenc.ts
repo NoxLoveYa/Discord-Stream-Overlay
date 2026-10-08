@@ -12,6 +12,8 @@ const HELLO = "StreamOverlay:nvenc:hello";
 const COMMAND = "StreamOverlay:nvenc:command";
 const RESULT = "StreamOverlay:nvenc:result";
 const FRAME = "StreamOverlay:nvenc:frame";
+const INTERACTIVE = "StreamOverlay:nvenc:interactive";
+const POINTER = "StreamOverlay:nvenc:pointer";
 
 const FRAME_GAP_MS = 16;
 const ASK_TIMEOUT_MS = 5000;
@@ -23,6 +25,10 @@ export interface StreamSink {
     /** Hooks the encoder and starts drawing into it. False when that is not possible (the overlay then stays on screen). */
     start(): Promise<boolean>;
     frame(bitmap: Buffer, width: number, height: number): void;
+    /** While an overlay's move combo is held the preview takes the mouse and reports it through `onPointer`. */
+    interactive(on: boolean): void;
+    /** The cursor over the preview, as fractions of it. */
+    onPointer: ((kind: "move" | "down" | "up", x: number, y: number) => void) | null;
     stop(): void;
 }
 
@@ -49,6 +55,30 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
     let active = false;
     let latest = null;
     let stale = false;
+    let interactive = false;
+
+    // dragging on a preview moves the overlay: the cursor is reported to the main process, which feeds it to the overlay
+    const clamp = v => Math.min(1, Math.max(0, v));
+    const report = (kind, e, canvas) => {
+        const r = canvas.getBoundingClientRect();
+        ipcRenderer.send(${JSON.stringify(POINTER)}, kind, clamp((e.clientX - r.left) / r.width), clamp((e.clientY - r.top) / r.height));
+    };
+    const wire = canvas => {
+        canvas.addEventListener("pointerdown", e => {
+            if (e.button !== 0) return;
+            canvas.setPointerCapture(e.pointerId);
+            report("down", e, canvas);
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        canvas.addEventListener("pointermove", e => report("move", e, canvas));
+        canvas.addEventListener("pointerup", e => report("up", e, canvas));
+        canvas.addEventListener("pointercancel", e => report("up", e, canvas));
+    };
+    const grab = canvas => {
+        canvas.style.pointerEvents = interactive ? "auto" : "none";
+        canvas.style.cursor = interactive ? "move" : "";
+    };
 
     const convert = (bitmap, width, height) => {
         if (bitmap.byteOffset & 3) bitmap = Uint8Array.from(bitmap);
@@ -107,7 +137,9 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
             let canvas = shown.get(video);
             if (!canvas) {
                 canvas = document.createElement("canvas");
-                canvas.style.cssText = "position:fixed;pointer-events:none;z-index:999";
+                canvas.style.cssText = "position:fixed;z-index:999";
+                grab(canvas);
+                wire(canvas);
                 document.body.append(canvas);
                 shown.set(video, canvas);
                 canvas.dirty = true;
@@ -134,6 +166,7 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
     };
 
     const clear = () => {
+        interactive = false;
         ratio = 0;
         latest = null;
         stale = false;
@@ -155,6 +188,11 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
             text = "failed: " + (e && e.message || e);
         }
         ipcRenderer.send(${JSON.stringify(RESULT)}, id, text);
+    });
+
+    ipcRenderer.on(${JSON.stringify(INTERACTIVE)}, (_, on) => {
+        interactive = on;
+        for (const canvas of shown.values()) grab(canvas);
     });
 
     ipcRenderer.on(${JSON.stringify(FRAME)}, (_, bitmap, width, height) => {
@@ -182,8 +220,10 @@ export class Nvenc implements StreamSink {
     private latest: { bitmap: Buffer; width: number; height: number; } | null = null;
     private timer: ReturnType<typeof setTimeout> | null = null;
     private lastSent = 0;
+    onPointer: StreamSink["onPointer"] = null;
 
     constructor() {
+        ipcMain.on(POINTER, (_, kind: "move" | "down" | "up", x: number, y: number) => this.onPointer?.(kind, x, y));
         ipcMain.on(HELLO, event => {
             this.targets.add(event.sender);
             event.sender.once("destroyed", () => this.targets.delete(event.sender));
@@ -226,6 +266,10 @@ export class Nvenc implements StreamSink {
         this.latest = { bitmap, width, height };
         if (this.timer) return;
         this.timer = setTimeout(this.flush, Math.max(0, FRAME_GAP_MS - (Date.now() - this.lastSent)));
+    }
+
+    interactive(on: boolean) {
+        for (const target of this.targets) target.send(INTERACTIVE, on);
     }
 
     stop() {
