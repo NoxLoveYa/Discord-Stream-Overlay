@@ -5,7 +5,7 @@
  */
 
 import type { Manifest, OverlayValue, OverlayValues } from "@plugins/streamOverlay.desktop/types";
-import { app, BrowserWindow, type Display, screen } from "electron";
+import { app, BrowserWindow, type Display } from "electron";
 import { writeFileSync } from "fs";
 import { join } from "path";
 import { pathToFileURL } from "url";
@@ -97,8 +97,7 @@ export class OverlayWindow {
         return this.layout ? this.entries.flatMap(e => e.manifest.draggable ? e.manifest.interactive : []) : [];
     }
 
-    /** `renderWidth`: the Layout window is rendered about this many pixels wide instead of at the size of the screen. */
-    async show(sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false, renderWidth = 0) {
+    async show(sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false) {
         this.hideToken++;
 
         const found = findOverlays(root, names);
@@ -120,10 +119,7 @@ export class OverlayWindow {
         const { display, match } = await this.displayFor(sourceId, sourceName);
         const win = this.window();
 
-        // the Layout window is smaller than the screen, so that fewer pixels are painted; the page still lays out for the screen
-        const scale = this.layout && renderWidth ? Math.min(1, renderWidth / (display.bounds.width * screen.getPrimaryDisplay().scaleFactor)) : 1;
-        win.setBounds({ ...display.bounds, width: Math.max(1, Math.round(display.bounds.width * scale)), height: Math.max(1, Math.round(display.bounds.height * scale)) });
-        const view = scale < 1 ? { width: display.bounds.width, height: display.bounds.height, scale } : undefined;
+        win.setBounds(display.bounds);
         if (offscreen) win.webContents.frameRate = this.layout ? LAYOUT_FPS : OFFSCREEN_FPS;
 
         if (this.exiting) {
@@ -137,10 +133,10 @@ export class OverlayWindow {
             interactive: manifests[i].interactive.length > 0,
             mouse: manifests[i].mouse
         }));
-        const key = JSON.stringify([overlays, view]);
+        const key = JSON.stringify(overlays);
         const fresh = key !== this.loadedKey;
         if (fresh) {
-            writeFileSync(hostPath(this.layout), hostHtml(overlays, view));
+            writeFileSync(hostPath(this.layout), hostHtml(overlays));
             await win.loadURL(pathToFileURL(hostPath(this.layout)).href);
             this.loadedKey = key;
         }

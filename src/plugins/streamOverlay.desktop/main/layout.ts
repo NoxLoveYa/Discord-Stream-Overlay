@@ -35,7 +35,6 @@ export class LayoutSink implements StreamSink {
     private image: NativeImage | null = null;
     private version = 0;
     private taken = 0;
-    private takenWidth = 0;
     private wake: (() => void) | null = null;
 
     start() {
@@ -53,11 +52,11 @@ export class LayoutSink implements StreamSink {
     }
 
     /**
-     * The frame scaled to `width`. When there is nothing new it waits for the next frame, so the page gets each one as
-     * it is drawn instead of looking for it on a timer; null when nothing came in time.
+     * The frame at the size it was drawn. When there is nothing new it waits for the next frame, so the page gets each one
+     * as it is drawn instead of looking for it on a timer; null when nothing came in time.
      */
-    async take(width: number) {
-        if (this.stale(width)) {
+    async take() {
+        if (this.stale()) {
             await new Promise<void>(resolve => {
                 const timer = setTimeout(resolve, WAIT_MS);
                 this.wake = () => {
@@ -66,19 +65,15 @@ export class LayoutSink implements StreamSink {
                 };
             });
             this.wake = null;
-            if (this.stale(width)) return null;
+            if (this.stale()) return null;
         }
         this.taken = this.version;
-        this.takenWidth = width;
 
-        // the window is already rendered at about this size; resizing is only for when it came out a lot bigger
-        const full = this.image!.getSize();
-        const picture = full.width > width * 1.25 ? this.image!.resize({ width: Math.round(width), quality: "good" }) : this.image!;
-        const { width: w, height: h } = picture.getSize();
-        return { bitmap: picture.toBitmap(), width: w, height: h };
+        const { width, height } = this.image!.getSize();
+        return { bitmap: this.image!.toBitmap(), width, height };
     }
 
-    private stale(width: number) {
-        return !this.image || (this.version === this.taken && width === this.takenWidth);
+    private stale() {
+        return !this.image || this.version === this.taken;
     }
 }

@@ -17,8 +17,6 @@ import { IconButton } from "./IconButton";
 
 const logger = new Logger("StreamOverlay");
 
-const PICTURE_WIDTH = 1280;
-const EXPANDED_WIDTH = 1920;
 const CHANGES_MS = 150;
 
 const ExpandIcon = (props: SVGProps<SVGSVGElement>) => (
@@ -88,7 +86,6 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const stage = useRef<HTMLDivElement>(null);
     const [expanded, setExpanded] = useState(false);
     const nativeFullscreen = useRef(false);
-    const pictureWidth = useRef(PICTURE_WIDTH);
 
     const enabled = [...enabledOverlays];
     const draggable = overlays.filter(o => o.draggable && enabled.includes(o.name));
@@ -116,8 +113,8 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const state = JSON.stringify([overlayRoot, enabled, plain(overlayValues)]);
     useEffect(() => {
         const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
-        Native.layoutShow(sourceId, overlayRoot, enabled, plain(overlayValues), expanded ? EXPANDED_WIDTH : PICTURE_WIDTH).then(takeBackground);
-    }, [state, expanded]);
+        Native.layoutShow(sourceId, overlayRoot, enabled, plain(overlayValues)).then(takeBackground);
+    }, [state]);
 
     useEffect(() => {
         let alive = true;
@@ -126,7 +123,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         const receive = async () => {
             while (alive) {
                 try {
-                    const frame = await Native.layoutFrame(pictureWidth.current);
+                    const frame = await Native.layoutFrame();
                     if (!alive || !frame || !canvas.current) continue;
 
                     painter.current ??= createPainter(canvas.current);
@@ -176,7 +173,6 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     };
 
     useEffect(() => {
-        pictureWidth.current = expanded ? EXPANDED_WIDTH : PICTURE_WIDTH;
         if (!expanded) return;
 
         const onFullscreenChange = () => {

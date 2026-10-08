@@ -96,10 +96,8 @@ a transparent canvas positioned over the video:
 ### The Layout tab
 
 A second `OverlayWindow` (created with `layout = true`, fed to a `LayoutSink` instead of the encoder) renders the enabled
-overlays offscreen at 60 Hz (the stream's own window only runs at 30 fps). It keeps the layout of the full screen but is rendered in far fewer pixels: its window is
-smaller and the host page (`main/host.ts`) puts the overlays in a stage that has the size of the screen and is scaled
-down with a CSS transform, so the overlays still measure the real screen (their saved positions mean the same thing)
-while about 1280 px (1920 when full screen) are painted instead of 2560 × 1440. The settings page (`components/Layout.tsx`) is in the renderer and cannot be pushed to, so it asks
+overlays offscreen at 60 Hz (the stream's own window only runs at 30 fps), at the full resolution of the display, so the
+picture is what the stream gets. The settings page (`components/Layout.tsx`) is in the renderer and cannot be pushed to, so it asks
 `Native.layoutFrame` for the next frame, which the main process answers as soon as one has been drawn (a long poll, so a
 frame is not left waiting for a timer); the BGRA bytes are uploaded to a WebGL texture and
 the channels swapped in a shader, so no per-pixel work runs in JavaScript. What the overlays saved is collected
@@ -118,7 +116,7 @@ the tab is open:
   window and updates the stream through the normal sync.
 
 The button at the picture's top right asks the browser for full screen on the picture (`requestFullscreen`) and falls back
-to a fixed element covering the window if that is refused; the picture is then requested at 1920 px instead of 1280.
+to a fixed element covering the window if that is refused.
 
 Closing the tab destroys the window.
 
