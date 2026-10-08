@@ -31,6 +31,7 @@ export class LayoutSink implements StreamSink {
     private image: NativeImage | null = null;
     private version = 0;
     private taken = 0;
+    private takenWidth = 0;
 
     start() {
         return Promise.resolve(true);
@@ -45,10 +46,11 @@ export class LayoutSink implements StreamSink {
         this.image = null;
     }
 
-    /** The frame scaled to `width`, or null when nothing changed since the last call. */
+    /** The frame scaled to `width`, or null when neither it nor the width changed since the last call. */
     take(width: number) {
-        if (!this.image || this.version === this.taken) return null;
+        if (!this.image || (this.version === this.taken && width === this.takenWidth)) return null;
         this.taken = this.version;
+        this.takenWidth = width;
 
         const full = this.image.getSize();
         const scaled = this.image.resize({ width: Math.min(Math.max(1, Math.round(width)), full.width), quality: "good" });

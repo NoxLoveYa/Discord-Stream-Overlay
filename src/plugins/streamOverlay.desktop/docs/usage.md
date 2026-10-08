@@ -20,6 +20,9 @@ with the overlays that are on, as they are drawn. Drag the keyboard or the mouse
 resize it. The result is saved when you let go and applies to the stream straight away. This works the same with
 "stream only" on or off.
 
+Hover the picture and use the button at its top right to make it full screen, which makes placing things easier (Esc or
+the same button goes back). The picture is then rendered larger.
+
 The overlays move at the refresh rate of that monitor. Behind them is a screenshot of the monitor, which is what the
 stream shows without the overlays, refreshed about once a second (so it is not live video). If that monitor is the one
 Discord is on, the screenshot contains the settings window itself, so the picture repeats inside itself; it is best used

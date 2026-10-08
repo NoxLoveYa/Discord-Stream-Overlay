@@ -112,6 +112,9 @@ the tab is open:
 - what the overlay saves comes back with the next poll and is written to the plugin settings, which re-renders the
   window and updates the stream through the normal sync.
 
+The button at the picture's top right asks the browser for full screen on the picture (`requestFullscreen`) and falls back
+to a fixed element covering the window if that is refused; the picture is then requested at 1920 px instead of 1280.
+
 Closing the tab destroys the window.
 
 ### Lifecycle

@@ -9,10 +9,26 @@ import "./layout.css";
 import { Paragraph } from "@components/Paragraph";
 import { Native, plain, settings, updateValues } from "@plugins/streamOverlay.desktop/settings";
 import type { OverlayInfo } from "@plugins/streamOverlay.desktop/types";
-import { MediaEngineStore, useEffect, useRef } from "@webpack/common";
+import { MediaEngineStore, useEffect, useRef, useState } from "@webpack/common";
+import type { SVGProps } from "react";
+
+import { IconButton } from "./IconButton";
 
 const PICTURE_WIDTH = 1280;
+const EXPANDED_WIDTH = 1920;
 const BACKGROUND_MS = 750;
+
+const ExpandIcon = (props: SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+    </svg>
+);
+
+const CollapseIcon = (props: SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+    </svg>
+);
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -32,6 +48,7 @@ function paint(canvas: HTMLCanvasElement, bitmap: Uint8Array, width: number, hei
     if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width;
         canvas.height = height;
+        canvas.style.setProperty("--ratio", String(width / height));
     }
 
     for (let i = 0; i < pixels.length; i++) {
@@ -59,6 +76,10 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const background = useRef<HTMLImageElement>(null);
     const pending = useRef<{ x: number; y: number; } | null>(null);
     const raf = useRef(0);
+    const stage = useRef<HTMLDivElement>(null);
+    const [expanded, setExpanded] = useState(false);
+    const nativeFullscreen = useRef(false);
+    const pictureWidth = useRef(PICTURE_WIDTH);
 
     const enabled = [...enabledOverlays];
     const draggable = overlays.filter(o => o.draggable && enabled.includes(o.name));
@@ -78,7 +99,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
 
         const tick = async () => {
             try {
-                const { frame, changes } = await Native.layoutFrame(PICTURE_WIDTH);
+                const { frame, changes } = await Native.layoutFrame(pictureWidth.current);
                 if (!alive) return;
 
                 if (Object.keys(changes).length) {
@@ -94,7 +115,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
 
         const refreshBackground = async () => {
             try {
-                const jpeg = await Native.layoutBackground(PICTURE_WIDTH);
+                const jpeg = await Native.layoutBackground(pictureWidth.current);
                 if (!alive) return;
                 if (jpeg && background.current) {
                     const url = URL.createObjectURL(new Blob([new Uint8Array(jpeg)], { type: "image/jpeg" }));
@@ -115,6 +136,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
             clearTimeout(backgroundTimer);
             if (backgroundUrl) URL.revokeObjectURL(backgroundUrl);
             cancelAnimationFrame(raf.current);
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
             Native.layoutHide();
         };
     }, []);
@@ -123,6 +145,40 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         const r = e.currentTarget.getBoundingClientRect();
         return { x: clamp((e.clientX - r.left) / r.width), y: clamp((e.clientY - r.top) / r.height) };
     };
+
+    // the real full screen when Discord allows it, the window covered by the picture otherwise
+    const toggleExpanded = () => {
+        if (expanded) {
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
+            setExpanded(false);
+        } else {
+            setExpanded(true);
+            stage.current?.requestFullscreen().then(() => nativeFullscreen.current = true, () => { });
+        }
+    };
+
+    useEffect(() => {
+        pictureWidth.current = expanded ? EXPANDED_WIDTH : PICTURE_WIDTH;
+        if (!expanded) return;
+
+        const onFullscreenChange = () => {
+            if (document.fullscreenElement || !nativeFullscreen.current) return;
+            nativeFullscreen.current = false;
+            setExpanded(false);
+        };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== "Escape") return;
+            if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
+            setExpanded(false);
+        };
+
+        document.addEventListener("fullscreenchange", onFullscreenChange);
+        addEventListener("keydown", onKey);
+        return () => {
+            document.removeEventListener("fullscreenchange", onFullscreenChange);
+            removeEventListener("keydown", onKey);
+        };
+    }, [expanded]);
 
     // moves are sent at most once per frame
     const flushMove = () => {
@@ -139,31 +195,37 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
                     : "No overlay that can be moved is on. Turn on one that is draggable (the keyboard or the mouse, for example) to place it here."}
             </Paragraph>
 
-            <div className="vc-so-stage">
-                <img ref={background} className="vc-so-stage-background" alt="" draggable={false} />
-                <canvas
-                    ref={canvas}
-                    width={16}
-                    height={9}
-                    className="vc-so-stage-canvas"
-                    onPointerDown={e => {
-                        if (e.button !== 0) return;
-                        e.currentTarget.setPointerCapture(e.pointerId);
-                        cancelAnimationFrame(raf.current);
-                        flushMove();
-                        Native.layoutPointer("down", at(e).x, at(e).y);
-                    }}
-                    onPointerMove={e => {
-                        pending.current = at(e);
-                        raf.current ||= requestAnimationFrame(flushMove);
-                    }}
-                    onPointerUp={e => {
-                        cancelAnimationFrame(raf.current);
-                        flushMove();
-                        Native.layoutPointer("up", at(e).x, at(e).y);
-                    }}
-                    onPointerCancel={e => Native.layoutPointer("up", at(e).x, at(e).y)}
-                />
+            <div ref={stage} className={`vc-so-stage${expanded ? " vc-so-expanded" : ""}`}>
+                <div className="vc-so-view">
+                    <img ref={background} className="vc-so-stage-background" alt="" draggable={false} />
+                    <canvas
+                        ref={canvas}
+                        width={16}
+                        height={9}
+                        className="vc-so-stage-canvas"
+                        onPointerDown={e => {
+                            if (e.button !== 0) return;
+                            e.currentTarget.setPointerCapture(e.pointerId);
+                            cancelAnimationFrame(raf.current);
+                            flushMove();
+                            Native.layoutPointer("down", at(e).x, at(e).y);
+                        }}
+                        onPointerMove={e => {
+                            pending.current = at(e);
+                            raf.current ||= requestAnimationFrame(flushMove);
+                        }}
+                        onPointerUp={e => {
+                            cancelAnimationFrame(raf.current);
+                            flushMove();
+                            Native.layoutPointer("up", at(e).x, at(e).y);
+                        }}
+                        onPointerCancel={e => Native.layoutPointer("up", at(e).x, at(e).y)}
+                    />
+                </div>
+
+                <div className="vc-so-expand">
+                    <IconButton label={expanded ? "Exit full screen" : "Full screen"} icon={expanded ? CollapseIcon : ExpandIcon} onClick={toggleExpanded} />
+                </div>
             </div>
         </div>
     );

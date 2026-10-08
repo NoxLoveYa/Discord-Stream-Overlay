@@ -9,6 +9,24 @@
         #0b0d12;
 }
 
+/* the picture, as big as the window allows; also what the browser's own full screen is */
+.vc-so-stage.vc-so-expanded,
+.vc-so-stage:fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 0;
+    background: #000;
+}
+
+.vc-so-view {
+    position: relative;
+}
+
 /* the screen behind the overlays: it takes the size of the canvas, which has the shape of the screen */
 .vc-so-stage-background {
     position: absolute;
@@ -32,4 +50,29 @@
     height: auto;
     touch-action: none;
     cursor: crosshair;
+}
+
+.vc-so-expanded .vc-so-stage-canvas,
+.vc-so-stage:fullscreen .vc-so-stage-canvas {
+    width: min(100vw, calc(100vh * var(--ratio, 1.7778)));
+}
+
+.vc-so-expand {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    border-radius: 6px;
+    background: rgb(0 0 0 / 60%);
+    color: #fff;
+    opacity: 0;
+    transition: opacity 120ms ease-out;
+}
+
+.vc-so-expand .vc-so-icon-btn {
+    color: inherit;
+}
+
+.vc-so-stage:hover .vc-so-expand,
+.vc-so-expand:focus-within {
+    opacity: 1;
 }
