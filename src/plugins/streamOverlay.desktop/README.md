@@ -1,5 +1,7 @@
 # StreamOverlay
 
+Docs: [what it adds](docs/README.md), [how to use it](docs/usage.md), [how it works](docs/how-it-works.md).
+
 Draws HTML/CSS overlays in a transparent, click-through window over the screen you are sharing, so they are captured
 into your stream. Windows desktop client only (monitor shares: other windows are not part of a window capture).
 
