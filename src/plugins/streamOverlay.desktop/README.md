@@ -121,7 +121,7 @@ settings (`appBindings`, `appRevert`).
 
 The setting "Only draw the overlays on the stream" keeps the overlays off your own screen. Windows, NVIDIA encoder only.
 Discord encodes the shared screen with NVENC inside its renderer process, so a small native addon (`nvenc/`, built with
-CMake, installed into `%APPDATA%\discord\StreamOverlay\nvenc`) hooks the encoder (MinHook) and, just before each frame is
+CMake by `scripts/build/nvenc.mjs`, installed into `%APPDATA%\discord\StreamOverlay\nvenc`) hooks the encoder (MinHook) and, just before each frame is
 encoded, blends the overlay over it. The overlays are rendered by an offscreen window (`main/window.ts`) whose pixels
 travel to the renderer (`main/nvenc.ts`); a preload script loads the addon there and also draws the overlay over the
 `<video>` of the in-app preview, which the encoder hook never touches.
@@ -135,8 +135,9 @@ travel to the renderer (`main/nvenc.ts`); a preload script loads the addon there
 - A Discord update can change the voice module and break the hook; failures are written to
   `%TEMP%\streamoverlay-nvenc.log`.
 
-Build the addon with `cmake -S . -B build -G "Visual Studio 17 2022" -A x64` then
-`cmake --build build --config Release` in `nvenc/` (Discord closed, or the old copy is renamed aside).
+The addon is built by `pnpm install` and `pnpm build` (`scripts/build/nvenc.mjs`): it installs the Visual Studio C++
+build tools and CMake with winget when they are missing, builds, and installs the result. It skips itself when the sources
+did not change, never fails the install or the build, and `VENCORD_SKIP_NVENC=1` turns it off. See `docs/usage.md`.
 
 ### Animations
 

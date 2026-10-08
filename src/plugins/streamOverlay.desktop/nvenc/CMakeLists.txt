@@ -19,11 +19,4 @@ target_include_directories(streamoverlay_nvenc PRIVATE ${nvcodec_SOURCE_DIR}/inc
 target_link_libraries(streamoverlay_nvenc PRIVATE minhook d3d11 d3dcompiler)
 set_target_properties(streamoverlay_nvenc PROPERTIES PREFIX "" SUFFIX ".node")
 
-# A running Discord keeps the installed .node locked: a loaded file can be renamed though, so the old one is moved aside
-# and the new one takes effect the next time Discord starts
-set(INSTALL_DIR "$ENV{APPDATA}/discord/StreamOverlay/nvenc")
-add_custom_command(TARGET streamoverlay_nvenc POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${INSTALL_DIR}"
-    COMMAND powershell -NoProfile -Command
-        "$d = '${INSTALL_DIR}/streamoverlay_nvenc.node'; if (Test-Path $d) { Move-Item -Force $d ($d + '.' + (Get-Date -Format yyyyMMddHHmmss) + '.old') }; Get-ChildItem '${INSTALL_DIR}' -Filter *.old | ForEach-Object { Remove-Item -Force $_.FullName -ErrorAction SilentlyContinue }"
-    COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:streamoverlay_nvenc>" "${INSTALL_DIR}/")
+# Installing the result is up to scripts/build/nvenc.mjs, which also installs the tools this needs

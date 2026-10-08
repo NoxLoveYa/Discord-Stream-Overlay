@@ -45,24 +45,27 @@ outside the settings, **Alt + Caps** still moves them while "stream only" is off
 Draws the overlays on the stream and its preview but not on your screen.
 
 ### Requirements
-- Windows, Discord Stable (the paths below use `%APPDATA%\discord`), an **NVIDIA GPU**. Discord must be using NVENC for
-  Go Live (the default on NVIDIA); a software or AMD/Intel encoder is not covered.
+- Windows and an **NVIDIA GPU**. Discord must be using NVENC for Go Live (the default on NVIDIA); a software or
+  AMD/Intel encoder is not covered.
 - A screen share of a monitor.
-- The native addon, built once (below).
+- The native addon (below), which `pnpm install` and `pnpm build` take care of.
 
-### Build the addon
-You need Visual Studio 2022 Build Tools (C++ workload), CMake and internet access (the build downloads MinHook and the
-NVIDIA codec headers). In `src/plugins/streamOverlay.desktop/nvenc/`:
+### The addon is built for you
+`pnpm install` and `pnpm build` run `scripts/build/nvenc.mjs` (Windows only, nothing happens elsewhere). It:
 
-```
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release
-```
+1. looks for the Visual Studio C++ build tools and CMake, and installs what is missing with **winget** (the build tools
+   are several GB and Windows asks for permission; git and internet access are needed too, because CMake downloads
+   MinHook and the NVIDIA codec headers);
+2. builds `nvenc/hook.cc` into `streamoverlay_nvenc.node`;
+3. copies it to `%APPDATA%\discord\StreamOverlay\nvenc\` (and the same for `discordptb` and `discordcanary` when they
+   have a data folder). If Discord is running, the old copy is renamed aside (`*.old`) and the new one is used the next
+   time Discord starts.
 
-The build copies `streamoverlay_nvenc.node` to `%APPDATA%\discord\StreamOverlay\nvenc\`. If Discord is running, the old
-copy is renamed aside (`*.old`) and the new one is used the next time Discord starts.
+When nothing changed since the last build it only compares a hash of the sources, so it costs nothing. It never fails the
+install or the build: if the tools cannot be installed it prints why, and the overlays stay on your screen. Fix that and
+run `node scripts/build/nvenc.mjs` by hand. `VENCORD_SKIP_NVENC=1` turns it off.
 
-Then build Vencord as usual (`pnpm build`) and inject it.
+So on a fresh machine: clone, `pnpm install`, `pnpm build`, `pnpm inject`.
 
 ### Turn it on
 1. **Quit Discord completely** and start it again.
@@ -90,11 +93,10 @@ Viewers now see the overlay; your monitor does not. In Discord, your own stream 
 
 | Symptom | Likely cause |
 |---|---|
-| Overlay stays on your screen with "stream only" on | the addon is missing (`%APPDATA%\discord\StreamOverlay\nvenc\streamoverlay_nvenc.node`), or the page was not reloaded since Discord started (Ctrl + R) |
+| Overlay stays on your screen with "stream only" on | the addon is missing (`%APPDATA%\discord\StreamOverlay\nvenc\streamoverlay_nvenc.node`: `pnpm build` prints why it could not be built), or the page was not reloaded since Discord started (Ctrl + R) |
 | Nothing on screen and nothing on the stream | the share started before the hook: stop and start the share again |
 | Viewers see nothing, still nothing after restarting the share | read `%TEMP%\streamoverlay-nvenc.log`: it states why drawing was switched off (not an NVIDIA encoder, texture not shared, GPU timeout, ...) |
 | Overlay on the stream but not in your preview | the preview video was not recognised: it must be a non-http(s) `<video>` with the aspect ratio of the shared screen |
 | Overlay shows on videos in chat | a video in the chat list or loaded over http(s) is skipped on purpose; update to the latest build |
-| Build fails with "Permission denied" copying the `.node` | an older build; the current one renames the loaded file aside |
 
 To go back to normal: turn the setting off. The overlays return to your screen on the next sync (about a second).
