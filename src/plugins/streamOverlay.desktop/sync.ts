@@ -8,6 +8,7 @@ import { SettingsStore } from "@api/Settings";
 import { Logger } from "@utils/Logger";
 import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore } from "@webpack/common";
 
+import { startAppPresets, stopAppPresets } from "./appPresets";
 import { Native, settings, updateValues } from "./settings";
 
 const logger = new Logger("StreamOverlay");
@@ -79,6 +80,7 @@ export function startSync() {
     SettingsStore.addPrefixChangeListener(SETTINGS_PATH, sync);
     syncTimer = setInterval(sync, SYNC_INTERVAL_MS);
     collectTimer = setInterval(() => collect().catch(e => logger.error("collect failed", e)), COLLECT_INTERVAL_MS);
+    startAppPresets();
     sync();
 }
 
@@ -87,6 +89,7 @@ export function stopSync() {
     visible = false;
     clearInterval(syncTimer);
     clearInterval(collectTimer);
+    stopAppPresets();
     FluxDispatcher.unsubscribe("STREAM_START", onStreamStart);
     SettingsStore.removePrefixChangeListener(SETTINGS_PATH, sync);
     lastKey = "";

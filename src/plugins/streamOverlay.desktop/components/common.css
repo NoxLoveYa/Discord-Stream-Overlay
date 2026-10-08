@@ -1,0 +1,84 @@
+/* what the presets and the apps have in common: the undo notice and the small icon buttons */
+.vc-so-notice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm, 8px);
+    background: var(--card-secondary-bg, var(--card-background-default));
+    color: var(--text-default);
+    font-size: 0.875rem;
+    animation: vc-so-rise 160ms ease-out;
+}
+
+.vc-so-undo,
+.vc-so-notice-close {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+}
+
+.vc-so-undo {
+    margin-left: auto;
+    color: var(--text-link, var(--brand-500));
+    font-weight: 600;
+}
+
+.vc-so-undo:hover {
+    text-decoration: underline;
+}
+
+.vc-so-notice-close {
+    color: var(--text-muted, var(--text-default));
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.vc-so-undo:focus-visible,
+.vc-so-notice-close:focus-visible {
+    outline: 2px solid var(--border-focus, var(--brand-500));
+    outline-offset: 2px;
+}
+
+.vc-so-icon-btn {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--text-muted, var(--text-default));
+    cursor: pointer;
+    transition: background-color 100ms ease-out, color 100ms ease-out;
+}
+
+.vc-so-icon-btn:disabled {
+    cursor: default;
+    opacity: 0.35;
+}
+
+.vc-so-icon-btn:focus-visible {
+    outline: 2px solid var(--border-focus, var(--brand-500));
+    outline-offset: -2px;
+}
+
+.vc-so-icon-btn:hover:not(:disabled) {
+    background: var(--control-icon-only-background-hover, rgb(128 128 128 / 20%));
+    color: var(--text-default);
+}
+
+.vc-so-icon-btn[data-danger="true"]:hover:not(:disabled) {
+    color: var(--text-feedback-critical, #f23f43);
+}
+
+@keyframes vc-so-rise {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+}

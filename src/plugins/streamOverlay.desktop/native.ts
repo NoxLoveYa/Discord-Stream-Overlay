@@ -6,6 +6,7 @@
 
 import { BrowserWindow, type IpcMainInvokeEvent, shell } from "electron";
 
+import { FocusWatcher } from "./main/focus";
 import { listOverlays as listOverlayFolder, pickFolder as pickOverlayFolder, resolveRoot } from "./main/folder";
 import { OverlayWindow } from "./main/window";
 import type { OverlayValues } from "./types";
@@ -13,6 +14,7 @@ import type { OverlayValues } from "./types";
 // What the renderer can call: every export is an IPC method. The logic lives in ./main.
 
 const overlay = new OverlayWindow();
+const focus = new FocusWatcher();
 
 export function listOverlays(_: IpcMainInvokeEvent, root: string) {
     return listOverlayFolder(root);
@@ -40,4 +42,13 @@ export function reload() {
 
 export function takeChanges() {
     return overlay.takeChanges();
+}
+
+/** Starts or stops following which program is in focus. Nothing runs while nobody asked for it. */
+export function watchFocus(_: IpcMainInvokeEvent, on: boolean) {
+    focus.set(on);
+}
+
+export function getFocus() {
+    return focus.read();
 }

@@ -82,17 +82,32 @@ Sent by the page:
 
 ### The settings page
 
-The plugin settings show a card per overlay: its switch turns it on or off, and the card opens the overlay's own page
-(its settings, and its presets). A preset of an overlay keeps all its settings, including where it was dragged to and
-its size. The presets on the first page are global: they keep which overlays are on and the settings of all of them
-(an overlay added after a global preset was saved is left as it is when that preset is applied). Presets are stored in
-the plugin settings (`overlayPresets`, `globalPresets`).
+The page has three tabs: **Overlays** (a card per overlay, whose switch turns it on or off and which opens the overlay's
+own page; and the folder tools), **Presets** (the global presets) and **Apps** (presets by app). The page of an overlay
+has two tabs, **Settings** and **Presets**. A preset of an overlay keeps all its settings, including where it was
+dragged to and its size. The global presets keep which overlays are on and the settings of all of them (an overlay added
+after a global preset was saved is left as it is when that preset is applied). Presets are stored in the plugin settings
+(`overlayPresets`, `globalPresets`). The tabs are Discord's own tab bar (`components/Tabs.tsx`).
 
 Both kinds are managed the same way (`components/PresetManager.tsx`): "Save current" names the current state, a card
 per preset applies it when clicked and previews it (the colors of an overlay, the overlays that are on), and each card
 can be updated with the current state, renamed, duplicated or deleted. A line says whether the current state is a
 preset ("In use") or has unsaved changes, and applying, updating and deleting can be undone from the notice that
 follows them instead of asking first.
+
+### Presets by app
+
+On the Apps tab, an app (a program, like `game.exe`) can be bound to a global preset: it is applied while the
+program is in focus. "Detect" fills in the next program that comes into focus. When the program is no longer in focus
+the previous state is put back (the setting "Go back when the app is no longer in focus", on by default), unless it
+was changed in the meantime, and going from one bound program to another goes back to what was there before the first.
+
+What it looks at: only the file name of the program of the window in focus (`main/focus.ts`: `GetForegroundWindow`, then
+the name of that process, opened with a right that cannot read or change it). Never window titles or contents. A program
+has to stay in focus for 0.6 s to count, and Discord's own windows and windows whose program cannot be told (some
+protected games, the lock screen) change nothing. Nothing runs while there are no bindings switched on and the Apps
+tab is closed. Microsoft Store apps all appear as `ApplicationFrameHost.exe`. The bindings are stored in the plugin
+settings (`appBindings`, `appRevert`).
 
 ### Animations
 
@@ -105,7 +120,8 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 |---|---|
 | `index.tsx` | the plugin definition |
 | `settings.ts`, `presets.ts` | the stored settings and helpers to edit them; the preset logic (no React, no store) |
-| `components/` | the settings page: `OverlayPicker` switches between `OverlayGrid` (cards, global presets, folder tools) and `OverlayDetail` (one overlay: its presets and settings); Discord's `TextInput`, `Slider` and select; the color picker is built here (like Discord's role color picker) because Discord's own `ColorPicker` is only filled in once Discord has loaded it |
+| `apps.ts`, `appPresets.ts` | presets by app: matching a program to its binding (no React, no store); following the program in focus and applying / going back |
+| `components/` | the settings page: `OverlayPicker` switches between `OverlayGrid` (tabs: cards and folder tools, global presets, presets by app) and `OverlayDetail` (one overlay: tabs for its settings and its presets); Discord's `TextInput`, `Slider` and select; the color picker is built here (like Discord's role color picker) because Discord's own `ColorPicker` is only filled in once Discord has loaded it |
 | `sync.ts` | keeps the overlay window in line with the stream and the settings; collects what overlays save |
 | `menu.tsx` | "Overlay Settings" in the stream menu |
 | `types.ts` | types shared by both sides, no runtime code |
@@ -117,3 +133,4 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `main/manifest.ts`, `main/values.ts` | reading and validating `overlay.json`, applying values to a page |
 | `main/host.ts` | the page that holds every overlay as an iframe and bridges them to the main process |
 | `main/display.ts`, `main/animations.ts` | finding the shared display, the enter / exit animations |
+| `main/focus.ts` | the program in focus: a small PowerShell helper (own process, only while somebody asks) and the object `native.ts` keeps it in |

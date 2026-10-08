@@ -7,15 +7,24 @@
 import { Button } from "@components/Button";
 import { Card } from "@components/Card";
 import { ExpandableSection } from "@components/ExpandableCard";
-import { Heading } from "@components/Heading";
 import { Paragraph } from "@components/Paragraph";
 import { captureGlobal, copyName, isGlobalActive, renamePreset, withoutPreset, withPreset } from "@plugins/streamOverlay.desktop/presets";
 import { applyGlobalPreset, Native, plain, setOverlayEnabled, settings, updateStored } from "@plugins/streamOverlay.desktop/settings";
 import type { GlobalPreset, OverlayInfo } from "@plugins/streamOverlay.desktop/types";
+import { useState } from "@webpack/common";
 
+import { AppBindings } from "./AppBindings";
 import { OverlayCard } from "./OverlayCard";
 import { PresetManager } from "./PresetManager";
 import { GlobalPresetSummary } from "./PresetSummary";
+import { Tabs } from "./Tabs";
+
+const TABS = [
+    { id: "overlays", label: "Overlays" },
+    { id: "presets", label: "Presets" },
+    { id: "apps", label: "Apps" }
+] as const;
+type Tab = (typeof TABS)[number]["id"];
 
 interface OverlayGridProps {
     info: { root: string; overlays: OverlayInfo[]; };
@@ -26,6 +35,7 @@ interface OverlayGridProps {
 export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
     const { overlayRoot, enabledOverlays, overlayValues, globalPresets } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues", "globalPresets"]);
     const { overlays } = info;
+    const [tab, setTab] = useState<Tab>("overlays");
 
     const enabled = [...enabledOverlays];
     const values = plain(overlayValues);
@@ -39,76 +49,84 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
 
     return (
         <section className="vc-so">
-            <PresetManager
-                title="Presets"
-                hint="A preset keeps which overlays are on and how every overlay is set up. Each overlay also has presets of its own."
-                emptyText="No presets yet. Turn on the overlays you want and set them up, then save it here to switch back to this setup in one click."
-                presets={presets}
-                isActive={preset => isGlobalActive(preset, overlays, enabled, values)}
-                summarize={preset => <GlobalPresetSummary preset={preset} overlays={overlays} />}
-                save={name => setPresets(withPreset(presets, captureGlobal(name, overlays, enabled, values)))}
-                rename={(preset, to) => setPresets(renamePreset(presets, preset.name, to))}
-                duplicate={preset => {
-                    const copy = copyName(presets, preset.name);
-                    setPresets([...presets, { ...plain(preset), name: copy }]);
-                    return copy;
-                }}
-                apply={applyGlobalPreset}
-                update={preset => {
-                    setPresets(withPreset(presets, captureGlobal(preset.name, overlays, enabled, values)));
-                    return () => setPresets(presets);
-                }}
-                remove={preset => {
-                    setPresets(withoutPreset(presets, preset.name));
-                    return () => setPresets(presets);
-                }}
-            />
-
-            <div>
-                <Heading tag="h3">Overlays</Heading>
-                <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
-                    Turn an overlay on or off with its switch, or open it to change its settings.
-                </Paragraph>
-                {overlays.length > 0 ? (
-                    <div className="vc-so-grid">
-                        {overlays.map(overlay => (
-                            <OverlayCard
-                                key={overlay.name}
-                                overlay={overlay}
-                                enabled={enabledOverlays.includes(overlay.name)}
-                                onToggle={on => setOverlayEnabled(overlay.name, on)}
-                                onOpen={() => onOpen(overlay.name)}
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <Card>
-                        <Paragraph>No overlays found in this folder. Each subfolder with an index.html is one overlay.</Paragraph>
-                    </Card>
-                )}
-            </div>
-
-            <ExpandableSection
-                renderContent={() => (
+            <Tabs<Tab> label="Stream overlay settings" tabs={TABS} current={tab} onChange={setTab}>
+                {tab === "overlays" && (
                     <>
-                        <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-path">{info.root}</Paragraph>
-                        <div className="vc-so-buttons">
-                            <Button size="small" onClick={browse}>Browse…</Button>
-                            <Button size="small" variant="secondary" onClick={() => Native.openRoot(overlayRoot)}>Open folder</Button>
-                            <Button size="small" variant="secondary" onClick={refresh}>Refresh list</Button>
-                            <Button size="small" variant="secondary" onClick={() => Native.reload()}>Reload overlays</Button>
-                            {overlayRoot && (
-                                <Button size="small" variant="dangerSecondary" onClick={() => settings.store.overlayRoot = ""}>Use default folder</Button>
+                        <div>
+                            <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
+                                Turn an overlay on or off with its switch, or open it to change its settings.
+                            </Paragraph>
+                            {overlays.length > 0 ? (
+                                <div className="vc-so-grid">
+                                    {overlays.map(overlay => (
+                                        <OverlayCard
+                                            key={overlay.name}
+                                            overlay={overlay}
+                                            enabled={enabledOverlays.includes(overlay.name)}
+                                            onToggle={on => setOverlayEnabled(overlay.name, on)}
+                                            onOpen={() => onOpen(overlay.name)}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <Card>
+                                    <Paragraph>No overlays found in this folder. Each subfolder with an index.html is one overlay.</Paragraph>
+                                </Card>
                             )}
                         </div>
-                        <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
-                            Keep an overlay's background transparent. The README of the plugin explains how to write your own.
-                        </Paragraph>
+
+                        <ExpandableSection
+                            renderContent={() => (
+                                <>
+                                    <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-path">{info.root}</Paragraph>
+                                    <div className="vc-so-buttons">
+                                        <Button size="small" onClick={browse}>Browse…</Button>
+                                        <Button size="small" variant="secondary" onClick={() => Native.openRoot(overlayRoot)}>Open folder</Button>
+                                        <Button size="small" variant="secondary" onClick={refresh}>Refresh list</Button>
+                                        <Button size="small" variant="secondary" onClick={() => Native.reload()}>Reload overlays</Button>
+                                        {overlayRoot && (
+                                            <Button size="small" variant="dangerSecondary" onClick={() => settings.store.overlayRoot = ""}>Use default folder</Button>
+                                        )}
+                                    </div>
+                                    <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
+                                        Keep an overlay's background transparent. The README of the plugin explains how to write your own.
+                                    </Paragraph>
+                                </>
+                            )}
+                        >
+                            <Paragraph weight="semibold">Overlays folder</Paragraph>
+                        </ExpandableSection>
                     </>
                 )}
-            >
-                <Paragraph weight="semibold">Overlays folder</Paragraph>
-            </ExpandableSection>
+
+                {tab === "presets" && (
+                    <PresetManager
+                        hint="A preset keeps which overlays are on and how every overlay is set up. Each overlay also has presets of its own."
+                        emptyText="No presets yet. Turn on the overlays you want and set them up, then save it here to switch back to this setup in one click."
+                        presets={presets}
+                        isActive={preset => isGlobalActive(preset, overlays, enabled, values)}
+                        summarize={preset => <GlobalPresetSummary preset={preset} overlays={overlays} />}
+                        save={name => setPresets(withPreset(presets, captureGlobal(name, overlays, enabled, values)))}
+                        rename={(preset, to) => setPresets(renamePreset(presets, preset.name, to))}
+                        duplicate={preset => {
+                            const copy = copyName(presets, preset.name);
+                            setPresets([...presets, { ...plain(preset), name: copy }]);
+                            return copy;
+                        }}
+                        apply={applyGlobalPreset}
+                        update={preset => {
+                            setPresets(withPreset(presets, captureGlobal(preset.name, overlays, enabled, values)));
+                            return () => setPresets(presets);
+                        }}
+                        remove={preset => {
+                            setPresets(withoutPreset(presets, preset.name));
+                            return () => setPresets(presets);
+                        }}
+                    />
+                )}
+
+                {tab === "apps" && <AppBindings presets={presets} />}
+            </Tabs>
         </section>
     );
 }

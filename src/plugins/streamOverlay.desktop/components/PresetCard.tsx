@@ -9,21 +9,9 @@ import { Card } from "@components/Card";
 import { CopyIcon, DeleteIcon, PencilIcon, RestartIcon } from "@components/Icons";
 import { cleanName, MAX_NAME } from "@plugins/streamOverlay.desktop/presets";
 import { TextInput, useState } from "@webpack/common";
-import type { ComponentType, ReactNode, SVGProps } from "react";
+import type { ReactNode } from "react";
 
-function IconButton({ label, icon: Icon, disabled, danger, onClick }: {
-    label: string;
-    icon: ComponentType<SVGProps<SVGSVGElement>>;
-    disabled?: boolean;
-    danger?: boolean;
-    onClick(): void;
-}) {
-    return (
-        <button type="button" className="vc-so-icon-btn" data-danger={danger} title={label} aria-label={label} disabled={disabled} onClick={onClick}>
-            <Icon width={16} height={16} />
-        </button>
-    );
-}
+import { IconButton } from "./IconButton";
 
 interface PresetCardProps {
     name: string;

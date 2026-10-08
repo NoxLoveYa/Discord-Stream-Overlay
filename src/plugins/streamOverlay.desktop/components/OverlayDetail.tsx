@@ -11,13 +11,22 @@ import { Switch } from "@components/Switch";
 import { copyName, presetsOf, renamePreset, sameSettings, withoutPreset, withPreset } from "@plugins/streamOverlay.desktop/presets";
 import { plain, setOverlayEnabled, settings, updateStored, updateValues } from "@plugins/streamOverlay.desktop/settings";
 import type { OverlayInfo, OverlayPreset, OverlayValue } from "@plugins/streamOverlay.desktop/types";
+import { useState } from "@webpack/common";
 
 import { OverlayOptionList } from "./OverlayOptions";
 import { PresetManager } from "./PresetManager";
 import { OverlayPresetSummary } from "./PresetSummary";
+import { Tabs } from "./Tabs";
+
+const TABS = [
+    { id: "settings", label: "Settings" },
+    { id: "presets", label: "Presets" }
+] as const;
+type Tab = (typeof TABS)[number]["id"];
 
 export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBack(): void; }) {
     const { enabledOverlays, overlayValues, overlayPresets } = settings.use(["enabledOverlays", "overlayValues", "overlayPresets"]);
+    const [tab, setTab] = useState<Tab>("settings");
 
     const { name } = overlay;
     const enabled = enabledOverlays.includes(name);
@@ -50,47 +59,50 @@ export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBac
                 </div>
             </header>
 
-            <PresetManager
-                title="Presets"
-                hint="A preset keeps all the settings below, including where you moved the overlay and how big you made it."
-                emptyText="No presets for this overlay yet. Set it up the way you like, then save it here to come back to it later."
-                presets={presets}
-                isActive={preset => sameSettings(overlay.settings, preset.values, current)}
-                summarize={preset => <OverlayPresetSummary overlay={overlay} preset={preset} />}
-                save={to => setPresets(withPreset(presets, { name: to, values: { ...current } }))}
-                rename={(preset, to) => setPresets(renamePreset(presets, preset.name, to))}
-                duplicate={preset => {
-                    const copy = copyName(presets, preset.name);
-                    setPresets([...presets, { name: copy, values: { ...preset.values } }]);
-                    return copy;
-                }}
-                apply={preset => {
-                    setValues({ ...preset.values });
-                    return () => setValues(current);
-                }}
-                update={preset => {
-                    setPresets(withPreset(presets, { name: preset.name, values: { ...current } }));
-                    return () => setPresets(presets);
-                }}
-                remove={preset => {
-                    setPresets(withoutPreset(presets, preset.name));
-                    return () => setPresets(presets);
-                }}
-            />
+            <Tabs<Tab> label={`${overlay.title} settings`} tabs={TABS} current={tab} onChange={setTab}>
+                {tab === "settings" && (options.length > 0 ? (
+                    <div>
+                        <div className="vc-so-section-head">
+                            <Paragraph size="sm" defaultColor={false} className="vc-so-muted">Changes apply right away.</Paragraph>
+                            <Button variant="dangerSecondary" size="small" onClick={() => setValues(undefined)}>
+                                Reset to defaults
+                            </Button>
+                        </div>
+                        <OverlayOptionList overlay={name} options={options} />
+                    </div>
+                ) : (
+                    <Paragraph size="sm" defaultColor={false} className="vc-so-muted">This overlay has no settings.</Paragraph>
+                ))}
 
-            <div>
-                <div className="vc-so-section-head">
-                    <Heading tag="h3" className="vc-so-title">Settings</Heading>
-                    {options.length > 0 && (
-                        <Button variant="dangerSecondary" size="small" onClick={() => setValues(undefined)}>
-                            Reset to defaults
-                        </Button>
-                    )}
-                </div>
-                {options.length > 0
-                    ? <OverlayOptionList overlay={name} options={options} />
-                    : <Paragraph size="sm" defaultColor={false} className="vc-so-muted">This overlay has no settings.</Paragraph>}
-            </div>
+                {tab === "presets" && (
+                    <PresetManager
+                        hint="A preset keeps all the settings of this overlay, including where you moved it and how big you made it."
+                        emptyText="No presets for this overlay yet. Set it up the way you like, then save it here to come back to it later."
+                        presets={presets}
+                        isActive={preset => sameSettings(overlay.settings, preset.values, current)}
+                        summarize={preset => <OverlayPresetSummary overlay={overlay} preset={preset} />}
+                        save={to => setPresets(withPreset(presets, { name: to, values: { ...current } }))}
+                        rename={(preset, to) => setPresets(renamePreset(presets, preset.name, to))}
+                        duplicate={preset => {
+                            const copy = copyName(presets, preset.name);
+                            setPresets([...presets, { name: copy, values: { ...preset.values } }]);
+                            return copy;
+                        }}
+                        apply={preset => {
+                            setValues({ ...preset.values });
+                            return () => setValues(current);
+                        }}
+                        update={preset => {
+                            setPresets(withPreset(presets, { name: preset.name, values: { ...current } }));
+                            return () => setPresets(presets);
+                        }}
+                        remove={preset => {
+                            setPresets(withoutPreset(presets, preset.name));
+                            return () => setPresets(presets);
+                        }}
+                    />
+                )}
+            </Tabs>
         </section>
     );
 }

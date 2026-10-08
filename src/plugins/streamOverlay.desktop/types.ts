@@ -54,6 +54,15 @@ export interface OverlayPreset {
 /** Presets of each overlay, by overlay name */
 export type OverlayPresets = Record<string, OverlayPreset[]>;
 
+/** While this program is in focus, the global preset is applied */
+export interface AppBinding {
+    /** the file name of the program, like "game.exe", in lower case */
+    app: string;
+    /** the name of a global preset */
+    preset: string;
+    enabled: boolean;
+}
+
 /** Which overlays are on, and the settings of every overlay, under a name */
 export interface GlobalPreset {
     name: string;

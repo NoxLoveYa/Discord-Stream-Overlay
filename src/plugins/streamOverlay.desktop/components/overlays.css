@@ -13,6 +13,17 @@
     margin: 2px 0 10px;
 }
 
+/* Vencord's tab bar has margins for its own pages: here the page has its gap */
+.vc-so .vc-so-tabs {
+    margin: 0;
+}
+
+.vc-so-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
 .vc-so-title {
     margin: 0;
 }

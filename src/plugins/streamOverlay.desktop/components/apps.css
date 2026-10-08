@@ -1,0 +1,75 @@
+.vc-so-app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 10px;
+}
+
+.vc-so-app {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 14px 8px;
+    transition: border-color 120ms ease-out, opacity 120ms ease-out;
+}
+
+.vc-so-app:hover {
+    border-color: var(--border-strong);
+}
+
+.vc-so-app[data-focused="true"] {
+    border-color: var(--brand-500);
+}
+
+.vc-so .vc-so-app-name {
+    overflow-wrap: anywhere;
+}
+
+.vc-so-app[data-enabled="false"] .vc-so-badge,
+.vc-so-app[data-enabled="false"] .vc-so-app-name {
+    opacity: 0.55;
+}
+
+.vc-so-app[data-enabled="true"] .vc-so-badge {
+    background: var(--brand-500);
+    color: #fff;
+}
+
+.vc-so-app-flags {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.vc-so-select {
+    width: 100%;
+    max-width: 260px;
+}
+
+.vc-so-composer .vc-so-select {
+    width: 220px;
+}
+
+.vc-so-app-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0 -6px;
+}
+
+.vc-so .vc-so-warn {
+    color: var(--text-feedback-critical, #f23f43);
+}
+
+.vc-so-composer-note {
+    flex: 1 0 100%;
+}
+
+/* a row with a longer explanation: the text takes what is left, the control stays on its side */
+.vc-so-row-text {
+    flex: 1 1 280px;
+    min-width: 0;
+}
+
+/* a program in focus that is not one of these: nothing to do, so no color */
+.vc-so-status[data-state="idle"] .vc-so-status-dot {
+    background: var(--primary-400, #80848e);
+}

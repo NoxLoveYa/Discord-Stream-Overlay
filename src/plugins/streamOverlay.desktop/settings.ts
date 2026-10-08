@@ -9,7 +9,7 @@ import { OptionType, PluginNative } from "@utils/types";
 
 import { OverlayPicker } from "./components/OverlayPicker";
 import { applyGlobal } from "./presets";
-import type { GlobalPreset, OverlayPresets, OverlayValues } from "./types";
+import type { AppBinding, GlobalPreset, OverlayPresets, OverlayValues } from "./types";
 
 export const Native = VencordNative.pluginHelpers.StreamOverlay as PluginNative<typeof import("./native")>;
 
@@ -34,6 +34,14 @@ export const settings = definePluginSettings({
         type: OptionType.CUSTOM,
         default: [] as GlobalPreset[]
     },
+    appBindings: {
+        type: OptionType.CUSTOM,
+        default: [] as AppBinding[]
+    },
+    appRevert: {
+        type: OptionType.CUSTOM,
+        default: true
+    },
     overlayPicker: {
         type: OptionType.COMPONENT,
         component: OverlayPicker
@@ -49,7 +57,7 @@ export const settings = definePluginSettings({
 export const plain = <T>(value: T): T => value === undefined ? value : JSON.parse(JSON.stringify(value));
 
 /** Edits a copy of a stored object in place, or returns what should replace it. */
-export function updateStored<K extends "overlayValues" | "overlayPresets" | "globalPresets">(
+export function updateStored<K extends "overlayValues" | "overlayPresets" | "globalPresets" | "appBindings">(
     key: K,
     edit: (value: (typeof settings.store)[K]) => (typeof settings.store)[K] | void
 ) {
@@ -64,15 +72,20 @@ export function setOverlayEnabled(name: string, on: boolean) {
     settings.store.enabledOverlays = on ? [...others, name] : others;
 }
 
+/** Which overlays are on and the settings of all of them, as they are now. */
+export const snapshotState = () => ({ enabled: [...settings.store.enabledOverlays], values: plain(settings.store.overlayValues) });
+
+export function restoreState(state: ReturnType<typeof snapshotState>) {
+    settings.store.enabledOverlays = [...state.enabled];
+    settings.store.overlayValues = plain(state.values);
+}
+
 /** Sets the toggles and the settings of every overlay the preset knows. Returns what puts everything back. */
 export function applyGlobalPreset(preset: GlobalPreset) {
-    const before = { enabled: [...settings.store.enabledOverlays], values: plain(settings.store.overlayValues) };
+    const before = snapshotState();
     const next = applyGlobal(preset, before.enabled, plain(before.values));
     settings.store.enabledOverlays = next.enabled;
     settings.store.overlayValues = next.values;
 
-    return () => {
-        settings.store.enabledOverlays = before.enabled;
-        settings.store.overlayValues = before.values;
-    };
+    return () => restoreState(before);
 }

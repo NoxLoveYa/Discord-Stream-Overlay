@@ -8,22 +8,18 @@ import "./presets.css";
 
 import { Button } from "@components/Button";
 import { Card } from "@components/Card";
-import { Heading } from "@components/Heading";
 import { PlusIcon } from "@components/Icons";
 import { Paragraph } from "@components/Paragraph";
 import { cleanName, findPreset, isTaken, MAX_NAME, newName } from "@plugins/streamOverlay.desktop/presets";
 import { TextInput, useEffect, useState } from "@webpack/common";
 import type { ReactNode } from "react";
 
+import { NoticeBar, type Undo, useNotice } from "./Notice";
 import { PresetCard } from "./PresetCard";
 
-const NOTICE_MS = 8000;
 const FRESH_MS = 1600;
 
-type Undo = () => void;
-
 interface PresetManagerProps<T extends { name: string; }> {
-    title: string;
     hint: string;
     emptyText: string;
     presets: T[];
@@ -47,14 +43,8 @@ export function PresetManager<T extends { name: string; }>(props: PresetManagerP
 
     const [composing, setComposing] = useState(false);
     const [name, setName] = useState("");
-    const [notice, setNotice] = useState<{ text: string; undo?: Undo; } | null>(null);
     const [fresh, setFresh] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!notice) return;
-        const timer = setTimeout(() => setNotice(null), NOTICE_MS);
-        return () => clearTimeout(timer);
-    }, [notice]);
+    const { notice, say, dismiss } = useNotice();
 
     useEffect(() => {
         if (!fresh) return;
@@ -71,8 +61,6 @@ export function PresetManager<T extends { name: string; }>(props: PresetManagerP
         setComposing(true);
     }
 
-    const say = (text: string, undo?: Undo) => setNotice({ text, undo });
-
     function save() {
         if (!clean) return;
         props.save(clean);
@@ -85,7 +73,6 @@ export function PresetManager<T extends { name: string; }>(props: PresetManagerP
         <section className="vc-so-pm">
             <div className="vc-so-pm-head">
                 <div>
-                    <Heading tag="h3">{props.title}</Heading>
                     <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">{props.hint}</Paragraph>
                 </div>
                 {!composing && (
@@ -128,15 +115,7 @@ export function PresetManager<T extends { name: string; }>(props: PresetManagerP
                 </div>
             )}
 
-            {notice && (
-                <div className="vc-so-notice" role="status">
-                    <span>{notice.text}</span>
-                    {notice.undo && (
-                        <button className="vc-so-undo" onClick={() => { notice.undo!(); setNotice(null); }}>Undo</button>
-                    )}
-                    <button className="vc-so-notice-close" aria-label="Dismiss" onClick={() => setNotice(null)}>×</button>
-                </div>
-            )}
+            <NoticeBar notice={notice} onDismiss={dismiss} />
 
             {presets.length > 0 ? (
                 <div className="vc-so-preset-grid">
