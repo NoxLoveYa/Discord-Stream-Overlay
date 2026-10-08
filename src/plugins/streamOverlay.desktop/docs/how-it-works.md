@@ -121,6 +121,18 @@ to a fixed element covering the window if that is refused.
 
 Closing the tab destroys the window.
 
+### The Spotify overlay
+
+Overlay pages cannot reach Discord, so the track is passed in from outside, like the keys and the mouse. `spotify.ts`
+(renderer) subscribes to the `SPOTIFY_PLAYER_STATE` event that Discord dispatches when the linked Spotify account starts,
+pauses, seeks or changes track (the same event Vencord's Spotify Controls plugin reads), and calls `Native.setMedia`. In
+the main process `cleanMedia` (`main/media.ts`) validates it: text is cut and whitespace-collapsed, numbers are clamped
+and the cover has to be an `https://*.scdn.co/` address. Both overlay windows (the stream's and the Layout tab's) keep the
+latest track and hand it to the host page (`window.__streamOverlayMedia`), which posts `streamoverlay:media` to the
+overlays that set `"media": true`, and again whenever one of them loads. The overlay moves the progress bar on its own
+from `position` and `at`, so no message is needed per second. The Layout window shows a sample track while nothing plays.
+Nothing is read at startup: the card stays on "Nothing playing" until the first event.
+
 ### Lifecycle
 
 - `startSync` (plugin start): if "stream only" is on, `Native.prepareStream` registers the preload script on Discord's

@@ -155,7 +155,7 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `index.tsx` | the plugin definition |
 | `settings.ts`, `presets.ts` | the stored settings and helpers to edit them; the preset logic (no React, no store) |
 | `apps.ts`, `appPresets.ts` | presets by app: matching a program to its binding (no React, no store); following the program in focus and applying / going back |
-| `components/` | the settings page: `OverlayPicker` switches between `OverlayGrid` (tabs: cards and folder tools, global presets, presets by app) and `OverlayDetail` (one overlay: tabs for its settings and its presets); Discord's `TextInput`, `Slider` and select; the color picker is built here (like Discord's role color picker) because Discord's own `ColorPicker` is only filled in once Discord has loaded it |
+| `components/` | the settings page: `OverlayPicker` switches between `OverlayGrid` (tabs: cards and folder tools, layout, global presets, presets by app) and `OverlayDetail` (one overlay: tabs for its settings and its presets); Discord's `TextInput`, `Slider` and select; the color picker is built here (like Discord's role color picker) because Discord's own `ColorPicker` is only filled in once Discord has loaded it |
 | `sync.ts` | keeps the overlay window in line with the stream and the settings; collects what overlays save |
 | `menu.tsx` | "Overlay Settings" in the stream menu |
 | `types.ts` | types shared by both sides, no runtime code |
@@ -168,5 +168,6 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `main/host.ts` | the page that holds every overlay as an iframe and bridges them to the main process |
 | `main/display.ts`, `main/animations.ts` | finding the shared display, the enter / exit animations |
 | `main/nvenc.ts`, `nvenc/` | stream only: the preload script, frame transport and preview overlay; the native NVENC hook |
-| `main/layout.ts`, `components/Layout.tsx` | the Layout tab: a second offscreen overlay window whose frames the settings page polls and whose mouse it feeds |
+| `main/layout.ts`, `components/Layout.tsx` | the Layout tab: a second offscreen overlay window whose frames the settings page asks for (answered as they are drawn) and whose mouse it feeds |
+| `spotify.ts`, `main/media.ts` | the track playing in Spotify: taken from Discord's player state events in the renderer, validated in the main process (`cleanMedia`) and pushed to the overlays that set `"media": true` |
 | `main/focus.ts` | the program in focus: a small PowerShell helper (own process, only while somebody asks) and the object `native.ts` keeps it in |
