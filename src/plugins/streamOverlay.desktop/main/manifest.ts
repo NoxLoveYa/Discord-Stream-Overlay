@@ -77,7 +77,7 @@ export function readManifest(indexFile: string): Manifest {
         settings.push(setting);
     }
 
-    return { keys, interactive, settings: settings.slice(0, MAX_SETTINGS) };
+    return { keys, mouse: raw?.mouse === true, interactive, settings: settings.slice(0, MAX_SETTINGS) };
 }
 
 export function unionKeys(manifests: Manifest[]) {

@@ -61,11 +61,16 @@ export class OverlayWindow {
             this.loadedKey = "";
         }
 
-        const files = found.map(o => o.file);
-        const key = JSON.stringify(files);
+        const overlays = found.map((o, i) => ({
+            file: o.file,
+            keys: manifests[i].keys,
+            interactive: manifests[i].interactive.length > 0,
+            mouse: manifests[i].mouse
+        }));
+        const key = JSON.stringify(overlays);
         const fresh = key !== this.loadedKey;
         if (fresh) {
-            writeFileSync(hostPath(), hostHtml(files, manifests.map(m => m.interactive.length > 0)));
+            writeFileSync(hostPath(), hostHtml(overlays));
             await win.loadURL(pathToFileURL(hostPath()).href);
             this.loadedKey = key;
         }
@@ -76,9 +81,9 @@ export class OverlayWindow {
         if (fresh) await playEnter(win);
 
         const keys = unionKeys(manifests);
-        this.input.sync(keys, manifests.some(m => m.interactive.length > 0), fresh);
+        this.input.sync(keys, manifests.some(m => m.mouse), manifests.some(m => m.interactive.length > 0), fresh);
 
-        return { match, displayId: display.id, bounds: display.bounds, overlays: files.length, keys: keys.length };
+        return { match, displayId: display.id, bounds: display.bounds, overlays: found.length, keys: keys.length };
     }
 
     async hide(animate = true) {

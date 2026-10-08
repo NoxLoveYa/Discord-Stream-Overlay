@@ -27,6 +27,8 @@ export interface OverlaySetting {
 
 export interface Manifest {
     keys: string[];
+    /** the overlay receives how far the mouse moved and the wheel turned (not where the cursor is) */
+    mouse: boolean;
     /** while all of these are held, the overlay window takes the mouse */
     interactive: string[];
     settings: OverlaySetting[];

@@ -1,7 +1,8 @@
-/* a key is a well (.key) with a cap sliding in it; --accent is the light under the key, --edge the hairline on the cap */
+/* A key is a well (.key) with a cap sliding in it; --accent is the light under the key, --edge the hairline on the cap.
+   The overlay's style.css defines --key-accent-rgb and --key-edge-rgb (.mod swaps them). */
 .key {
-    --accent: var(--letter-accent-rgb);
-    --edge: var(--modifier-accent-rgb);
+    --accent: var(--key-accent-rgb);
+    --edge: var(--key-edge-rgb);
 
     position: relative;
     width: calc(var(--pitch) * var(--span, 1) - var(--gap));
@@ -12,8 +13,8 @@
 }
 
 .mod {
-    --accent: var(--modifier-accent-rgb);
-    --edge: var(--letter-accent-rgb);
+    --accent: var(--key-edge-rgb);
+    --edge: var(--key-accent-rgb);
 }
 
 /* ambient bloom behind the key */

@@ -5,16 +5,31 @@
  */
 
 import keyboardHtml from "file://../defaultOverlays/keyboard/index.html";
-import keyboardKeysCss from "file://../defaultOverlays/keyboard/keys.css";
-import keyboardMoveCss from "file://../defaultOverlays/keyboard/move.css";
 import keyboardManifest from "file://../defaultOverlays/keyboard/overlay.json";
-import keyboardScript from "file://../defaultOverlays/keyboard/script.js";
 import keyboardCss from "file://../defaultOverlays/keyboard/style.css";
+import mouseHtml from "file://../defaultOverlays/mouse/index.html";
+import mouseManifest from "file://../defaultOverlays/mouse/overlay.json";
+import mouseScript from "file://../defaultOverlays/mouse/script.js";
+import mouseCss from "file://../defaultOverlays/mouse/style.css";
 import redBorderHtml from "file://../defaultOverlays/red-border/index.html";
 import redBorderManifest from "file://../defaultOverlays/red-border/overlay.json";
 import redBorderCss from "file://../defaultOverlays/red-border/style.css";
+import boardCss from "file://../defaultOverlays/shared/board.css";
+import keysCss from "file://../defaultOverlays/shared/keys.css";
+import keysScript from "file://../defaultOverlays/shared/keys.js";
+import moveCss from "file://../defaultOverlays/shared/move.css";
+import moveScript from "file://../defaultOverlays/shared/move.js";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
+
+/** Copied into every overlay that looks like the keyboard: each overlay folder has to be complete on its own. */
+const board = {
+    "board.css": boardCss,
+    "keys.css": keysCss,
+    "keys.js": keysScript,
+    "move.css": moveCss,
+    "move.js": moveScript
+};
 
 /** Overlays shipped with the plugin: folder name -> files. To add one, import its files above and list it here. */
 const defaultOverlays: Record<string, Record<string, string>> = {
@@ -24,12 +39,17 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "overlay.json": redBorderManifest
     },
     "keyboard": {
+        ...board,
         "index.html": keyboardHtml,
-        "script.js": keyboardScript,
         "style.css": keyboardCss,
-        "keys.css": keyboardKeysCss,
-        "move.css": keyboardMoveCss,
         "overlay.json": keyboardManifest
+    },
+    "mouse": {
+        ...board,
+        "index.html": mouseHtml,
+        "script.js": mouseScript,
+        "style.css": mouseCss,
+        "overlay.json": mouseManifest
     }
 };
 

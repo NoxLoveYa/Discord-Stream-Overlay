@@ -6,17 +6,17 @@
 
 import { type BrowserWindow, screen } from "electron";
 
-import { type KeyPoll, startKeyPoll } from "./keys";
+import { type InputHandlers, type InputPoll, startInputPoll } from "./keys";
 
 const POINTER_INTERVAL_MS = 50;
 
 /**
  * Feeds the overlay page with what it cannot see itself because the window never has focus and ignores the mouse:
- * the state of the keys it asked for, and where the cursor is. It also lets the window take the mouse while an
- * interactive overlay's key combo is held.
+ * the state of the keys it asked for, how far the mouse moved, and where the cursor is. It also lets the window take
+ * the mouse while an interactive overlay's key combo is held.
  */
 export class OverlayInput {
-    private keyPoll: KeyPoll | null = null;
+    private poll: InputPoll | null = null;
     private pointerTimer: ReturnType<typeof setInterval> | null = null;
     private lastPointer = "";
     private mouseCaptured = false;
@@ -26,10 +26,13 @@ export class OverlayInput {
         private readonly getCombos: () => string[][]
     ) { }
 
-    sync(keys: string[], relayPointer: boolean, freshPage: boolean) {
-        if (this.keyPoll?.names.join() !== keys.join()) {
-            this.stopKeys();
-            this.keyPoll = startKeyPoll(keys, this.onKeys);
+    sync(keys: string[], mouse: boolean, relayPointer: boolean, freshPage: boolean) {
+        const unchanged = this.poll
+            ? this.poll.names.join() === keys.join() && this.poll.mouse === mouse
+            : !keys.length && !mouse;
+        if (!unchanged) {
+            this.stopPoll();
+            this.poll = startInputPoll(keys, mouse, this.handlers);
         }
 
         if (freshPage) this.lastPointer = "";
@@ -39,26 +42,31 @@ export class OverlayInput {
     /** A reloaded page has lost the key and cursor state: start over so both are sent again. */
     restart() {
         this.lastPointer = "";
-        const names = this.keyPoll?.names;
-        this.stopKeys();
-        if (names) this.keyPoll = startKeyPoll(names, this.onKeys);
+        const { poll } = this;
+        this.stopPoll();
+        if (poll) this.poll = startInputPoll(poll.names, poll.mouse, this.handlers);
     }
 
     stop() {
-        this.stopKeys();
+        this.stopPoll();
         this.setPointerRelay(false);
     }
 
-    private stopKeys() {
-        this.keyPoll?.stop();
-        this.keyPoll = null;
+    private stopPoll() {
+        this.poll?.stop();
+        this.poll = null;
         // without key state nothing could say the combo is released, so never leave the screen blocked
         this.setMouseCaptured(false);
     }
 
-    private onKeys = (down: string[]) => {
-        this.setMouseCaptured(this.getCombos().some(combo => combo.length > 0 && combo.every(k => down.includes(k))));
-        this.getWindow()?.webContents.executeJavaScript(`window.__streamOverlayKeys?.(${JSON.stringify(down)})`).catch(() => { });
+    private readonly handlers: InputHandlers = {
+        keys: down => {
+            this.setMouseCaptured(this.getCombos().some(combo => combo.length > 0 && combo.every(k => down.includes(k))));
+            this.getWindow()?.webContents.executeJavaScript(`window.__streamOverlayKeys?.(${JSON.stringify(down)})`).catch(() => { });
+        },
+        mouse: (dx, dy, wheel) => {
+            this.getWindow()?.webContents.executeJavaScript(`window.__streamOverlayMouse?.(${dx}, ${dy}, ${wheel})`).catch(() => { });
+        }
     };
 
     private setMouseCaptured(capture: boolean) {
