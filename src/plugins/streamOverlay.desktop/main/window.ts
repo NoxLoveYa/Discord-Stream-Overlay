@@ -93,6 +93,15 @@ export class OverlayWindow {
         if (this.shown && !this.offscreen) this.live()?.showInactive();
     }
 
+    // the 240 Hz Electron documents as the highest is used when a higher rate is not taken
+    private setFrameRate(win: BrowserWindow, fps: number) {
+        const { webContents } = win;
+        try {
+            webContents.frameRate = fps;
+        } catch { /* refused */ }
+        if (webContents.frameRate !== fps) webContents.frameRate = Math.min(fps, FALLBACK_FPS);
+    }
+
     private armed() {
         return this.layout ? this.entries.flatMap(e => e.manifest.draggable ? e.manifest.interactive : []) : [];
     }
@@ -123,11 +132,7 @@ export class OverlayWindow {
         // The page keeps the layout of the full screen: a smaller window with a matching zoom shows it in fewer pixels
         const scale = this.layout && renderWidth ? Math.min(1, renderWidth / (display.bounds.width * screen.getPrimaryDisplay().scaleFactor)) : 1;
         win.setBounds({ ...display.bounds, width: Math.max(1, Math.round(display.bounds.width * scale)), height: Math.max(1, Math.round(display.bounds.height * scale)) });
-        if (offscreen) {
-            const { webContents } = win;
-            webContents.setFrameRate(this.layout ? LAYOUT_FPS : OFFSCREEN_FPS);
-            if (this.layout && webContents.getFrameRate() !== LAYOUT_FPS) webContents.setFrameRate(FALLBACK_FPS);
-        }
+        if (offscreen) this.setFrameRate(win, this.layout ? LAYOUT_FPS : OFFSCREEN_FPS);
 
         if (this.exiting) {
             this.exiting = false;
@@ -147,7 +152,7 @@ export class OverlayWindow {
             await win.loadURL(pathToFileURL(hostPath(this.layout)).href);
             this.loadedKey = key;
         }
-        if (offscreen) win.webContents.setZoomFactor(scale);
+        if (this.layout) win.webContents.zoomFactor = scale;
 
         // before it becomes visible, so the first frame already has the right values
         await this.applySettings();
@@ -230,10 +235,7 @@ export class OverlayWindow {
         });
         win.setAlwaysOnTop(true, "screen-saver");
         win.setIgnoreMouseEvents(true);
-        if (this.offscreen) {
-            win.webContents.setFrameRate(OFFSCREEN_FPS);
-            win.webContents.on("paint", (_, __, image) => this.stream.frame(image));
-        }
+        if (this.offscreen) win.webContents.on("paint", (_, __, image) => this.stream.frame(image));
         win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
         win.webContents.on("will-navigate", e => e.preventDefault());
         win.on("closed", () => {
