@@ -1,0 +1,75 @@
+/* Ocean Abyss: deep navy water with cyan light and foam edges, generously round.
+   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "ocean".
+   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+html[data-theme="ocean"] {
+    --graphite-900: #04141f;
+    --graphite-700: #06283f;
+    --graphite-500: #0b3a57;
+    --text: #eaf7ff;
+    --text-muted: #7fa8c0;
+
+    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
+    --key-accent-rgb: 34 211 238;
+    --key-edge-rgb: 190 240 255;
+    --click-rgb: 34 211 238;
+    --motion-rgb: 120 220 255;
+    --card-accent-rgb: 34 211 238;
+    --card-accent2-rgb: 190 240 255;
+    --move-rgb: 34 211 238;
+    --gem-rgb: 34 211 238;
+}
+
+:where(html[data-theme="ocean"]) {
+    .board {
+        border: 1.5px solid color-mix(in srgb, rgb(34 211 238 / 30%) var(--panel-opacity, 100%), transparent);
+        border-radius: 16px;
+        background:
+            radial-gradient(130% 100% at 50% 0%, color-mix(in srgb, rgb(34 211 238 / 10%) var(--panel-opacity, 100%), transparent), color-mix(in srgb, rgb(34 211 238 / 0%) var(--panel-opacity, 100%), transparent) 55%),
+            linear-gradient(180deg, color-mix(in srgb, rgb(7 42 66 / 96%) var(--panel-opacity, 100%), transparent), color-mix(in srgb, rgb(2 14 24 / 96%) var(--panel-opacity, 100%), transparent));
+        box-shadow:
+            0 24px 48px -16px color-mix(in srgb, rgb(0 0 0 / 80%) var(--panel-opacity, 100%), transparent),
+            0 0 24px color-mix(in srgb, rgb(34 211 238 / 12%) var(--panel-opacity, 100%), transparent),
+            inset 0 1px 0 color-mix(in srgb, rgb(190 240 255 / 14%) var(--panel-opacity, 100%), transparent);
+    }
+
+    .key {
+        border-radius: 12px;
+    }
+
+    .cap {
+        border-radius: 12px 12px 16px 16px;
+    }
+
+    .key::after {
+        inset: auto 8px 0;
+        height: 5px;
+        border-radius: 0 0 12px 12px;
+    }
+
+    .btn-left,
+    .btn-left .cap {
+        border-radius: 24px 12px 12px;
+    }
+
+    .btn-right,
+    .btn-right .cap {
+        border-radius: 12px 24px 12px 12px;
+    }
+
+    .btn-m4,
+    .btn-m4 .cap,
+    .btn-m5,
+    .btn-m5 .cap {
+        border-radius: 12px;
+    }
+
+    .wheel,
+    .roller,
+    .pad {
+        border-radius: 12px;
+    }
+
+    .cover {
+        border-radius: 12px;
+    }
+}

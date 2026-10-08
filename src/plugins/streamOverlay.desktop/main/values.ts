@@ -29,11 +29,22 @@ export const BUILTIN_FONTS = [
 export const fontCssValue = (family: string) =>
     family === "default" ? DEFAULT_FONT_STACK : `'${family}', 'Segoe UI', system-ui, sans-serif`;
 
-/** The font a theme draws with when nothing else is picked: blackletter for gothic, the default stack otherwise. */
+/** The font a theme draws with when nothing else is picked (blackletter for gothic, mono for terminal). */
+const THEME_FONTS: Record<string, string> = { gothic: "ObnoxiousGothic", terminal: "Consolas" };
+
 export function themeFontDefault(settings: OverlaySetting[], stored: Record<string, unknown>) {
     const theme = settings.find(s => s.id === "theme" && s.type === "select");
     if (!theme) return "default";
-    return resolveValue(theme, stored[theme.id]) === "gothic" ? "ObnoxiousGothic" : "default";
+    const value = resolveValue(theme, stored[theme.id]);
+    return typeof value === "string" && THEME_FONTS[value] ? THEME_FONTS[value] : "default";
+}
+
+/** The theme behind a theme font, for the picker's hint ("gothic", "terminal", null when none). */
+export function themeFontName(settings: OverlaySetting[], stored: Record<string, unknown>): string | null {
+    const theme = settings.find(s => s.id === "theme" && s.type === "select");
+    if (!theme) return null;
+    const value = resolveValue(theme, stored[theme.id]);
+    return typeof value === "string" && THEME_FONTS[value] ? value : null;
 }
 
 /** Where an unset font follows, for the picker's hint: null when it is just the default stack. */
@@ -41,7 +52,8 @@ export function fontFollows(settings: OverlaySetting[], stored: Record<string, u
     if (typeof globalFont === "string" && globalFont !== "default" && FONT_FAMILY.test(globalFont))
         return `the default font (${globalFont})`;
     const themeDefault = themeFontDefault(settings, stored);
-    return themeDefault === "default" ? null : `the gothic theme (${themeDefault})`;
+    const theme = themeFontName(settings, stored);
+    return theme && themeDefault !== "default" ? `the ${theme} theme (${themeDefault})` : null;
 }
 
 /**

@@ -2,7 +2,7 @@
     "title": "Mouse",
     "category": "Input",
     "description": "The mouse buttons, wheel and movement, in a default or a gothic look. Hold Alt + Caps to move or resize it.",
-    "keys": ["LMB", "RMB", "MMB"],
+    "keys": ["LMB", "RMB", "MMB", "M4", "M5"],
     "mouse": true,
     "interactive": ["ALT", "CAPS"],
     "draggable": true,
@@ -15,7 +15,14 @@
             "default": "default",
             "options": [
                 { "label": "Default", "value": "default" },
-                { "label": "Gothic", "value": "gothic" }
+                { "label": "Gothic", "value": "gothic" },
+                { "label": "Neon Nights", "value": "neon" },
+                { "label": "Porcelain Light", "value": "porcelain" },
+                { "label": "Retro Terminal", "value": "terminal" },
+                { "label": "Sakura Pastel", "value": "sakura" },
+                { "label": "Molten Lava", "value": "molten" },
+                { "label": "Royal Gold", "value": "royal" },
+                { "label": "Ocean Abyss", "value": "ocean" }
             ]
         },
         {

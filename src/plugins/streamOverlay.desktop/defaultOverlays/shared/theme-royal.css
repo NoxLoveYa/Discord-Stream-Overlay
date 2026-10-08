@@ -1,0 +1,79 @@
+/* Royal Gold: black with fine gold hairlines and ivory light, restrained and sharp.
+   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "royal".
+   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+html[data-theme="royal"] {
+    --graphite-900: #0a0a0f;
+    --graphite-700: #101016;
+    --graphite-500: #1a1a22;
+    --text: #f4ecd8;
+    --text-muted: #a89a75;
+
+    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
+    --key-accent-rgb: 212 175 55;
+    --key-edge-rgb: 240 230 200;
+    --click-rgb: 212 175 55;
+    --motion-rgb: 230 205 130;
+    --card-accent-rgb: 212 175 55;
+    --card-accent2-rgb: 240 230 200;
+    --move-rgb: 212 175 55;
+    --gem-rgb: 212 175 55;
+}
+
+:where(html[data-theme="royal"]) {
+    .board {
+        border: 1px solid color-mix(in srgb, rgb(212 175 55 / 48%) var(--panel-opacity, 100%), transparent);
+        border-radius: 10px;
+        background: linear-gradient(180deg, color-mix(in srgb, rgb(13 13 18 / 97%) var(--panel-opacity, 100%), transparent), color-mix(in srgb, rgb(5 5 8 / 97%) var(--panel-opacity, 100%), transparent));
+        box-shadow:
+            0 24px 44px -16px color-mix(in srgb, rgb(0 0 0 / 85%) var(--panel-opacity, 100%), transparent),
+            0 0 18px color-mix(in srgb, rgb(212 175 55 / 10%) var(--panel-opacity, 100%), transparent),
+            inset 0 0 0 1px color-mix(in srgb, rgb(0 0 0 / 60%) var(--panel-opacity, 100%), transparent),
+            inset 0 1px 0 color-mix(in srgb, rgb(240 230 200 / 12%) var(--panel-opacity, 100%), transparent);
+    }
+
+    .key {
+        border-radius: 8px;
+    }
+
+    .cap {
+        border-radius: 8px 8px 7px 7px;
+    }
+
+    .key::after {
+        height: 3px;
+    }
+
+    .key:not(.mod) .cap span {
+        letter-spacing: 0.06em;
+    }
+
+    .btn-left,
+    .btn-left .cap {
+        border-radius: 22px 8px 8px;
+    }
+
+    .btn-right,
+    .btn-right .cap {
+        border-radius: 8px 22px 8px 8px;
+    }
+
+    .btn-m4,
+    .btn-m4 .cap,
+    .btn-m5,
+    .btn-m5 .cap {
+        border-radius: 8px;
+    }
+
+    .wheel,
+    .roller,
+    .pad {
+        border-radius: 8px;
+    }
+
+    .cover {
+        border-radius: 8px;
+        box-shadow:
+            inset 0 0 0 1px rgb(212 175 55 / 30%),
+            0 8px 16px -8px rgb(212 175 55 / 35%);
+    }
+}

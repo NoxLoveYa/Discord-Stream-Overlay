@@ -40,6 +40,8 @@ export interface Manifest {
     mouse: boolean;
     /** the overlay receives the track that is playing in Spotify */
     media: boolean;
+    /** the overlay receives the local League of Legends player's champion and summoner spells while in game */
+    lol: boolean;
     /** while all of these are held, the overlay window takes the mouse */
     interactive: string[];
     /** can be moved and resized with the `interactive` keys, so the Layout tab lets you drag it */
@@ -69,6 +71,18 @@ export interface MediaState {
     position: number;
     playing: boolean;
     at: number;
+}
+
+/**
+ * The local League of Legends player while a game is live, or null outside one. `champion` is the Data Dragon
+ * champion id ("Fiora"), `spells` its QWER ability icon addresses ("" when unknown), `summonerD/F` are
+ * "summoner-flash" ids ("" when unknown). Everything comes from the game client on this machine.
+ */
+export interface LolState {
+    champion: string;
+    spells: string[];
+    summonerD: string;
+    summonerF: string;
 }
 
 /** A font the user added: a file imported into the fonts folder, or a system font by name (`file` is null). */

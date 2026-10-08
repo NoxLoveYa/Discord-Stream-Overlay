@@ -1,0 +1,74 @@
+/* Sakura Pastel: deep plum air with sakura-pink light and cream edges, everything softly round.
+   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "sakura".
+   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+html[data-theme="sakura"] {
+    --graphite-900: #220d1a;
+    --graphite-700: #311326;
+    --graphite-500: #47203a;
+    --text: #ffeef5;
+    --text-muted: #c99ab2;
+
+    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
+    --key-accent-rgb: 255 158 199;
+    --key-edge-rgb: 255 220 232;
+    --click-rgb: 255 158 199;
+    --motion-rgb: 255 205 225;
+    --card-accent-rgb: 255 158 199;
+    --card-accent2-rgb: 255 220 232;
+    --move-rgb: 255 158 199;
+    --gem-rgb: 255 158 199;
+}
+
+:where(html[data-theme="sakura"]) {
+    .board {
+        border: 1.5px solid color-mix(in srgb, rgb(255 158 199 / 32%) var(--panel-opacity, 100%), transparent);
+        border-radius: 20px;
+        background: linear-gradient(180deg, color-mix(in srgb, rgb(42 16 30 / 96%) var(--panel-opacity, 100%), transparent), color-mix(in srgb, rgb(20 8 15 / 96%) var(--panel-opacity, 100%), transparent));
+        box-shadow:
+            0 24px 48px -16px color-mix(in srgb, rgb(0 0 0 / 75%) var(--panel-opacity, 100%), transparent),
+            0 0 26px color-mix(in srgb, rgb(255 158 199 / 14%) var(--panel-opacity, 100%), transparent),
+            inset 0 1px 0 color-mix(in srgb, rgb(255 220 232 / 16%) var(--panel-opacity, 100%), transparent);
+    }
+
+    .key {
+        border-radius: 14px;
+    }
+
+    .cap {
+        border-radius: 14px 14px 12px 12px;
+    }
+
+    .key:not(.mod) .cap span {
+        text-shadow: 0 0 10px rgb(var(--accent) / 60%);
+    }
+
+    .btn-left,
+    .btn-left .cap {
+        border-radius: 26px 14px 14px;
+    }
+
+    .btn-right,
+    .btn-right .cap {
+        border-radius: 14px 26px 14px 14px;
+    }
+
+    .btn-m4,
+    .btn-m4 .cap,
+    .btn-m5,
+    .btn-m5 .cap {
+        border-radius: 14px;
+    }
+
+    .wheel,
+    .roller {
+        border-radius: 12px;
+    }
+
+    .pad {
+        border-radius: 16px;
+    }
+
+    .cover {
+        border-radius: 14px;
+    }
+}

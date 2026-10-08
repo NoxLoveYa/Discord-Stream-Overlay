@@ -14,7 +14,14 @@
             "default": "default",
             "options": [
                 { "label": "Default", "value": "default" },
-                { "label": "Gothic", "value": "gothic" }
+                { "label": "Gothic", "value": "gothic" },
+                { "label": "Neon Nights", "value": "neon" },
+                { "label": "Porcelain Light", "value": "porcelain" },
+                { "label": "Retro Terminal", "value": "terminal" },
+                { "label": "Sakura Pastel", "value": "sakura" },
+                { "label": "Molten Lava", "value": "molten" },
+                { "label": "Royal Gold", "value": "royal" },
+                { "label": "Ocean Abyss", "value": "ocean" }
             ]
         },
         {

@@ -8,6 +8,22 @@ import { createHash } from "crypto";
 import keyboardGothic from "file://../defaultOverlays/keyboard/gothic.css";
 import keyboardHtml from "file://../defaultOverlays/keyboard/index.html";
 import keyboardManifest from "file://../defaultOverlays/keyboard/overlay.json";
+import akaliE from "file://../defaultOverlays/keyboard/spells/akali-e.png?base64";
+import akaliQ from "file://../defaultOverlays/keyboard/spells/akali-q.png?base64";
+import akaliR from "file://../defaultOverlays/keyboard/spells/akali-r.png?base64";
+import akaliW from "file://../defaultOverlays/keyboard/spells/akali-w.png?base64";
+import fioraE from "file://../defaultOverlays/keyboard/spells/fiora-e.png?base64";
+import fioraQ from "file://../defaultOverlays/keyboard/spells/fiora-q.png?base64";
+import fioraR from "file://../defaultOverlays/keyboard/spells/fiora-r.png?base64";
+import fioraW from "file://../defaultOverlays/keyboard/spells/fiora-w.png?base64";
+import summonerBarrier from "file://../defaultOverlays/keyboard/spells/summoner-barrier.png?base64";
+import summonerExhaust from "file://../defaultOverlays/keyboard/spells/summoner-exhaust.png?base64";
+import summonerFlash from "file://../defaultOverlays/keyboard/spells/summoner-flash.png?base64";
+import summonerGhost from "file://../defaultOverlays/keyboard/spells/summoner-ghost.png?base64";
+import summonerHeal from "file://../defaultOverlays/keyboard/spells/summoner-heal.png?base64";
+import summonerIgnite from "file://../defaultOverlays/keyboard/spells/summoner-ignite.png?base64";
+import summonerSmite from "file://../defaultOverlays/keyboard/spells/summoner-smite.png?base64";
+import summonerTeleport from "file://../defaultOverlays/keyboard/spells/summoner-teleport.png?base64";
 import keyboardCss from "file://../defaultOverlays/keyboard/style.css";
 import mouseGothic from "file://../defaultOverlays/mouse/gothic.css";
 import mouseHtml from "file://../defaultOverlays/mouse/index.html";
@@ -30,13 +46,20 @@ import keysCss from "file://../defaultOverlays/shared/keys.css";
 import keysScript from "file://../defaultOverlays/shared/keys.js";
 import moveCss from "file://../defaultOverlays/shared/move.css";
 import moveScript from "file://../defaultOverlays/shared/move.js";
+import themeMolten from "file://../defaultOverlays/shared/theme-molten.css";
+import themeNeon from "file://../defaultOverlays/shared/theme-neon.css";
+import themeOcean from "file://../defaultOverlays/shared/theme-ocean.css";
+import themePorcelain from "file://../defaultOverlays/shared/theme-porcelain.css";
+import themeRoyal from "file://../defaultOverlays/shared/theme-royal.css";
+import themeSakura from "file://../defaultOverlays/shared/theme-sakura.css";
+import themeTerminal from "file://../defaultOverlays/shared/theme-terminal.css";
 import spotifyGothic from "file://../defaultOverlays/spotify/gothic.css";
 import spotifyHtml from "file://../defaultOverlays/spotify/index.html";
 import spotifyManifest from "file://../defaultOverlays/spotify/overlay.json";
 import spotifyScript from "file://../defaultOverlays/spotify/script.js";
 import spotifyCss from "file://../defaultOverlays/spotify/style.css";
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 
 /** Copied into every overlay that looks like the keyboard: each overlay folder has to be complete on its own. */
 const board = {
@@ -54,6 +77,17 @@ const gothic = {
     "gothic-panel.css": gothicPanel
 };
 
+/** The custom themes: one shared file per look, copied into the keyboard, the mouse and the Spotify card. */
+const themes = {
+    "theme-neon.css": themeNeon,
+    "theme-porcelain.css": themePorcelain,
+    "theme-terminal.css": themeTerminal,
+    "theme-sakura.css": themeSakura,
+    "theme-molten.css": themeMolten,
+    "theme-royal.css": themeRoyal,
+    "theme-ocean.css": themeOcean
+};
+
 /** Overlays shipped with the plugin: folder name -> files. To add one, import its files above and list it here. */
 const defaultOverlays: Record<string, Record<string, string>> = {
     "red-border": {
@@ -64,15 +98,34 @@ const defaultOverlays: Record<string, Record<string, string>> = {
     "keyboard": {
         ...board,
         ...gothic,
+        ...themes,
         "gothic-keys.css": gothicKeys,
         "gothic.css": keyboardGothic,
         "index.html": keyboardHtml,
         "style.css": keyboardCss,
-        "overlay.json": keyboardManifest
+        "overlay.json": keyboardManifest,
+        // spell icons for the MOBA arrangement (Data Dragon, see docs/usage.md)
+        "spells/akali-e.png": akaliE,
+        "spells/akali-q.png": akaliQ,
+        "spells/akali-r.png": akaliR,
+        "spells/akali-w.png": akaliW,
+        "spells/fiora-e.png": fioraE,
+        "spells/fiora-q.png": fioraQ,
+        "spells/fiora-r.png": fioraR,
+        "spells/fiora-w.png": fioraW,
+        "spells/summoner-barrier.png": summonerBarrier,
+        "spells/summoner-exhaust.png": summonerExhaust,
+        "spells/summoner-flash.png": summonerFlash,
+        "spells/summoner-ghost.png": summonerGhost,
+        "spells/summoner-heal.png": summonerHeal,
+        "spells/summoner-ignite.png": summonerIgnite,
+        "spells/summoner-smite.png": summonerSmite,
+        "spells/summoner-teleport.png": summonerTeleport
     },
     "mouse": {
         ...board,
         ...gothic,
+        ...themes,
         "gothic-keys.css": gothicKeys,
         "gothic.css": mouseGothic,
         "index.html": mouseHtml,
@@ -85,6 +138,7 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "move.css": moveCss,
         "move.js": moveScript,
         ...gothic,
+        ...themes,
         "gothic.css": spotifyGothic,
         "index.html": spotifyHtml,
         "script.js": spotifyScript,
@@ -113,14 +167,20 @@ const hashOf = (files: string[], read: (file: string) => string | null) => {
 
 const shippedHash = (name: string) => hashOf(Object.keys(defaultOverlays[name]), file => defaultOverlays[name][file]);
 
-/** The hash of these files of the copy in `target`. */
-const installedHash = (target: string, files: string[]) => hashOf(files, file => {
+/** Files shipped as base64 instead of text ("overlay/file"): read back the same way, so hashes match. */
+const binaryFiles = new Set(Object.keys(defaultOverlays.keyboard).filter(f => f.endsWith(".png")).map(f => `keyboard/${f}`));
+
+const readInstalled = (target: string, name: string, file: string) => {
     try {
-        return readFileSync(join(target, file), "utf-8");
+        const full = join(target, file);
+        return binaryFiles.has(`${name}/${file}`) ? readFileSync(full).toString("base64") : readFileSync(full, "utf-8");
     } catch {
         return null;
     }
-});
+};
+
+/** The hash of these files of the copy in `target`. */
+const installedHash = (target: string, name: string, files: string[]) => hashOf(files, file => readInstalled(target, name, file));
 
 const filesIn = (target: string) => readdirSync(target, { withFileTypes: true }).filter(d => d.isFile()).map(d => d.name);
 
@@ -139,12 +199,23 @@ function readMarker(marker: string): Record<string, string> {
 /** `prune`: files of an older version that this one no longer has are removed (only for a copy that is known to be ours). */
 function install(target: string, name: string, prune = false) {
     mkdirSync(target, { recursive: true });
-    for (const [file, content] of Object.entries(defaultOverlays[name]))
-        writeFileSync(join(target, file), content);
+    for (const [file, content] of Object.entries(defaultOverlays[name])) {
+        const dest = join(target, file);
+        mkdirSync(dirname(dest), { recursive: true });
+        writeFileSync(dest, binaryFiles.has(`${name}/${file}`) ? Buffer.from(content, "base64") : content);
+    }
 
-    if (prune)
+    if (prune) {
         for (const file of filesIn(target))
             if (!(file in defaultOverlays[name])) rmSync(join(target, file), { force: true });
+        // shipped subfolders (spells/): same treatment inside, filesIn only sees the top level
+        for (const dir of new Set(Object.keys(defaultOverlays[name]).map(f => dirname(f)).filter(d => d !== "."))) {
+            const full = join(target, dir);
+            if (!existsSync(full)) continue;
+            for (const file of filesIn(full))
+                if (!(`${dir}/${file}` in defaultOverlays[name])) rmSync(join(full, file), { force: true });
+        }
+    }
 }
 
 const checked = new Set<string>();
@@ -177,9 +248,9 @@ export function seedDefaults(dir: string) {
                 seeded[name] = shipped;
             }
         } else if (known !== shipped && known !== CUSTOM && existsSync(target)) {
-            if (installedHash(target, Object.keys(defaultOverlays[name])) === shipped) {
+            if (installedHash(target, name, Object.keys(defaultOverlays[name])) === shipped) {
                 seeded[name] = shipped;
-            } else if (known === "" || installedHash(target, filesIn(target)) === known) {
+            } else if (known === "" || installedHash(target, name, filesIn(target)) === known) {
                 // what was written last had the files of that version, which are not always the ones of this one (a new
                 // version can add files): so it is what is there that says whether the copy was edited
                 if (known === "") {

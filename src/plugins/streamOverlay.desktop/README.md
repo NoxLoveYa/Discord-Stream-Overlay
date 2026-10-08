@@ -26,7 +26,7 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
 | | |
 |---|---|
 | `board.css` | the panel, its position presets (`data-position`) and the shared look (colors, shadow, intro) |
-| `keys.css`, `keys.js` | keys and buttons: `[data-key]` elements get `.is-down` while that key is held |
+| `keys.css`, `keys.js` | keys and buttons: `[data-key]` elements get `.is-down` while that key is held; the keyboard's `arrangement` setting regroups its keys per game (FPS, MOBA) and hides the rest (`.is-hidden`); in MOBA the `champion` setting puts Fiora/Akali spell icons on QWER and `summoner-d`/`summoner-f` on D/F (PNGs in `keyboard/spells/`, from Data Dragon, bundled by `main/defaults.ts` like the rest) |
 | `move.css`, `move.js` | Alt + Caps to move and resize the `.board`, saved on release (needs the `.resize` and `.hint` elements) |
 | `gothic-panel.css`, `gothic-keys.css` | the gothic theme of the window and of the keys (see below) |
 
@@ -77,6 +77,8 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
   it). Read from raw input, so it also works in games that lock the cursor.
 - `media`: the page receives the track that is playing in Spotify (title, artists, cover, position), as long as Spotify is
   linked to the Discord account. Nothing else about what you listen to is read.
+- `lol`: the page receives the local League of Legends player's champion and summoner spells while a game is live
+  (`null` outside one). Read straight from the game client on this machine: no login, and nothing leaves it.
 - `interactive`: while all these keys are held the window takes the mouse instead of passing clicks through.
 - `draggable`: the overlay moves itself with those keys (`move.js`), so the Layout tab of the settings lets you drag it.
   Defaults to true when `interactive` is set; `"draggable": false` keeps an overlay out of it.
@@ -102,13 +104,21 @@ typography through the Apps tab.
 ### Themes
 
 An overlay with more than one look has a `select` setting named `theme`, which reaches the page as `html[data-theme="..."]`.
-The keyboard, the mouse and the Spotify card are built that way: their own CSS is the default theme and is not touched, and the
-gothic one is only rules inside `:where(html[data-theme="gothic"]) { ... }` (native CSS nesting). `:where()` weighs nothing,
+The keyboard, the mouse and the Spotify card are built that way: their own CSS is the default theme and is not touched, and every
+other theme is one shared file (`defaultOverlays/shared/theme-<name>.css`, copied into all three) with rules inside
+`:where(html[data-theme="<name>"]) { ... }` (native CSS nesting). `:where()` weighs nothing,
 so a rule weighs what it would without the scope and the order of the style sheets decides ties as before; variables that have
-to beat `:root` use `html[data-theme="gothic"] { ... }` instead. The colors of a theme are settings of their own (`letter-accent`
-and `g-letter-accent`), each shown only with its theme (`when`) and with its own default, and the CSS draws with an
-intermediate variable (`--key-accent-rgb`, `--click-rgb`, `--card-accent-rgb`) that the theme points at its own setting. The
-gothic keyboard, mouse and Spotify card used to be overlays of their own (`obnoxious-keyboard`...): `migrate.ts` moves what was
+to beat `:root` use `html[data-theme="<name>"] { ... }` instead. The Default and Gothic themes take their colors from
+settings of their own (`letter-accent` and `g-letter-accent`), each shown only with its theme (`when`) and with its own
+default, and the CSS draws with an intermediate variable (`--key-accent-rgb`, `--click-rgb`, `--card-accent-rgb`) that
+each theme points at its own colors. Each overlay picks its theme independently.
+
+Besides Default and Gothic there are seven custom themes, each with its own shapes, background and fixed palette
+(the accent settings stay on the Default and Gothic themes): Neon Nights (dark cyberpunk, pink/cyan), Porcelain Light
+(the only bright one, ivory glass), Retro Terminal (green phosphor CRT, square keys, mono font while none is picked),
+Sakura Pastel (plum and pink, very round), Molten Lava (basalt and ember orange, angular), Royal Gold (black and gold
+hairlines) and Ocean Abyss (deep navy, cyan, generously round). The gothic keyboard, mouse and Spotify card used to be
+overlays of their own (`obnoxious-keyboard`...): `migrate.ts` moves what was
 saved for them (what is on, settings, presets, global presets) to the theme when the plugin starts.
 
 ### Messages
@@ -121,6 +131,7 @@ Sent to the page (`window.addEventListener("message", ...)`, ignore anything who
 | `streamoverlay:pointer` | `x`, `y` | the cursor moved, in page coordinates (interactive overlays only) |
 | `streamoverlay:media` | `state` | the track changed, started, paused or was sought (`"media": true` only; also sent once the page loads). `state` is `null` when nothing plays, else `{ id, title, artists: string[], album, cover, duration, position, playing, at }` (milliseconds; `position` was true at `at`, a `Date.now()`, and moves on from there while `playing`). `cover` is an `https://*.scdn.co/` address or `""`. The names come from Spotify: show them as text, never as HTML |
 | `streamoverlay:mouse` | `dx`, `dy`, `wheel` | the mouse moved / the wheel turned since the last message, at most every 16 ms (`"mouse": true` only). `dx`, `dy` are mouse counts, `wheel` is 120 per notch, positive is up |
+| `streamoverlay:lol` | `state` | the live LoL player changed (`"lol": true` only; also sent once the page loads). `state` is `null` outside a game, else `{ champion, spells: string[4], summonerD, summonerF }`: the Data Dragon champion id, its QWER ability icon addresses (Data Dragon CDN, `""` when unknown) and `"summoner-flash"` ids (`""` when unknown) |
 
 Sent by the page:
 

@@ -1,0 +1,94 @@
+/* Porcelain Light: the only bright theme, an ivory glass panel with soft shadows and dark ink.
+   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "porcelain".
+   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+html[data-theme="porcelain"] {
+    --graphite-900: #fff;
+    --graphite-700: #f3eee3;
+    --graphite-500: #e3dac7;
+    --text: #26222c;
+    --text-muted: #6f6a7a;
+
+    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
+    --key-accent-rgb: 124 92 255;
+    --key-edge-rgb: 14 165 233;
+    --click-rgb: 124 92 255;
+    --motion-rgb: 14 165 233;
+    --card-accent-rgb: 124 92 255;
+    --card-accent2-rgb: 14 165 233;
+    --move-rgb: 124 92 255;
+    --gem-rgb: 124 92 255;
+}
+
+:where(html[data-theme="porcelain"]) {
+    .board {
+        border: 1px solid color-mix(in srgb, rgb(70 58 35 / 16%) var(--panel-opacity, 100%), transparent);
+        border-radius: 18px;
+        background: linear-gradient(180deg, color-mix(in srgb, rgb(250 247 240 / 94%) var(--panel-opacity, 100%), transparent), color-mix(in srgb, rgb(238 232 220 / 94%) var(--panel-opacity, 100%), transparent));
+        box-shadow:
+            0 24px 44px -18px color-mix(in srgb, rgb(70 58 35 / 35%) var(--panel-opacity, 100%), transparent),
+            0 2px 8px color-mix(in srgb, rgb(70 58 35 / 18%) var(--panel-opacity, 100%), transparent),
+            inset 0 1px 0 color-mix(in srgb, rgb(255 255 255 / 80%) var(--panel-opacity, 100%), transparent);
+    }
+
+    .key {
+        border-radius: 12px;
+        background: var(--graphite-900);
+        background: color-mix(in srgb, var(--graphite-900) var(--well-opacity, 100%), transparent);
+        box-shadow: inset 0 0 0 1px rgb(70 58 35 / 12%);
+    }
+
+    .cap {
+        border-radius: 12px 12px 10px 10px;
+        background: linear-gradient(180deg, #fff, var(--graphite-700));
+        box-shadow:
+            inset 0 0 0 1px rgb(70 58 35 / 10%),
+            inset 0 1px 0 rgb(255 255 255 / 90%),
+            0 3px 6px rgb(70 58 35 / 18%);
+    }
+
+    .key::after {
+        background: rgb(var(--accent) / 70%);
+    }
+
+    .btn-left,
+    .btn-left .cap {
+        border-radius: 22px 12px 12px;
+    }
+
+    .btn-right,
+    .btn-right .cap {
+        border-radius: 12px 22px 12px 12px;
+    }
+
+    .btn-m4,
+    .btn-m4 .cap,
+    .btn-m5,
+    .btn-m5 .cap {
+        border-radius: 12px;
+    }
+
+    .wheel {
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .roller {
+        border-radius: 9px;
+    }
+
+    .pad {
+        border-radius: 14px;
+        background:
+            linear-gradient(90deg, transparent calc(50% - 0.5px), rgb(70 58 35 / 10%) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+            linear-gradient(180deg, transparent calc(50% - 0.5px), rgb(70 58 35 / 10%) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+            #fff;
+    }
+
+    .cover {
+        border-radius: 12px;
+    }
+
+    .is-down .cap span {
+        color: var(--text);
+    }
+}

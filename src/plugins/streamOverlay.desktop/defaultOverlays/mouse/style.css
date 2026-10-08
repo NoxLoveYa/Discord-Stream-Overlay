@@ -4,7 +4,10 @@
     --wheel-w: 22px;
     --wheel-h: 58px;
     --rib: 8px;
+    --side-w: 10px;
+    --side-h: 69px;
     --move-rgb: var(--click-rgb);
+
     /* what the colors are drawn with: the theme picks which settings they come from */
     --click-rgb: var(--click-accent-rgb);
     --motion-rgb: var(--motion-accent-rgb);
@@ -12,6 +15,39 @@
     /* defaults: the settings in overlay.json override them */
     --click-accent-rgb: 139 92 246;
     --motion-accent-rgb: 34 211 238;
+}
+
+.mouse-bottom {
+    display: flex;
+    gap: var(--gap);
+    align-items: end;
+}
+
+/* invisible spacer balancing the thin side barrettes, so the sensor stays centered under the wheel
+   while taking almost the whole width of the board */
+.mouse-bottom::after {
+    content: "";
+    width: var(--side-w);
+    align-self: stretch;
+}
+
+.side {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+}
+
+.side .key {
+    --accent: var(--click-rgb);
+    --edge: var(--motion-rgb);
+
+    width: var(--side-w);
+    height: var(--side-h);
+}
+
+/* no labels on the thin macro barrettes: they light up like the rest, without text */
+.side .cap span {
+    display: none;
 }
 
 .buttons {
@@ -38,6 +74,14 @@
 .btn-right,
 .btn-right .cap {
     border-radius: 7px 28px 9px 7px;
+}
+
+/* the macro side buttons are thin barrettes, soberly round */
+.btn-m4,
+.btn-m4 .cap,
+.btn-m5,
+.btn-m5 .cap {
+    border-radius: 10px;
 }
 
 /* the wheel: a well like the keys', with a ribbed roller turning in it */
@@ -162,9 +206,12 @@
     opacity: 1;
 }
 
-/* where the mouse moved: the dot sits in the middle and leans the way the mouse goes */
+/* where the mouse moved: the dot sits in the middle and leans the way the mouse goes.
+   It takes almost the whole row and stays centered under the wheel (see .mouse-bottom::after). */
 .pad {
     position: relative;
+    flex: 1;
+    min-width: 0;
     aspect-ratio: 1;
     overflow: hidden;
     border-radius: 12px;

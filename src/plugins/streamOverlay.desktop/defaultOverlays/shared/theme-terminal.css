@@ -1,0 +1,87 @@
+/* Retro Terminal: green phosphor on near-black, square keys, CRT scanlines and a glowing tube text.
+   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "terminal".
+   The font falls back to Consolas while nothing else is picked (see themeFontDefault). The rules are inside :where(),
+   which counts for nothing; the variables have to beat :root, so they are not. */
+html[data-theme="terminal"] {
+    --graphite-900: #020805;
+    --graphite-700: #04140a;
+    --graphite-500: #0a2a16;
+    --text: #c9ffd9;
+    --text-muted: #4da86a;
+
+    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
+    --key-accent-rgb: 51 255 102;
+    --key-edge-rgb: 20 120 60;
+    --click-rgb: 51 255 102;
+    --motion-rgb: 51 255 102;
+    --card-accent-rgb: 51 255 102;
+    --card-accent2-rgb: 20 120 60;
+    --move-rgb: 51 255 102;
+    --gem-rgb: 51 255 102;
+}
+
+:where(html[data-theme="terminal"]) {
+    .board {
+        border: 1px solid color-mix(in srgb, rgb(51 255 102 / 32%) var(--panel-opacity, 100%), transparent);
+        border-radius: 3px;
+        background: linear-gradient(180deg, color-mix(in srgb, rgb(3 18 9 / 97%) var(--panel-opacity, 100%), transparent), color-mix(in srgb, rgb(1 6 3 / 97%) var(--panel-opacity, 100%), transparent));
+        box-shadow:
+            0 0 26px color-mix(in srgb, rgb(51 255 102 / 12%) var(--panel-opacity, 100%), transparent),
+            inset 0 0 30px color-mix(in srgb, rgb(51 255 102 / 5%) var(--panel-opacity, 100%), transparent);
+    }
+
+    /* CRT scanlines over the panel */
+    .board::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        border-radius: inherit;
+        background: repeating-linear-gradient(180deg, color-mix(in srgb, rgb(0 0 0 / 22%) var(--panel-opacity, 100%), transparent) 0 1px, color-mix(in srgb, rgb(0 0 0 / 0%) var(--panel-opacity, 100%), transparent) 1px 3px);
+        pointer-events: none;
+    }
+
+    .key {
+        border-radius: 2px;
+    }
+
+    .cap {
+        border-radius: 2px;
+        background: linear-gradient(180deg, var(--graphite-500), var(--graphite-700));
+    }
+
+    .cap span {
+        text-shadow: 0 0 8px rgb(var(--accent) / 75%);
+    }
+
+    .mod .cap span {
+        letter-spacing: 0.12em;
+    }
+
+    .btn-left,
+    .btn-left .cap {
+        border-radius: 12px 2px 2px;
+    }
+
+    .btn-right,
+    .btn-right .cap {
+        border-radius: 2px 12px 2px 2px;
+    }
+
+    .btn-m4,
+    .btn-m4 .cap,
+    .btn-m5,
+    .btn-m5 .cap {
+        border-radius: 2px;
+    }
+
+    .wheel,
+    .roller,
+    .pad {
+        border-radius: 3px;
+    }
+
+    .cover {
+        border-radius: 3px;
+    }
+}
