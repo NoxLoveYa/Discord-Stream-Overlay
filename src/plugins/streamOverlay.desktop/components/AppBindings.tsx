@@ -8,7 +8,7 @@ import "./apps.css";
 
 import { Button } from "@components/Button";
 import { Card } from "@components/Card";
-import { DeleteIcon, PlusIcon } from "@components/Icons";
+import { DeleteIcon, PlusIcon, SearchIcon } from "@components/Icons";
 import { Paragraph } from "@components/Paragraph";
 import { Switch } from "@components/Switch";
 import { detectApp, useFocusedApp } from "@plugins/streamOverlay.desktop/appPresets";
@@ -22,7 +22,7 @@ import { IconButton } from "./IconButton";
 import { NoticeBar, useNotice } from "./Notice";
 
 /** Which preset to switch to while a program is in focus. */
-export function AppBindings({ presets }: { presets: GlobalPreset[]; }) {
+export function AppBindings({ presets, onShowPresets }: { presets: GlobalPreset[]; onShowPresets(): void; }) {
     const { appBindings, appRevert } = settings.use(["appBindings", "appRevert"]);
     const bindings: AppBinding[] = plain(appBindings);
     const focused = useFocusedApp();
@@ -32,10 +32,18 @@ export function AppBindings({ presets }: { presets: GlobalPreset[]; }) {
     const [app, setApp] = useState("");
     const [preset, setPreset] = useState("");
     const [detecting, setDetecting] = useState<AbortController | null>(null);
+    // the search ended without finding anything
+    const [missed, setMissed] = useState(false);
 
     useEffect(() => () => detecting?.abort(), [detecting]);
 
     const clean = cleanApp(app);
+    const invalid = !!app.trim() && !clean;
+    const replaces = !!clean && bindings.some(b => b.app === clean);
+    const hint = invalid ? "" : detecting ? "Switch to the app you want: it is picked up as soon as it is in focus."
+        : missed ? "No app came into focus. Try again, or type the name."
+            : replaces ? `${clean} is already here: adding it replaces its preset.`
+                : "The name of the program, like game.exe. Or press Detect and switch to the app.";
     const options = presets.map(p => ({ label: p.name, value: p.name }));
     const setBindings = (next: AppBinding[]) => updateStored("appBindings", () => next);
     const change = (target: string, edit: Partial<AppBinding>) =>
@@ -43,6 +51,7 @@ export function AppBindings({ presets }: { presets: GlobalPreset[]; }) {
 
     function startComposing() {
         setApp("");
+        setMissed(false);
         setPreset(presets[0]?.name ?? "");
         setComposing(true);
     }
@@ -56,16 +65,18 @@ export function AppBindings({ presets }: { presets: GlobalPreset[]; }) {
         if (detecting) return detecting.abort();
 
         const controller = new AbortController();
+        setApp("");
+        setMissed(false);
         setDetecting(controller);
         const found = await detectApp(controller.signal);
         setDetecting(null);
         if (found) setApp(found);
+        else setMissed(!controller.signal.aborted);
     }
 
     function add() {
         if (!clean || !preset) return;
 
-        const replaces = bindings.some(b => b.app === clean);
         setBindings(withBinding(bindings, { app: clean, preset, enabled: true }));
         say(replaces ? `Changed ${clean} to “${preset}”.` : `${clean} now switches to “${preset}” while it is in focus.`);
         stopComposing();
@@ -95,51 +106,73 @@ export function AppBindings({ presets }: { presets: GlobalPreset[]; }) {
             )}
 
             {composing && (
-                <div className="vc-so-composer">
-                    <div className="vc-so-composer-field">
-                        <TextInput
-                            value={app}
-                            onChange={setApp}
-                            maxLength={MAX_APP}
-                            autoFocus
-                            spellCheck={false}
-                            placeholder="App, like game.exe"
-                            aria-label="App"
-                            error={app.trim() && !clean ? "Use the name of the program, like game.exe" : undefined}
-                            onKeyDown={e => {
-                                if (e.key === "Enter") add();
-                                else if (e.key === "Escape") {
-                                    e.stopPropagation();
-                                    stopComposing();
-                                }
-                            }}
-                        />
+                <Card className="vc-so-form" role="group" aria-label="Add an app">
+                    <Paragraph size="md" weight="semibold">Add an app</Paragraph>
+
+                    <div className="vc-so-field">
+                        <Paragraph size="sm" weight="semibold">App</Paragraph>
+                        <div className="vc-so-field-row">
+                            <TextInput
+                                value={app}
+                                onChange={value => { setApp(value); setMissed(false); }}
+                                maxLength={MAX_APP}
+                                autoFocus
+                                disabled={!!detecting}
+                                spellCheck={false}
+                                placeholder={detecting ? "Waiting for an app…" : "game.exe"}
+                                aria-label="App"
+                                error={invalid ? "Use the name of the program, like game.exe" : undefined}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter") add();
+                                    else if (e.key === "Escape") {
+                                        e.stopPropagation();
+                                        stopComposing();
+                                    }
+                                }}
+                            />
+                            <Button variant="secondary" onClick={detect}>
+                                <span className="vc-so-btn-content">
+                                    {!detecting && <SearchIcon width={16} height={16} />}
+                                    {detecting ? "Stop" : "Detect"}
+                                </span>
+                            </Button>
+                        </div>
+                        {hint && (
+                            <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-field-hint" role="status">
+                                {detecting && <span className="vc-so-pulse" aria-hidden="true" />}
+                                {hint}
+                            </Paragraph>
+                        )}
                     </div>
-                    <Button size="small" variant="secondary" onClick={detect}>{detecting ? "Stop looking" : "Detect"}</Button>
-                    <div className="vc-so-select">
-                        <SearchableSelect
-                            options={options}
-                            value={preset || undefined}
-                            onChange={(value: string) => setPreset(value)}
-                            placeholder="Preset to switch to"
-                            isDisabled={options.length === 0}
-                            closeOnSelect
-                            maxVisibleItems={6}
-                        />
+
+                    <div className="vc-so-field">
+                        <Paragraph size="sm" weight="semibold">Switch to preset</Paragraph>
+                        {options.length > 0 ? (
+                            <div className="vc-so-select">
+                                <SearchableSelect
+                                    options={options}
+                                    value={preset || undefined}
+                                    onChange={(value: string) => setPreset(value)}
+                                    placeholder="Choose a preset"
+                                    closeOnSelect
+                                    maxVisibleItems={6}
+                                />
+                            </div>
+                        ) : (
+                            <div className="vc-so-callout">
+                                <Paragraph size="sm" defaultColor={false} className="vc-so-muted">
+                                    An app switches to one of your global presets, and you have none yet.
+                                </Paragraph>
+                                <Button size="small" variant="secondary" onClick={onShowPresets}>Go to Presets</Button>
+                            </div>
+                        )}
                     </div>
-                    <Button size="small" disabled={!clean || !preset} onClick={add}>{bindings.some(b => b.app === clean) ? "Replace" : "Add"}</Button>
-                    <Button size="small" variant="secondary" onClick={stopComposing}>Cancel</Button>
-                    {detecting && (
-                        <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-composer-note" role="status">
-                            Now switch to the app you want: it is picked up as soon as it is in focus.
-                        </Paragraph>
-                    )}
-                    {options.length === 0 && (
-                        <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-composer-note">
-                            Save a preset above first: an app switches to one of your presets.
-                        </Paragraph>
-                    )}
-                </div>
+
+                    <div className="vc-so-form-actions">
+                        <Button variant="secondary" onClick={stopComposing}>Cancel</Button>
+                        <Button disabled={!clean || !preset} onClick={add}>{replaces ? "Replace" : "Add app"}</Button>
+                    </div>
+                </Card>
             )}
 
             <NoticeBar notice={notice} onDismiss={dismiss} />
@@ -207,7 +240,7 @@ export function AppBindings({ presets }: { presets: GlobalPreset[]; }) {
                         </div>
                     </div>
                 </>
-            ) : (
+            ) : !composing && (
                 <Card className="vc-so-empty">
                     <Paragraph size="sm" defaultColor={false} className="vc-so-muted">
                         No apps yet. Add an app, and the preset to switch to while it is in focus.

@@ -45,8 +45,8 @@
     max-width: 260px;
 }
 
-.vc-so-composer .vc-so-select {
-    width: 220px;
+.vc-so-form .vc-so-select {
+    max-width: none;
 }
 
 .vc-so-app-actions {
@@ -59,8 +59,82 @@
     color: var(--text-feedback-critical, #f23f43);
 }
 
-.vc-so-composer-note {
-    flex: 1 0 100%;
+/* the form to add an app: a field after the other, each with what it is for, and the actions at the end */
+.vc-so-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-sizing: border-box;
+    max-width: 540px;
+    padding: 16px;
+}
+
+.vc-so-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* the field takes what the button leaves; the button stays at the top when an error shows under the field */
+.vc-so-field-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.vc-so-field-row > :first-child {
+    flex: 1;
+    min-width: 0;
+}
+
+.vc-so-field-row > button {
+    flex: none;
+}
+
+.vc-so .vc-so-field-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.vc-so-pulse {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--brand-500);
+    animation: vc-so-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vc-so-pulse {
+        animation: none;
+    }
+}
+
+@keyframes vc-so-pulse {
+    50% {
+        opacity: 0.25;
+    }
+}
+
+/* what to do first, when the field cannot be filled yet */
+.vc-so-callout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    padding: 12px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm, 8px);
+}
+
+.vc-so-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
 }
 
 /* a row with a longer explanation: the text takes what is left, the control stays on its side */

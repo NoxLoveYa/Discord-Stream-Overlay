@@ -125,7 +125,7 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
                     />
                 )}
 
-                {tab === "apps" && <AppBindings presets={presets} />}
+                {tab === "apps" && <AppBindings presets={presets} onShowPresets={() => setTab("presets")} />}
             </Tabs>
         </section>
     );
