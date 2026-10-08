@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { combineStatus, parseStatus } from "@plugins/streamOverlay.desktop/health";
 import { app, BrowserWindow, ipcMain, type NativeImage, type Rectangle, type Session, type WebContents } from "electron";
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
@@ -366,6 +367,12 @@ export class Nvenc implements StreamSink {
             for (const target of this.targets) target.send(FRAME, bitmap, width, height, 0, 0, width, height);
         }
     };
+
+    /** What the hook has done since drawing went on, from the pages that have it; null when none answered. */
+    async health() {
+        if (!this.started) return null;
+        return combineStatus((await this.askAll("status")).map(parseStatus));
+    }
 
     private askAll(command: string) {
         return Promise.all([...this.targets].map(target => this.ask(target, command)));

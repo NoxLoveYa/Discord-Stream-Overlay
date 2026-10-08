@@ -32,6 +32,9 @@ bool g_on = false;
 bool g_installed = false;
 std::atomic<bool> g_draw{false};
 std::atomic<uint64_t> g_unknown{0};  // frames whose texture was never seen being registered
+std::atomic<uint64_t> g_encodes{0};  // frames NVENC was given while drawing was on
+std::atomic<uint64_t> g_drawn{0};    // of those, the ones the overlay was blended into
+std::string g_lastError;             // why drawing was switched off (under g_mutex)
 
 void logf(const char* fmt, ...) {
     static FILE* file = nullptr;
@@ -255,7 +258,18 @@ const char* drawFrame(void* resource) {
         if (GetTickCount64() - start > 20) return "gpu did not finish in 20 ms";
         Sleep(0);
     }
+    ++g_drawn;
     return nullptr;
+}
+
+// kept apart from safeDraw, which may have no C++ objects needing unwinding (it uses __try)
+void drawingFailed(const char* error) {
+    g_draw = false;
+    {
+        std::lock_guard lock(g_mutex);
+        g_lastError = error;
+    }
+    logf("drawing switched off: %s", error);
 }
 
 // no C++ objects needing unwinding in here, so __try is allowed
@@ -266,10 +280,7 @@ void safeDraw(void* resource) {
     } __except (EXCEPTION_EXECUTE_HANDLER) {
         error = "exception while drawing";
     }
-    if (error) {
-        g_draw = false;
-        logf("drawing switched off: %s", error);
-    }
+    if (error) drawingFailed(error);
 }
 
 // ---- the hooks ------------------------------------------------------------------------------------------------------
@@ -320,6 +331,7 @@ NVENCSTATUS NVENCAPI hkUnmap(void* encoder, NV_ENC_INPUT_PTR mapped) {
 
 NVENCSTATUS NVENCAPI hkEncode(void* encoder, NV_ENC_PIC_PARAMS* p) {
     if (p && g_draw) {
+        ++g_encodes;
         void* texture = nullptr;
         {
             std::lock_guard lock(g_mutex);
@@ -385,8 +397,28 @@ std::string start() {
 }
 
 std::string draw(bool on) {
+    if (on) {
+        g_encodes = 0;
+        g_drawn = 0;
+        g_unknown = 0;
+        std::lock_guard lock(g_mutex);
+        g_lastError.clear();
+    }
     g_draw = on;
     return on ? (g_on ? "drawing on" : "the hooks are off: start them first") : "drawing off";
+}
+
+// What the hook has done since drawing was last switched on, as JSON: the plugin uses it to see that the overlay really
+// reaches the stream (an encoder that is not NVENC, like AMD's or a software one, never goes through here).
+std::string status() {
+    std::string error;
+    {
+        std::lock_guard lock(g_mutex);
+        error = g_lastError;
+    }
+    return std::string("{\"draw\":") + (g_draw ? "true" : "false") + ",\"encodes\":" + std::to_string(g_encodes.load()) +
+        ",\"drawn\":" + std::to_string(g_drawn.load()) + ",\"unknown\":" + std::to_string(g_unknown.load()) +
+        ",\"error\":\"" + error + "\"}";
 }
 
 void setOverlay(const uint8_t* data, size_t size, uint32_t width, uint32_t height) {
@@ -449,6 +481,7 @@ napi_value toJs(napi_env env, const std::string& s) {
 napi_value jsStart(napi_env env, napi_callback_info) { return toJs(env, start()); }
 napi_value jsDrawOn(napi_env env, napi_callback_info) { return toJs(env, draw(true)); }
 napi_value jsDrawOff(napi_env env, napi_callback_info) { return toJs(env, draw(false)); }
+napi_value jsStatus(napi_env env, napi_callback_info) { return toJs(env, status()); }
 
 // setOverlay(bitmap: Uint8Array, width, height): no arguments clears the overlay
 napi_value jsSetOverlay(napi_env env, napi_callback_info info) {
@@ -507,6 +540,7 @@ extern "C" __declspec(dllexport) napi_value napi_register_module_v1(napi_env env
     expose(env, exports, "start", jsStart);
     expose(env, exports, "drawOn", jsDrawOn);
     expose(env, exports, "drawOff", jsDrawOff);
+    expose(env, exports, "status", jsStatus);
     expose(env, exports, "setOverlay", jsSetOverlay);
     expose(env, exports, "updateOverlay", jsUpdateOverlay);
     return exports;

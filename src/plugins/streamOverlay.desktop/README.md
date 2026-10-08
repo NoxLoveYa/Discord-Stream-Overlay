@@ -177,6 +177,7 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `settings.ts`, `presets.ts` | the stored settings and helpers to edit them; the preset logic (no React, no store) |
 | `apps.ts`, `appPresets.ts` | presets by app: matching a program to its binding (no React, no store); following the program in focus and applying / going back |
 | `components/` | the settings page: `OverlayPicker` switches between `OverlayGrid` (tabs: cards and folder tools, layout, global presets, presets by app) and `OverlayDetail` (one overlay: tabs for its settings and its presets); Discord's `TextInput`, `Slider` and select; the color picker is built here (like Discord's role color picker) because Discord's own `ColorPicker` is only filled in once Discord has loaded it |
+| `health.ts` | whether "stream only" really puts the overlay in the stream (what the hook reports, and the verdict) (no React, no store) |
 | `groups.ts`, `migrate.ts` | how an overlay's settings are split into tabs and which are shown (`group`, `when`) and the grouping of the cards; moving what was saved for the old gothic overlays to the theme (no React, no store) |
 | `sync.ts` | keeps the overlay window in line with the stream and the settings; collects what overlays save |
 | `menu.tsx` | "Overlay Settings" in the stream menu |

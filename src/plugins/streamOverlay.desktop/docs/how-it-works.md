@@ -154,6 +154,17 @@ Nothing is read at startup: the card stays on "Nothing playing" until the first 
   preview canvases are removed.
 - Switching the setting while a share runs rebuilds the window in the other mode.
 
+### Does it reach the stream?
+
+With "stream only" the overlay is taken off the screen as soon as the hook is in, so the hook has to be seen working. The
+addon counts the frames NVENC was given since drawing went on and the ones it drew on (`status()`, returned by
+`Native.streamHealth` as the sum over the pages that have it). While the overlay is off the screen `sync.ts` looks every
+2 s and `judgeHook` (`health.ts`) decides: drawing switched itself off (any time); nothing encoded in 10 s (the stream is
+not NVENC: a laptop whose screen is on the integrated GPU, AMD, Intel, software); frames but none drawn (the stream began
+before the hook, or a texture that cannot be drawn on). On a verdict the next sync shows the overlays on the screen
+instead, with a notice, and the stream is left alone; the next stream is tried again, and so is turning the setting off
+and on.
+
 ## Why it is built this way
 
 - A plain overlay window is simple and robust, so it stays the default.

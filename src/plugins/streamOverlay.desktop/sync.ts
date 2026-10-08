@@ -4,11 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { showNotification } from "@api/Notifications";
 import { SettingsStore } from "@api/Settings";
 import { Logger } from "@utils/Logger";
 import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore } from "@webpack/common";
 
 import { startAppPresets, stopAppPresets } from "./appPresets";
+import { judgeHook } from "./health";
 import { Native, settings, updateValues } from "./settings";
 import { startSpotify, stopSpotify } from "./spotify";
 
@@ -17,6 +19,7 @@ const logger = new Logger("StreamOverlay");
 const SETTINGS_PATH = "plugins.StreamOverlay";
 const SYNC_INTERVAL_MS = 1000;
 const COLLECT_INTERVAL_MS = 400;
+const HEALTH_INTERVAL_MS = 2000;
 
 let running = false;
 let visible = false;
@@ -26,6 +29,12 @@ let collectTimer: ReturnType<typeof setInterval> | undefined;
 let lastKey = "";
 let lastState = "";
 let sourceName: string | null = null;
+// Stream only takes the overlay off the screen, so it has to be seen reaching the stream: when this stream is not encoded
+// by NVENC it would be in neither place. Then the overlays go back on the screen, for this stream.
+let offscreenSince = 0;
+let streamOnlyFailed = "";
+let lastHealth = 0;
+let lastStreamOnly = false;
 // one sync at a time, so quick successive changes (dragging a color picker) cannot be applied out of order
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -33,13 +42,39 @@ const onStreamStart = (e: { sourceName?: string; }) => {
     sourceName = e.sourceName ?? null;
 };
 
+/** Looks at whether the overlay reaches the stream; if not, the next sync puts it on the screen. */
+async function checkHook() {
+    if (!offscreenSince || streamOnlyFailed || Date.now() - lastHealth < HEALTH_INTERVAL_MS) return;
+    lastHealth = Date.now();
+
+    const reason = judgeHook(await Native.streamHealth(), Date.now() - offscreenSince);
+    if (!reason) return;
+
+    streamOnlyFailed = reason;
+    lastKey = "";
+    logger.warn("stream only does not work with this stream, the overlays go back on the screen", reason);
+    showNotification({
+        title: "StreamOverlay",
+        body: `"Stream only" does not work with this stream (${reason}), so the overlays are on your screen instead.`,
+        noPersist: true
+    });
+}
+
 /** Shows, updates or hides the overlay window to match the stream and the settings. */
 async function doSync() {
     if (!running) return;
 
     const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
     const active = ApplicationStreamingStore.getCurrentUserActiveStream();
-    const { overlayRoot, alwaysShow, streamOnly } = settings.store;
+    const { overlayRoot, alwaysShow } = settings.store;
+
+    // turning the setting off and on again tries again
+    if (settings.store.streamOnly !== lastStreamOnly) {
+        lastStreamOnly = settings.store.streamOnly;
+        streamOnlyFailed = "";
+    }
+    await checkHook();
+    const streamOnly = settings.store.streamOnly && !streamOnlyFailed;
 
     // before any stream: the hook has to see the encoder being set up
     if (streamOnly && !hooked) {
@@ -60,11 +95,15 @@ async function doSync() {
     if (!shouldShow) {
         logger.info("hiding overlay", { sourceId });
         visible = false;
+        // the next stream is tried again
+        offscreenSince = 0;
+        streamOnlyFailed = "";
         return Native.hide();
     }
 
     const result = await Native.show(sourceId, sourceName, overlayRoot, overlays, values, streamOnly);
     visible = result != null;
+    offscreenSince = streamOnly && result?.streamOnly ? offscreenSince || Date.now() : 0;
     // the encoder hook is not reachable yet (Discord was not reloaded since the plugin registered its script): try again
     if (streamOnly && result && !result.streamOnly) lastKey = "";
     if (state !== lastState) logger.info("showing overlay", { sourceId, sourceName, ...result });

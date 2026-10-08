@@ -99,6 +99,11 @@ export function getFocus() {
     return focus.read();
 }
 
+/** Whether the overlay really reaches the stream: what the hook has done since drawing went on, or null. */
+export function streamHealth() {
+    return nvenc.health();
+}
+
 /**
  * Hooks the encoder ahead of the stream: it only knows which texture an encoded frame is by watching Discord register
  * them, so a stream that started before the hook cannot be drawn on. True once the hook is in.

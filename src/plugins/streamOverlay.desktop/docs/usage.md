@@ -115,6 +115,10 @@ Viewers now see the overlay; your monitor does not. In Discord, your own stream 
 ### Limits
 - Overlays cannot be dragged on screen while it is on; use the Layout tab.
 - NVIDIA / NVENC only, monitor shares only. If the hook cannot attach, the overlays stay on your screen.
+- The stream has to go through NVENC for the screen it shares. On a laptop with two graphics cards the screen is usually on the
+  integrated one (an NVIDIA card with "no screen connected" in its settings is the sign), so Discord cannot hand those frames to
+  NVENC and uses another encoder (AMD's, Intel's, or software). The overlay would then be in neither place, so the plugin
+  checks (see "Does it reach the stream?" below) and puts the overlays back on your screen for that stream, with a notice.
 - The overlay is rendered at 30 fps and sent frame by frame to Discord's renderer; expect some extra CPU use.
 - The preview overlay goes on any non-http(s) video with the shape of the shared screen, so someone else's stream of
   the same shape could get it too, and it assumes the picture is letterboxed.
@@ -128,9 +132,12 @@ Viewers now see the overlay; your monitor does not. In Discord, your own stream 
 | Symptom | Likely cause |
 |---|---|
 | Overlay stays on your screen with "stream only" on | the addon is missing (`%APPDATA%\discord\StreamOverlay\nvenc\streamoverlay_nvenc.node`: `pnpm build` prints why it could not be built), or the page was not reloaded since Discord started (Ctrl + R) |
+| A notice says "Stream only does not work with this stream" | the plugin saw that nothing reached the stream and put the overlays on your screen: the reason is in the notice (the stream is not encoded by NVENC; it began before the hook; drawing was switched off). The next stream is tried again |
 | Nothing on screen and nothing on the stream | the share started before the hook: stop and start the share again |
 | Viewers see nothing, still nothing after restarting the share | read `%TEMP%\streamoverlay-nvenc.log`: it states why drawing was switched off (not an NVIDIA encoder, texture not shared, GPU timeout, ...) |
 | Overlay on the stream but not in your preview | the preview video was not recognised: it must be a non-http(s) `<video>` with the aspect ratio of the shared screen |
 | Overlay shows on videos in chat | a video in the chat list or loaded over http(s) is skipped on purpose; update to the latest build |
+
+To see which encoder a stream uses, look in `%APPDATA%\discord\logs\discord-webrtc_0` for "Outbound video stats": `codec: H264 (nvidia: direct3d)` is NVENC, anything else (`amd`, `intel`, `software`...) is not covered.
 
 To go back to normal: turn the setting off. The overlays return to your screen on the next sync (about a second).
