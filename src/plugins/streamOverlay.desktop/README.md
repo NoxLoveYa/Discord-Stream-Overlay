@@ -17,8 +17,10 @@ my-overlay/
   overlay.json     optional
 ```
 
-The defaults in `defaultOverlays/` (`red-border`, `keyboard`, `mouse`) are copied into the default folder once (see
-`main/defaults.ts`); edit the copies. `keyboard` and `mouse` look alike because they are built from the same files in
+The defaults in `defaultOverlays/` (`red-border`, `keyboard`, `mouse`) are copied into the default folder (see
+`main/defaults.ts`): a copy you did not edit is updated when the plugin ships a newer version, a copy you edited is left
+alone (so edit the copies, or make your own folder), and one you deleted stays deleted. The first time the plugin finds
+a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before updating it. `keyboard` and `mouse` look alike because they are built from the same files in
 `defaultOverlays/shared/`, which are copied into each of them (a folder has to be complete on its own):
 
 | | |

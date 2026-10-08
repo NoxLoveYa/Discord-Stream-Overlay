@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { createHash } from "crypto";
 import keyboardHtml from "file://../defaultOverlays/keyboard/index.html";
 import keyboardManifest from "file://../defaultOverlays/keyboard/overlay.json";
 import keyboardCss from "file://../defaultOverlays/keyboard/style.css";
@@ -19,7 +20,7 @@ import keysCss from "file://../defaultOverlays/shared/keys.css";
 import keysScript from "file://../defaultOverlays/shared/keys.js";
 import moveCss from "file://../defaultOverlays/shared/move.css";
 import moveScript from "file://../defaultOverlays/shared/move.js";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
 
 /** Copied into every overlay that looks like the keyboard: each overlay folder has to be complete on its own. */
@@ -53,25 +54,86 @@ const defaultOverlays: Record<string, Record<string, string>> = {
     }
 };
 
+// what the marker says about an overlay that is not one of ours
+const CUSTOM = "custom";
+
+const hashOf = (files: string[], read: (file: string) => string | null) => {
+    const hash = createHash("sha1");
+    for (const file of [...files].sort()) hash.update(`${file}\0${read(file) ?? "\0missing"}\0`);
+    return hash.digest("hex");
+};
+
+const shippedHash = (name: string) => hashOf(Object.keys(defaultOverlays[name]), file => defaultOverlays[name][file]);
+
+const installedHash = (target: string, name: string) => hashOf(Object.keys(defaultOverlays[name]), file => {
+    try {
+        return readFileSync(join(target, file), "utf-8");
+    } catch {
+        return null;
+    }
+});
+
+/** Overlay name -> the hash of the files written last, or "" when that is not known. */
+function readMarker(marker: string): Record<string, string> {
+    if (!existsSync(marker)) return {};
+
+    const raw = readFileSync(marker, "utf-8");
+    try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+    } catch { /* the first versions listed the names, one per line */ }
+    return Object.fromEntries(raw.split("\n").filter(Boolean).map(name => [name, ""]));
+}
+
+function install(target: string, name: string) {
+    mkdirSync(target, { recursive: true });
+    for (const [file, content] of Object.entries(defaultOverlays[name]))
+        writeFileSync(join(target, file), content);
+}
+
+const checked = new Set<string>();
+
 /**
- * Copies every default overlay into `dir` once. A marker file remembers which ones were handled, so defaults added by
- * a later version show up while deleted or edited ones are left alone.
+ * Puts the default overlays in `dir`, once per session. A marker file remembers what was written last, so:
+ * - a default that is new shows up, and one the user deleted stays deleted;
+ * - a copy that was not edited is updated when the plugin ships a newer version;
+ * - a copy that was edited is left alone, and an unknown one (written before the marker knew) is updated after a copy of
+ *   it is kept in `.<name>.backup`.
  */
 export function seedDefaults(dir: string) {
-    const marker = join(dir, ".seeded");
+    if (checked.has(dir)) return;
+    checked.add(dir);
+
     mkdirSync(dir, { recursive: true });
+    const marker = join(dir, ".seeded");
+    const seeded = readMarker(marker);
 
-    const seeded = existsSync(marker) ? readFileSync(marker, "utf-8").split("\n") : [];
-    const pending = Object.keys(defaultOverlays).filter(name => !seeded.includes(name));
-    if (!pending.length) return;
-
-    for (const name of pending) {
+    for (const name of Object.keys(defaultOverlays)) {
         const target = join(dir, name);
-        if (existsSync(target)) continue;
+        const shipped = shippedHash(name);
+        const known = seeded[name];
 
-        mkdirSync(target);
-        for (const [file, content] of Object.entries(defaultOverlays[name]))
-            writeFileSync(join(target, file), content);
+        if (known === undefined) {
+            if (existsSync(target)) {
+                seeded[name] = CUSTOM;
+            } else {
+                install(target, name);
+                seeded[name] = shipped;
+            }
+        } else if (known !== shipped && known !== CUSTOM && existsSync(target)) {
+            const installed = installedHash(target, name);
+            if (installed === shipped) {
+                seeded[name] = shipped;
+            } else if (installed === known || known === "") {
+                if (known === "") {
+                    const backup = join(dir, `.${name}.backup`);
+                    rmSync(backup, { recursive: true, force: true });
+                    cpSync(target, backup, { recursive: true });
+                }
+                install(target, name);
+                seeded[name] = shipped;
+            }
+        }
     }
-    writeFileSync(marker, [...seeded, ...pending].filter(Boolean).join("\n"));
+    writeFileSync(marker, JSON.stringify(seeded, null, 4));
 }
