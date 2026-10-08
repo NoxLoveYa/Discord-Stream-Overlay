@@ -86,7 +86,8 @@ Your own stream preview in the app is a `<video>` fed directly by the native mod
 different route from the encoder, so it never gets the blended frames. The preload script therefore draws the overlay on
 a transparent canvas positioned over the video:
 
-- the bitmap is converted to RGBA, un-premultiplied and downscaled (to about 1280 px wide) once per frame;
+- the bitmap is converted to RGBA, un-premultiplied and downscaled (to about 1280 px wide), only when a new frame
+  arrived and a matching video is on screen;
 - one canvas per matching video is placed over the picture (accounting for letterboxing) and follows it on every
   animation frame;
 - a video matches when it is not an http(s) file (those are the media in chat, embeds and the lightbox), is not inside

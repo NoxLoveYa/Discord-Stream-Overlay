@@ -47,6 +47,8 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
     let ratio = 0;
     let raf = 0;
     let active = false;
+    let latest = null;
+    let stale = false;
 
     const convert = (bitmap, width, height) => {
         if (bitmap.byteOffset & 3) bitmap = Uint8Array.from(bitmap);
@@ -90,6 +92,12 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         if (!ratio) return;
 
         const live = new Set(previews());
+        if (stale && live.size) {
+            stale = false;
+            try { convert(latest.bitmap, latest.width, latest.height); } catch { }
+            for (const canvas of shown.values()) canvas.dirty = true;
+        }
+
         for (const [video, canvas] of shown) {
             if (live.has(video)) continue;
             canvas.remove();
@@ -127,6 +135,8 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
 
     const clear = () => {
         ratio = 0;
+        latest = null;
+        stale = false;
         for (const canvas of shown.values()) canvas.remove();
         shown.clear();
     };
@@ -150,12 +160,12 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
     ipcRenderer.on(${JSON.stringify(FRAME)}, (_, bitmap, width, height) => {
         if (!active) return;
         try { load().setOverlay(bitmap, width, height); } catch { }
-        try {
-            convert(bitmap, width, height);
-            ratio = width / height;
-            for (const canvas of shown.values()) canvas.dirty = true;
-            if (!raf) raf = requestAnimationFrame(place);
-        } catch { }
+
+        // converted later, and only if a preview is on screen
+        latest = { bitmap, width, height };
+        ratio = width / height;
+        stale = true;
+        if (!raf) raf = requestAnimationFrame(place);
     });
 
     ipcRenderer.send(${JSON.stringify(HELLO)});
