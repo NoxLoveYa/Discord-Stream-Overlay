@@ -10,6 +10,7 @@ import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore } from "@we
 
 import { startAppPresets, stopAppPresets } from "./appPresets";
 import { Native, settings, updateValues } from "./settings";
+import { startSpotify, stopSpotify } from "./spotify";
 
 const logger = new Logger("StreamOverlay");
 
@@ -91,6 +92,7 @@ export function startSync() {
     syncTimer = setInterval(sync, SYNC_INTERVAL_MS);
     collectTimer = setInterval(() => collect().catch(e => logger.error("collect failed", e)), COLLECT_INTERVAL_MS);
     startAppPresets();
+    startSpotify();
     sync();
 }
 
@@ -101,6 +103,7 @@ export function stopSync() {
     clearInterval(syncTimer);
     clearInterval(collectTimer);
     stopAppPresets();
+    stopSpotify();
     FluxDispatcher.unsubscribe("STREAM_START", onStreamStart);
     SettingsStore.removePrefixChangeListener(SETTINGS_PATH, sync);
     lastKey = "";

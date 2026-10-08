@@ -17,7 +17,7 @@ my-overlay/
   overlay.json     optional
 ```
 
-The defaults in `defaultOverlays/` (`red-border`, `keyboard`, `mouse`) are copied into the default folder (see
+The defaults in `defaultOverlays/` (`red-border`, `keyboard`, `mouse`, `spotify`) are copied into the default folder (see
 `main/defaults.ts`): a copy you did not edit is updated when the plugin ships a newer version, a copy you edited is left
 alone (so edit the copies, or make your own folder), and one you deleted stays deleted. The first time the plugin finds
 a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before updating it. `keyboard` and `mouse` look alike because they are built from the same files in
@@ -37,6 +37,7 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
     "description": "What it shows, in a sentence.",
     "keys": ["W", "SHIFT"],
     "mouse": true,
+    "media": true,
     "interactive": ["ALT", "CAPS"],
     "draggable": true,
     "settings": [
@@ -62,6 +63,8 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
   `SPACE`, `TAB`, `ENTER`, `ESC`, arrows, and the mouse buttons `LMB`, `RMB`, `MMB`).
 - `mouse`: the page receives how far the mouse moved and the wheel turned (never where the cursor is, or what is under
   it). Read from raw input, so it also works in games that lock the cursor.
+- `media`: the page receives the track that is playing in Spotify (title, artists, cover, position), as long as Spotify is
+  linked to the Discord account. Nothing else about what you listen to is read.
 - `interactive`: while all these keys are held the window takes the mouse instead of passing clicks through.
 - `draggable`: the overlay moves itself with those keys (`move.js`), so the Layout tab of the settings lets you drag it.
   Defaults to true when `interactive` is set; `"draggable": false` keeps an overlay out of it.
@@ -77,6 +80,7 @@ Sent to the page (`window.addEventListener("message", ...)`, ignore anything who
 |---|---|---|
 | `streamoverlay:keys` | `down: string[]` | the state of the requested keys changed (also sent once the page loads) |
 | `streamoverlay:pointer` | `x`, `y` | the cursor moved, in page coordinates (interactive overlays only) |
+| `streamoverlay:media` | `state` | the track changed, started, paused or was sought (`"media": true` only; also sent once the page loads). `state` is `null` when nothing plays, else `{ id, title, artists: string[], album, cover, duration, position, playing, at }` (milliseconds; `position` was true at `at`, a `Date.now()`, and moves on from there while `playing`). `cover` is an `https://*.scdn.co/` address or `""`. The names come from Spotify: show them as text, never as HTML |
 | `streamoverlay:mouse` | `dx`, `dy`, `wheel` | the mouse moved / the wheel turned since the last message, at most every 16 ms (`"mouse": true` only). `dx`, `dy` are mouse counts, `wheel` is 120 per notch, positive is up |
 
 Sent by the page:

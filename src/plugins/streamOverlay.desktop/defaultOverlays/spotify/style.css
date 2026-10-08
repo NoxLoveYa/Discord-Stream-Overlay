@@ -1,0 +1,166 @@
+:root {
+    --art: 64px;
+    --move-rgb: var(--accent-rgb);
+
+    /* defaults: the settings in overlay.json override them */
+    --accent-rgb: 139 92 246;
+    --accent2-rgb: 34 211 238;
+}
+
+/* the board of the keyboard, as a row: cover, text, bars */
+.board {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 340px;
+    padding: 14px 18px 14px 14px;
+}
+
+html[data-hide-idle="true"] .board[data-state="idle"] {
+    display: none;
+}
+
+.cover {
+    position: relative;
+    display: grid;
+    flex: none;
+    width: var(--art);
+    height: var(--art);
+    place-items: center;
+    overflow: hidden;
+    border-radius: 11px;
+    background: linear-gradient(135deg, var(--graphite-500), var(--graphite-900));
+    color: var(--text-muted);
+    box-shadow:
+        inset 0 0 0 1px rgb(255 255 255 / 8%),
+        0 8px 16px -8px rgb(var(--accent-rgb) / 55%);
+}
+
+.cover img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* no cover yet, or none for this track: the note shows */
+.cover img:not([src]) {
+    display: none;
+}
+
+html[data-cover="false"] .cover {
+    display: none;
+}
+
+.info {
+    flex: 1;
+    min-width: 0;
+}
+
+.title,
+.artist {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.title {
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: 0.01em;
+}
+
+.artist {
+    margin-top: 2px;
+    color: var(--text-muted);
+    font-size: 12.5px;
+}
+
+.progress {
+    margin-top: 10px;
+}
+
+html[data-progress="false"] .progress {
+    display: none;
+}
+
+.track {
+    height: 4px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: rgb(255 255 255 / 10%);
+}
+
+/* only transform is ever animated: the bar grows by scaling, and it is stepped twice a second */
+.fill {
+    width: 100%;
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, rgb(var(--accent-rgb)), rgb(var(--accent2-rgb)));
+    box-shadow: 0 0 10px rgb(var(--accent-rgb) / 60%);
+    transform: scaleX(var(--p, 0));
+    transform-origin: left;
+    transition: transform 500ms linear;
+}
+
+/* a new track starts from the left at once, not by running back */
+.fill.jump {
+    transition: none;
+}
+
+.board[data-state="paused"] .fill {
+    opacity: 0.55;
+}
+
+.board[data-state="idle"] .track {
+    opacity: 0.5;
+}
+
+.times {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+    color: var(--text-muted);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+}
+
+.bars {
+    display: flex;
+    flex: none;
+    align-items: flex-end;
+    gap: 3px;
+    height: 24px;
+}
+
+html[data-bars="false"] .bars {
+    display: none;
+}
+
+.bars i {
+    width: 3px;
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(180deg, rgb(var(--accent2-rgb)), rgb(var(--accent-rgb)));
+    opacity: 0.35;
+    transform: scaleY(0.22);
+    transform-origin: bottom;
+}
+
+.board[data-state="playing"] .bars i {
+    opacity: 1;
+    animation: eq 900ms ease-in-out infinite alternate;
+}
+
+.bars i:nth-child(2) { animation-duration: 640ms; animation-delay: -200ms; }
+.bars i:nth-child(3) { animation-duration: 1080ms; animation-delay: -420ms; }
+.bars i:nth-child(4) { animation-duration: 760ms; animation-delay: -90ms; }
+
+@keyframes eq {
+    from { transform: scaleY(0.2); }
+    to { transform: scaleY(1); }
+}

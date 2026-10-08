@@ -21,15 +21,28 @@ resize it. The result is saved when you let go and applies to the stream straigh
 "stream only" on or off.
 
 Hover the picture and use the button at its top right to make it full screen, which makes placing things easier (Esc or
-the same button goes back). The picture is then rendered larger.
+the same button goes back).
 
 The overlays are rendered at 60 Hz. Behind them is a screenshot of the monitor,
 which is what the stream shows without the overlays, taken once when you open the tab at the monitor's own resolution; it is a still, not live video.
 If that monitor is the one Discord is on, the screenshot contains the settings window. While the tab is open the overlays are hidden on the real screen, and come
 back when you leave the tab.
 
-Only overlays tagged `draggable` can be moved there (the keyboard and the mouse; see the plugin README). On screen,
-outside the settings, **Alt + Caps** still moves them while "stream only" is off.
+Only overlays tagged `draggable` can be moved there (the keyboard, the mouse and the Spotify card; see the plugin README).
+On screen, outside the settings, **Alt + Caps** still moves them while "stream only" is off.
+
+### Spotify
+
+The **Spotify** overlay is a card with the cover, title, artist and a progress bar of the track that is playing, in the look
+of the keyboard and the mouse. It is moved and resized like them. Settings: two accent colors, show the cover, show the
+progress, animated bars, hide when nothing is playing, scale and position.
+
+- Spotify has to be **linked to your Discord account** (Settings, Connections). The plugin listens to the player state that
+  Discord itself receives from Spotify, so no login or key is involved and nothing about what you listen to leaves your
+  machine. It works with any Spotify client Discord can follow.
+- The card fills in when the track changes, starts, pauses or is sought: if the music was already playing when the
+  overlay was switched on, it says "Nothing playing" until the next of those.
+- In the Layout tab it shows a sample track, so that there is something to drag while no music is playing.
 
 ### Presets
 
