@@ -8,28 +8,27 @@ import { Button } from "@components/Button";
 import { Heading } from "@components/Heading";
 import { Paragraph } from "@components/Paragraph";
 import { Switch } from "@components/Switch";
-import { presetsOf, sameSettings, withoutPreset, withPreset } from "@plugins/streamOverlay.desktop/presets";
-import { setOverlayEnabled, settings, updateStored, updateValues } from "@plugins/streamOverlay.desktop/settings";
-import type { OverlayInfo, OverlayPreset } from "@plugins/streamOverlay.desktop/types";
+import { copyName, presetsOf, renamePreset, sameSettings, withoutPreset, withPreset } from "@plugins/streamOverlay.desktop/presets";
+import { plain, setOverlayEnabled, settings, updateStored, updateValues } from "@plugins/streamOverlay.desktop/settings";
+import type { OverlayInfo, OverlayPreset, OverlayValue } from "@plugins/streamOverlay.desktop/types";
 
 import { OverlayOptionList } from "./OverlayOptions";
-import { PresetBar } from "./PresetBar";
+import { PresetManager } from "./PresetManager";
+import { OverlayPresetSummary } from "./PresetSummary";
 
 export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBack(): void; }) {
     const { enabledOverlays, overlayValues, overlayPresets } = settings.use(["enabledOverlays", "overlayValues", "overlayPresets"]);
 
-    const enabled = enabledOverlays.includes(overlay.name);
+    const { name } = overlay;
+    const enabled = enabledOverlays.includes(name);
     const options = overlay.settings.filter(s => !s.hidden);
-    const current = overlayValues[overlay.name];
+    const current: Record<string, OverlayValue> | undefined = plain(overlayValues[name]);
+    const presets: OverlayPreset[] = plain(presetsOf(overlayPresets, name));
 
-    const savePreset = (name: string) => updateStored("overlayPresets", all => {
-        all[overlay.name] = withPreset(presetsOf(all, overlay.name), { name, values: { ...current } });
-    });
-    const deletePreset = (name: string) => updateStored("overlayPresets", all => {
-        all[overlay.name] = withoutPreset(presetsOf(all, overlay.name), name);
-    });
-    const applyPreset = (preset: OverlayPreset) => updateValues(values => {
-        values[overlay.name] = { ...preset.values };
+    const setPresets = (next: OverlayPreset[]) => updateStored("overlayPresets", all => { all[name] = next; });
+    const setValues = (values: Record<string, OverlayValue> | undefined) => updateValues(all => {
+        if (values) all[name] = values;
+        else delete all[name];
     });
 
     return (
@@ -47,36 +46,49 @@ export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBac
                 </div>
                 <div className="vc-so-enable" role="group" aria-label={`${overlay.title} on or off`}>
                     <Paragraph size="sm">{enabled ? "On" : "Off"}</Paragraph>
-                    <Switch checked={enabled} onChange={on => setOverlayEnabled(overlay.name, on)} />
+                    <Switch checked={enabled} onChange={on => setOverlayEnabled(name, on)} />
                 </div>
             </header>
 
-            <div>
-                <Heading tag="h3">Presets</Heading>
-                <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
-                    A preset keeps all the settings below, including where you moved the overlay and how big you made it.
-                </Paragraph>
-                <PresetBar
-                    presets={presetsOf(overlayPresets, overlay.name)}
-                    isActive={preset => sameSettings(overlay.settings, preset.values, current)}
-                    onApply={applyPreset}
-                    onSave={savePreset}
-                    onDelete={deletePreset}
-                    emptyText="No presets for this overlay yet."
-                />
-            </div>
+            <PresetManager
+                title="Presets"
+                hint="A preset keeps all the settings below, including where you moved the overlay and how big you made it."
+                emptyText="No presets for this overlay yet. Set it up the way you like, then save it here to come back to it later."
+                presets={presets}
+                isActive={preset => sameSettings(overlay.settings, preset.values, current)}
+                summarize={preset => <OverlayPresetSummary overlay={overlay} preset={preset} />}
+                save={to => setPresets(withPreset(presets, { name: to, values: { ...current } }))}
+                rename={(preset, to) => setPresets(renamePreset(presets, preset.name, to))}
+                duplicate={preset => {
+                    const copy = copyName(presets, preset.name);
+                    setPresets([...presets, { name: copy, values: { ...preset.values } }]);
+                    return copy;
+                }}
+                apply={preset => {
+                    setValues({ ...preset.values });
+                    return () => setValues(current);
+                }}
+                update={preset => {
+                    setPresets(withPreset(presets, { name: preset.name, values: { ...current } }));
+                    return () => setPresets(presets);
+                }}
+                remove={preset => {
+                    setPresets(withoutPreset(presets, preset.name));
+                    return () => setPresets(presets);
+                }}
+            />
 
             <div>
                 <div className="vc-so-section-head">
                     <Heading tag="h3" className="vc-so-title">Settings</Heading>
                     {options.length > 0 && (
-                        <Button variant="dangerSecondary" size="small" onClick={() => updateValues(values => void delete values[overlay.name])}>
+                        <Button variant="dangerSecondary" size="small" onClick={() => setValues(undefined)}>
                             Reset to defaults
                         </Button>
                     )}
                 </div>
                 {options.length > 0
-                    ? <OverlayOptionList overlay={overlay.name} options={options} />
+                    ? <OverlayOptionList overlay={name} options={options} />
                     : <Paragraph size="sm" defaultColor={false} className="vc-so-muted">This overlay has no settings.</Paragraph>}
             </div>
         </section>

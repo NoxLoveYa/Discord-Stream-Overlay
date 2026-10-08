@@ -1,0 +1,280 @@
+.vc-so-pm {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vc-so-pm-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+/* the hint next to it is long: the button keeps its size */
+.vc-so-pm-head > button {
+    flex: none;
+    white-space: nowrap;
+}
+
+.vc-so-btn-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* is the current state a preset? */
+.vc-so-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted, var(--text-default));
+    font-size: 0.8125rem;
+}
+
+.vc-so-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--status-warning, #f0b232);
+}
+
+.vc-so-status[data-state="in-use"] {
+    color: var(--text-default);
+}
+
+.vc-so-status[data-state="in-use"] .vc-so-status-dot {
+    background: var(--green-430, #23a55a);
+}
+
+.vc-so-composer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.vc-so-composer-field {
+    flex: 0 1 300px;
+    min-width: 160px;
+}
+
+/* what just happened, with a way to take it back */
+.vc-so-notice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 9px 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm, 8px);
+    background: var(--card-secondary-bg, var(--card-background-default));
+    color: var(--text-default);
+    font-size: 0.875rem;
+    animation: vc-so-rise 160ms ease-out;
+}
+
+.vc-so-undo,
+.vc-so-notice-close {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+}
+
+.vc-so-undo {
+    margin-left: auto;
+    color: var(--text-link, var(--brand-500));
+    font-weight: 600;
+}
+
+.vc-so-undo:hover {
+    text-decoration: underline;
+}
+
+.vc-so-notice-close {
+    color: var(--text-muted, var(--text-default));
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.vc-so-undo:focus-visible,
+.vc-so-notice-close:focus-visible {
+    outline: 2px solid var(--border-focus, var(--brand-500));
+    outline-offset: 2px;
+}
+
+.vc-so-preset-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+}
+
+.vc-so-preset {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 12px 8px;
+    transition: border-color 120ms ease-out, background-color 120ms ease-out;
+}
+
+.vc-so-preset:hover {
+    border-color: var(--border-strong);
+}
+
+.vc-so-preset[data-active="true"] {
+    border-color: var(--brand-500);
+    background: color-mix(in srgb, var(--brand-500) 12%, var(--card-background-default));
+}
+
+.vc-so-preset[data-fresh="true"] {
+    animation: vc-so-flash 1600ms ease-out;
+}
+
+.vc-so-preset-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 22px;
+}
+
+.vc-so-preset-name {
+    overflow: hidden;
+    min-width: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vc-so-pill {
+    flex: none;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--brand-500);
+    color: #fff;
+    font-size: 0.6875rem;
+    font-weight: 600;
+}
+
+.vc-so-preset-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 20px;
+    color: var(--text-muted, var(--text-default));
+    font-size: 0.8125rem;
+}
+
+.vc-so-dots {
+    display: inline-flex;
+}
+
+.vc-so-dots i {
+    width: 16px;
+    height: 16px;
+    margin-left: -4px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--card-background-default), inset 0 0 0 1px rgb(128 128 128 / 40%);
+}
+
+.vc-so-dots i:first-child {
+    margin-left: 0;
+}
+
+.vc-so-minis {
+    display: inline-flex;
+}
+
+.vc-so-mini {
+    display: grid;
+    min-width: 18px;
+    height: 18px;
+    margin-left: -4px;
+    place-items: center;
+    padding: 0 3px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    background: var(--control-secondary-background-default, rgb(128 128 128 / 30%));
+    box-shadow: 0 0 0 2px var(--card-background-default);
+    color: var(--text-default);
+    font-size: 0.6875rem;
+    font-weight: 700;
+}
+
+.vc-so-mini:first-child {
+    margin-left: 0;
+}
+
+/* above the stretched button of the card, which would otherwise take the clicks */
+.vc-so-preset-actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 2px;
+    margin: 0 -6px;
+}
+
+.vc-so-icon-btn {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--text-muted, var(--text-default));
+    cursor: pointer;
+    transition: background-color 100ms ease-out, color 100ms ease-out;
+}
+
+.vc-so-icon-btn:disabled {
+    cursor: default;
+    opacity: 0.35;
+}
+
+.vc-so-icon-btn:focus-visible {
+    outline: 2px solid var(--border-focus, var(--brand-500));
+    outline-offset: -2px;
+}
+
+.vc-so-icon-btn:hover:not(:disabled) {
+    background: var(--control-icon-only-background-hover, rgb(128 128 128 / 20%));
+    color: var(--text-default);
+}
+
+.vc-so-icon-btn[data-danger="true"]:hover:not(:disabled) {
+    color: var(--text-feedback-critical, #f23f43);
+}
+
+.vc-so-rename {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 4px;
+}
+
+.vc-so-rename-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.vc-so-empty {
+    padding: 18px;
+    text-align: center;
+}
+
+@keyframes vc-so-rise {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+}
+
+@keyframes vc-so-flash {
+    from {
+        border-color: var(--brand-500);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-500) 35%, transparent);
+    }
+}

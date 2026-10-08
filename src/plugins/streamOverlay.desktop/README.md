@@ -85,8 +85,14 @@ Sent by the page:
 The plugin settings show a card per overlay: its switch turns it on or off, and the card opens the overlay's own page
 (its settings, and its presets). A preset of an overlay keeps all its settings, including where it was dragged to and
 its size. The presets on the first page are global: they keep which overlays are on and the settings of all of them
-(an overlay added after a global preset was saved is left as it is when that preset is applied). The preset that matches
-what is set right now is highlighted. Presets are stored in the plugin settings (`overlayPresets`, `globalPresets`).
+(an overlay added after a global preset was saved is left as it is when that preset is applied). Presets are stored in
+the plugin settings (`overlayPresets`, `globalPresets`).
+
+Both kinds are managed the same way (`components/PresetManager.tsx`): "Save current" names the current state, a card
+per preset applies it when clicked and previews it (the colors of an overlay, the overlays that are on), and each card
+can be updated with the current state, renamed, duplicated or deleted. A line says whether the current state is a
+preset ("In use") or has unsaved changes, and applying, updating and deleting can be undone from the notice that
+follows them instead of asking first.
 
 ### Animations
 

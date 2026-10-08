@@ -46,7 +46,7 @@ export const settings = definePluginSettings({
 });
 
 // settings.store hands out proxies: work on plain copies and assign them back
-const plain = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+export const plain = <T>(value: T): T => value === undefined ? value : JSON.parse(JSON.stringify(value));
 
 /** Edits a copy of a stored object in place, or returns what should replace it. */
 export function updateStored<K extends "overlayValues" | "overlayPresets" | "globalPresets">(
@@ -64,8 +64,15 @@ export function setOverlayEnabled(name: string, on: boolean) {
     settings.store.enabledOverlays = on ? [...others, name] : others;
 }
 
+/** Sets the toggles and the settings of every overlay the preset knows. Returns what puts everything back. */
 export function applyGlobalPreset(preset: GlobalPreset) {
-    const next = applyGlobal(preset, [...settings.store.enabledOverlays], plain(settings.store.overlayValues));
+    const before = { enabled: [...settings.store.enabledOverlays], values: plain(settings.store.overlayValues) };
+    const next = applyGlobal(preset, before.enabled, plain(before.values));
     settings.store.enabledOverlays = next.enabled;
     settings.store.overlayValues = next.values;
+
+    return () => {
+        settings.store.enabledOverlays = before.enabled;
+        settings.store.overlayValues = before.values;
+    };
 }

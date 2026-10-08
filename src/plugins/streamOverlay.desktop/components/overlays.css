@@ -117,86 +117,6 @@
     font-size: 0.75rem;
 }
 
-/* presets: chips to apply, a field to save the current state under a name */
-.vc-so-presets {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.vc-so-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.vc-so-chip {
-    display: flex;
-    align-items: stretch;
-    overflow: hidden;
-    border: 1px solid var(--border-subtle);
-    border-radius: 999px;
-    background: var(--card-background-default);
-    transition: border-color 120ms ease-out, background-color 120ms ease-out;
-}
-
-.vc-so-chip:hover {
-    border-color: var(--border-strong);
-}
-
-.vc-so-chip[data-active="true"] {
-    border-color: var(--brand-500);
-    background: color-mix(in srgb, var(--brand-500) 18%, var(--card-background-default));
-}
-
-.vc-so-chip-apply,
-.vc-so-chip-delete {
-    border: 0;
-    background: none;
-    color: var(--text-default);
-    font: inherit;
-    font-size: 0.8125rem;
-    cursor: pointer;
-}
-
-.vc-so-chip-apply {
-    padding: 5px 6px 5px 14px;
-    font-weight: 600;
-}
-
-.vc-so-chip-delete {
-    padding: 5px 11px 5px 6px;
-    color: var(--text-muted, var(--text-default));
-    font-size: 1rem;
-    line-height: 1;
-}
-
-.vc-so-chip-delete:hover {
-    color: var(--text-feedback-critical, #f23f43);
-}
-
-.vc-so-chip-apply:focus-visible,
-.vc-so-chip-delete:focus-visible {
-    outline: 2px solid var(--border-focus, var(--brand-500));
-    outline-offset: -2px;
-}
-
-.vc-so-confirm,
-.vc-so-save {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-}
-
-.vc-so-name {
-    flex: 0 1 280px;
-    min-width: 160px;
-}
-
 /* the page of one overlay */
 .vc-so-crumbs {
     display: flex;
@@ -286,3 +206,4 @@
     flex-wrap: wrap;
     gap: 8px;
 }
+

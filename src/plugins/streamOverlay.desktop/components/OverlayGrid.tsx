@@ -9,12 +9,13 @@ import { Card } from "@components/Card";
 import { ExpandableSection } from "@components/ExpandableCard";
 import { Heading } from "@components/Heading";
 import { Paragraph } from "@components/Paragraph";
-import { captureGlobal, isGlobalActive, withoutPreset, withPreset } from "@plugins/streamOverlay.desktop/presets";
-import { applyGlobalPreset, Native, setOverlayEnabled, settings, updateStored } from "@plugins/streamOverlay.desktop/settings";
-import type { OverlayInfo } from "@plugins/streamOverlay.desktop/types";
+import { captureGlobal, copyName, isGlobalActive, renamePreset, withoutPreset, withPreset } from "@plugins/streamOverlay.desktop/presets";
+import { applyGlobalPreset, Native, plain, setOverlayEnabled, settings, updateStored } from "@plugins/streamOverlay.desktop/settings";
+import type { GlobalPreset, OverlayInfo } from "@plugins/streamOverlay.desktop/types";
 
 import { OverlayCard } from "./OverlayCard";
-import { PresetBar } from "./PresetBar";
+import { PresetManager } from "./PresetManager";
+import { GlobalPresetSummary } from "./PresetSummary";
 
 interface OverlayGridProps {
     info: { root: string; overlays: OverlayInfo[]; };
@@ -26,6 +27,11 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
     const { overlayRoot, enabledOverlays, overlayValues, globalPresets } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues", "globalPresets"]);
     const { overlays } = info;
 
+    const enabled = [...enabledOverlays];
+    const values = plain(overlayValues);
+    const presets: GlobalPreset[] = plain(globalPresets);
+    const setPresets = (next: GlobalPreset[]) => updateStored("globalPresets", () => next);
+
     async function browse() {
         const picked = await Native.pickFolder(overlayRoot);
         if (picked) settings.store.overlayRoot = picked;
@@ -33,20 +39,30 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
 
     return (
         <section className="vc-so">
-            <div>
-                <Heading tag="h3">Presets</Heading>
-                <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
-                    A preset keeps which overlays are on and how every overlay is set up. Each overlay also has presets of its own.
-                </Paragraph>
-                <PresetBar
-                    presets={globalPresets}
-                    isActive={preset => isGlobalActive(preset, overlays, enabledOverlays, overlayValues)}
-                    onApply={applyGlobalPreset}
-                    onSave={name => updateStored("globalPresets", all => withPreset(all, captureGlobal(name, overlays, enabledOverlays, overlayValues)))}
-                    onDelete={name => updateStored("globalPresets", all => withoutPreset(all, name))}
-                    emptyText="No presets yet."
-                />
-            </div>
+            <PresetManager
+                title="Presets"
+                hint="A preset keeps which overlays are on and how every overlay is set up. Each overlay also has presets of its own."
+                emptyText="No presets yet. Turn on the overlays you want and set them up, then save it here to switch back to this setup in one click."
+                presets={presets}
+                isActive={preset => isGlobalActive(preset, overlays, enabled, values)}
+                summarize={preset => <GlobalPresetSummary preset={preset} overlays={overlays} />}
+                save={name => setPresets(withPreset(presets, captureGlobal(name, overlays, enabled, values)))}
+                rename={(preset, to) => setPresets(renamePreset(presets, preset.name, to))}
+                duplicate={preset => {
+                    const copy = copyName(presets, preset.name);
+                    setPresets([...presets, { ...plain(preset), name: copy }]);
+                    return copy;
+                }}
+                apply={applyGlobalPreset}
+                update={preset => {
+                    setPresets(withPreset(presets, captureGlobal(preset.name, overlays, enabled, values)));
+                    return () => setPresets(presets);
+                }}
+                remove={preset => {
+                    setPresets(withoutPreset(presets, preset.name));
+                    return () => setPresets(presets);
+                }}
+            />
 
             <div>
                 <Heading tag="h3">Overlays</Heading>
