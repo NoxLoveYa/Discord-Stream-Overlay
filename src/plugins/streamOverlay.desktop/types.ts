@@ -18,6 +18,10 @@ export interface OverlaySetting {
     default: OverlayValue;
     /** not shown in the settings window, the overlay sets it itself (a dragged position) */
     hidden?: boolean;
+    /** the tab of the overlay's settings page it is on; the overlay's settings are all on one tab when none has a group */
+    group?: string;
+    /** only shown while the setting `id` has this value, like the colors of one theme */
+    when?: { id: string; value: OverlayValue; };
     min?: number;
     max?: number;
     step?: number;
@@ -29,6 +33,8 @@ export interface Manifest {
     /** shown on the overlay's card in the settings, instead of the folder name */
     title: string;
     description: string;
+    /** the heading its card is listed under ("Input", "Media"...) */
+    category: string;
     keys: string[];
     /** the overlay receives how far the mouse moved and the wheel turned (not where the cursor is) */
     mouse: boolean;
@@ -46,6 +52,7 @@ export interface OverlayInfo {
     name: string;
     title: string;
     description: string;
+    category: string;
     draggable: boolean;
     settings: OverlaySetting[];
 }

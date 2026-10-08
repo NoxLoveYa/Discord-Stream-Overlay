@@ -8,6 +8,7 @@ import { definePluginSettings } from "@api/Settings";
 import { OptionType, PluginNative } from "@utils/types";
 
 import { OverlayPicker } from "./components/OverlayPicker";
+import { migrateLegacy } from "./migrate";
 import { applyGlobal } from "./presets";
 import type { AppBinding, GlobalPreset, OverlayPresets, OverlayValues } from "./types";
 
@@ -57,6 +58,23 @@ export const settings = definePluginSettings({
         default: false
     }
 });
+
+/** The gothic keyboard, mouse and Spotify card are themes of the ones they look like now: carry over what was saved for them. */
+export function migrateOverlays() {
+    const { store } = settings;
+    const moved = migrateLegacy({
+        enabled: [...store.enabledOverlays],
+        values: plain(store.overlayValues),
+        presets: plain(store.overlayPresets),
+        globals: plain(store.globalPresets)
+    });
+    if (!moved) return;
+
+    store.enabledOverlays = moved.enabled;
+    store.overlayValues = moved.values;
+    store.overlayPresets = moved.presets;
+    store.globalPresets = moved.globals;
+}
 
 // settings.store hands out proxies: work on plain copies and assign them back
 export const plain = <T>(value: T): T => value === undefined ? value : JSON.parse(JSON.stringify(value));

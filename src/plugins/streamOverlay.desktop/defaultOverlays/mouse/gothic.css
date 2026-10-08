@@ -1,0 +1,48 @@
+/* The gothic theme of the mouse: its own accents (the "theme" setting picks which look is on), the gems on the corners
+   follow the accent of the movement and the wheel, and the roller, the wheel and the pad are silver rather than white.
+   It comes after style.css, which has the layout and the shapes. */
+html[data-theme="gothic"] {
+    --click-rgb: var(--g-click-accent-rgb);
+    --motion-rgb: var(--g-motion-accent-rgb);
+    --move-rgb: var(--g-click-accent-rgb);
+    --gem-rgb: var(--g-motion-accent-rgb);
+}
+
+:where(html[data-theme="gothic"]) {
+    .ribs {
+        background: repeating-linear-gradient(180deg, rgb(var(--silver-rgb) / 20%) 0 3px, rgb(var(--silver-rgb) / 0%) 3px var(--rib));
+    }
+
+    .wheel {
+        border-radius: 7px;
+        box-shadow: inset 0 0 0 1px rgb(var(--silver-rgb) / 8%);
+    }
+
+    .roller {
+        border-radius: 5px;
+        box-shadow: inset 0 0 0 1px rgb(var(--silver-rgb) / 13%);
+    }
+
+    .pad {
+        border-radius: 6px;
+        background:
+            linear-gradient(90deg, transparent calc(50% - 0.5px), rgb(var(--silver-rgb) / 8%) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+            linear-gradient(180deg, transparent calc(50% - 0.5px), rgb(var(--silver-rgb) / 8%) calc(50% - 0.5px) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+            var(--graphite-900);
+        box-shadow:
+            inset 0 0 0 1px rgb(var(--silver-rgb) / 14%),
+            inset 0 10px 22px -12px rgb(0 0 0 / 80%);
+    }
+
+    .pad::before {
+        border-color: rgb(var(--silver-rgb) / 16%);
+    }
+
+    .pad::after {
+        border-color: rgb(var(--silver-rgb) / 22%);
+    }
+
+    .dot {
+        background: radial-gradient(circle at 35% 30%, #fff, rgb(var(--motion-rgb)) 62%);
+    }
+}

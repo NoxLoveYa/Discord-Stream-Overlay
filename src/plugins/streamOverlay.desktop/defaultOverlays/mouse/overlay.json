@@ -1,20 +1,35 @@
 {
     "title": "Mouse",
-    "description": "The mouse buttons, wheel and movement. Hold Alt + Caps to move or resize it.",
+    "category": "Input",
+    "description": "The mouse buttons, wheel and movement, in a default or a gothic look. Hold Alt + Caps to move or resize it.",
     "keys": ["LMB", "RMB", "MMB"],
     "mouse": true,
     "interactive": ["ALT", "CAPS"],
     "draggable": true,
     "settings": [
-        { "id": "click-accent", "type": "color", "label": "Buttons accent", "default": "#8b5cf6" },
-        { "id": "motion-accent", "type": "color", "label": "Movement and wheel accent", "default": "#22d3ee" },
-        { "id": "shadow", "type": "color", "label": "Shadow color", "default": "#000000" },
-        { "id": "sensitivity", "type": "number", "label": "Movement sensitivity", "min": 0.25, "max": 3, "step": 0.05, "default": 1 },
-        { "id": "scale", "type": "number", "label": "Scale", "min": 0.6, "max": 2, "step": 0.05, "default": 1 },
+        {
+            "id": "theme",
+            "type": "select",
+            "label": "Theme",
+            "group": "Look",
+            "default": "default",
+            "options": [
+                { "label": "Default", "value": "default" },
+                { "label": "Gothic", "value": "gothic" }
+            ]
+        },
+        { "id": "click-accent", "type": "color", "label": "Buttons accent", "group": "Look", "when": { "theme": "default" }, "default": "#8b5cf6" },
+        { "id": "g-click-accent", "type": "color", "label": "Buttons accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#e4def0" },
+        { "id": "motion-accent", "type": "color", "label": "Movement and wheel accent", "group": "Look", "when": { "theme": "default" }, "default": "#22d3ee" },
+        { "id": "g-motion-accent", "type": "color", "label": "Movement and wheel accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#b3122e" },
+        { "id": "shadow", "type": "color", "label": "Shadow color", "group": "Look", "default": "#000000" },
+        { "id": "sensitivity", "type": "number", "label": "Movement sensitivity", "group": "Movement", "min": 0.25, "max": 3, "step": 0.05, "default": 1 },
+        { "id": "scale", "type": "number", "label": "Scale", "group": "Layout", "min": 0.6, "max": 2, "step": 0.05, "default": 1 },
         {
             "id": "position",
             "type": "select",
             "label": "Position",
+            "group": "Layout",
             "default": "bottom-right",
             "options": [
                 { "label": "Bottom left", "value": "bottom-left" },

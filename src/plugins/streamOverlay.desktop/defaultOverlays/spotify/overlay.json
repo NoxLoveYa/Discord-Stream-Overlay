@@ -1,22 +1,36 @@
 {
     "title": "Spotify",
-    "description": "The track that is playing in Spotify, with its cover and progress. Needs Spotify linked to Discord. Hold Alt + Caps to move or resize it.",
+    "category": "Media",
+    "description": "The track that is playing in Spotify, with its cover and progress, in a default or a gothic look. Needs Spotify linked to Discord. Hold Alt + Caps to move or resize it.",
     "media": true,
     "interactive": ["ALT", "CAPS"],
     "draggable": true,
     "settings": [
-        { "id": "accent", "type": "color", "label": "Accent", "default": "#8b5cf6" },
-        { "id": "accent2", "type": "color", "label": "Second accent", "default": "#22d3ee" },
-        { "id": "shadow", "type": "color", "label": "Shadow color", "default": "#000000" },
-        { "id": "cover", "type": "boolean", "label": "Show the cover", "default": true },
-        { "id": "progress", "type": "boolean", "label": "Show the progress", "default": true },
-        { "id": "bars", "type": "boolean", "label": "Animated bars", "default": true },
-        { "id": "hide-idle", "type": "boolean", "label": "Hide when nothing is playing", "default": false },
-        { "id": "scale", "type": "number", "label": "Scale", "min": 0.6, "max": 2, "step": 0.05, "default": 1 },
+        {
+            "id": "theme",
+            "type": "select",
+            "label": "Theme",
+            "group": "Look",
+            "default": "default",
+            "options": [
+                { "label": "Default", "value": "default" },
+                { "label": "Gothic", "value": "gothic" }
+            ]
+        },
+        { "id": "accent", "type": "color", "label": "Accent", "group": "Look", "when": { "theme": "default" }, "default": "#8b5cf6" },
+        { "id": "g-accent", "type": "color", "label": "Accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#e4def0" },
+        { "id": "accent2", "type": "color", "label": "Second accent", "group": "Look", "when": { "theme": "default" }, "default": "#22d3ee" },
+        { "id": "g-accent2", "type": "color", "label": "Second accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#b3122e" },
+        { "id": "shadow", "type": "color", "label": "Shadow color", "group": "Look", "default": "#000000" },
+        { "id": "cover", "type": "boolean", "label": "Show the cover", "group": "Look", "default": true },
+        { "id": "progress", "type": "boolean", "label": "Show the progress", "group": "Look", "default": true },
+        { "id": "bars", "type": "boolean", "label": "Animated bars", "group": "Look", "default": true },
+        { "id": "scale", "type": "number", "label": "Scale", "group": "Layout", "min": 0.6, "max": 2, "step": 0.05, "default": 1 },
         {
             "id": "position",
             "type": "select",
             "label": "Position",
+            "group": "Layout",
             "default": "top-left",
             "options": [
                 { "label": "Bottom left", "value": "bottom-left" },
@@ -26,6 +40,7 @@
                 { "label": "Custom (moved by hand)", "value": "custom" }
             ]
         },
+        { "id": "hide-idle", "type": "boolean", "label": "Hide when nothing is playing", "group": "Layout", "default": false },
         { "id": "x", "type": "number", "label": "X", "min": 0, "max": 20000, "step": 1, "unit": "px", "default": 0, "hidden": true },
         { "id": "y", "type": "number", "label": "Y", "min": 0, "max": 20000, "step": 1, "unit": "px", "default": 0, "hidden": true }
     ]

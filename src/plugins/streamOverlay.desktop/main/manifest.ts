@@ -17,14 +17,22 @@ const ID = /^[a-z][a-z0-9-]{0,31}$/;
 const OPTION_VALUE = /^[\w .-]{1,40}$/;
 const UNIT = /^(px|%|em|rem|vw|vh|deg|s|ms)?$/;
 
+const text = (value: unknown, max: number) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
+
 // overlay.json belongs to a folder the user picked: nothing in it is trusted
 function parseSetting(raw: any): OverlaySetting | null {
     if (!raw || typeof raw.id !== "string" || !ID.test(raw.id)) return null;
 
+    const group = text(raw.group, 24);
+    // { "theme": "gothic" }: one setting and the value it has to have
+    const [[when, wanted] = []] = Object.entries(raw.when && typeof raw.when === "object" ? raw.when : {});
+
     const base = {
         id: raw.id,
         label: typeof raw.label === "string" ? raw.label.slice(0, 60) : raw.id,
-        ...(raw.hidden === true && { hidden: true })
+        ...(raw.hidden === true && { hidden: true }),
+        ...(group && { group }),
+        ...(typeof when === "string" && ID.test(when) && (typeof wanted === "string" || typeof wanted === "boolean") && { when: { id: when, value: wanted } })
     };
 
     switch (raw.type) {
@@ -56,8 +64,6 @@ function parseSetting(raw: any): OverlaySetting | null {
     }
 }
 
-const text = (value: unknown, max: number) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
-
 const keyNames = (list: unknown) =>
     [...new Set<string>((Array.isArray(list) ? list : []).map(k => String(k).toUpperCase()))].filter(k => VIRTUAL_KEYS.has(k));
 
@@ -82,6 +88,7 @@ export function readManifest(indexFile: string): Manifest {
     return {
         title: text(raw?.title, 40),
         description: text(raw?.description, 160),
+        category: text(raw?.category, 24),
         keys,
         mouse: raw?.mouse === true,
         media: raw?.media === true,

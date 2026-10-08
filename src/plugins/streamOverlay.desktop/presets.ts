@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { isShown } from "./groups";
 import type { GlobalPreset, OverlayInfo, OverlayPresets, OverlaySetting, OverlayValue, OverlayValues } from "./types";
 
 export const MAX_NAME = 40;
@@ -60,7 +61,7 @@ export const sameSettings = (settings: OverlaySetting[], a: Stored, b: Stored) =
 
 /** The colors an overlay would have with these values, for a preview of a preset. */
 export const colorsOf = (settings: OverlaySetting[], stored: Stored) =>
-    settings.filter(s => s.type === "color").map(s => String(stored?.[s.id] ?? s.default));
+    settings.filter(s => s.type === "color" && isShown(s, settings, stored)).map(s => String(stored?.[s.id] ?? s.default));
 
 /** How many settings these values change from the defaults. */
 export const changedCount = (settings: OverlaySetting[], stored: Stored) =>

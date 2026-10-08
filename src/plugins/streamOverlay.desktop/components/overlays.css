@@ -37,6 +37,18 @@
 }
 
 /* the cards: the whole card opens the overlay (the stretched button), the switch sits above that */
+.vc-so-category + .vc-so-category {
+    margin-top: 20px;
+}
+
+.vc-so .vc-so-group {
+    margin: 0 0 8px;
+    color: var(--text-muted, var(--text-default));
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
 .vc-so-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

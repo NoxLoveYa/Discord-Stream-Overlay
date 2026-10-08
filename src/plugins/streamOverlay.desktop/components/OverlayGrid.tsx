@@ -7,7 +7,9 @@
 import { Button } from "@components/Button";
 import { Card } from "@components/Card";
 import { ExpandableSection } from "@components/ExpandableCard";
+import { Heading } from "@components/Heading";
 import { Paragraph } from "@components/Paragraph";
+import { byCategory } from "@plugins/streamOverlay.desktop/groups";
 import { captureGlobal, copyName, isGlobalActive, renamePreset, withoutPreset, withPreset } from "@plugins/streamOverlay.desktop/presets";
 import { applyGlobalPreset, Native, plain, setOverlayEnabled, settings, updateStored } from "@plugins/streamOverlay.desktop/settings";
 import type { GlobalPreset, OverlayInfo } from "@plugins/streamOverlay.desktop/types";
@@ -37,6 +39,7 @@ interface OverlayGridProps {
 export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
     const { overlayRoot, enabledOverlays, overlayValues, globalPresets } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues", "globalPresets"]);
     const { overlays } = info;
+    const sections = byCategory(overlays);
     const [tab, setTab] = useState<Tab>("overlays");
 
     const enabled = [...enabledOverlays];
@@ -58,19 +61,23 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
                             <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
                                 Turn an overlay on or off with its switch, or open it to change its settings.
                             </Paragraph>
-                            {overlays.length > 0 ? (
-                                <div className="vc-so-grid">
-                                    {overlays.map(overlay => (
-                                        <OverlayCard
-                                            key={overlay.name}
-                                            overlay={overlay}
-                                            enabled={enabledOverlays.includes(overlay.name)}
-                                            onToggle={on => setOverlayEnabled(overlay.name, on)}
-                                            onOpen={() => onOpen(overlay.name)}
-                                        />
-                                    ))}
+                            {overlays.length > 0 ? sections.map(({ category, items }) => (
+                                <div key={category} className="vc-so-category">
+                                    {/* no headings when everything is in the same place (or has no category at all) */}
+                                    {sections.length > 1 && <Heading tag="h3" className="vc-so-group">{category || "Other"}</Heading>}
+                                    <div className="vc-so-grid">
+                                        {items.map(overlay => (
+                                            <OverlayCard
+                                                key={overlay.name}
+                                                overlay={overlay}
+                                                enabled={enabledOverlays.includes(overlay.name)}
+                                                onToggle={on => setOverlayEnabled(overlay.name, on)}
+                                                onOpen={() => onOpen(overlay.name)}
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
-                            ) : (
+                            )) : (
                                 <Card>
                                     <Paragraph>No overlays found in this folder. Each subfolder with an index.html is one overlay.</Paragraph>
                                 </Card>

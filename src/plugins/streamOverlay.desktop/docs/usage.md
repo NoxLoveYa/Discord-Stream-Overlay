@@ -13,6 +13,17 @@ The overlays folder is `%APPDATA%\discord\StreamOverlay\overlays` by default. Th
 edit the copies, or add your own folder next to them (see the [plugin README](../README.md)). The Overlays tab has
 the folder tools (pick another folder, open it).
 
+### Finding your way around the settings
+
+- The cards on the **Overlays** tab are listed under headings: **Input** (keyboard, mouse), **Media** (Spotify) and **Frames**.
+- An overlay's page has a tab for each group of its settings (the keyboard has **Look** and **Layout**, the mouse also has
+  **Movement**, the frame has **Look**, **Wings** and **Details**) and a **Presets** tab. "Reset" on a tab only resets what is on
+  that tab: where you moved the overlay to and what is on the other tabs stay.
+- The keyboard, the mouse and the Spotify card have a **Theme** setting, **Default** or **Gothic**. Each theme has its own accent
+  colors, and the page shows the ones of the theme that is on. Position, size and the other settings are shared, so switching
+  the theme does not move anything. (The gothic ones used to be overlays of their own, `obnoxious-keyboard` and so on: what was
+  saved for them is moved to the theme the first time the plugin starts.)
+
 ### Moving the keyboard and mouse overlays
 
 Open the **Layout** tab of the settings. It shows the screen being shared (your main screen when you are not sharing)

@@ -7,6 +7,7 @@
 import { Card } from "@components/Card";
 import { Paragraph } from "@components/Paragraph";
 import { Switch } from "@components/Switch";
+import { isShown } from "@plugins/streamOverlay.desktop/groups";
 import type { OverlayInfo } from "@plugins/streamOverlay.desktop/types";
 
 interface OverlayCardProps {
@@ -17,7 +18,7 @@ interface OverlayCardProps {
 }
 
 export function OverlayCard({ overlay, enabled, onToggle, onOpen }: OverlayCardProps) {
-    const count = overlay.settings.filter(s => !s.hidden).length;
+    const count = overlay.settings.filter(s => isShown(s, overlay.settings, undefined)).length;
 
     return (
         <Card className="vc-so-card" data-enabled={enabled}>

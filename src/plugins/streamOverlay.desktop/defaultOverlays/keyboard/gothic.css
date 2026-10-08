@@ -1,0 +1,8 @@
+/* The colors of the gothic theme: its own accents (the "theme" setting picks which look is on), and the gems on the corners
+   follow the accent of the modifier keys. */
+html[data-theme="gothic"] {
+    --key-accent-rgb: var(--g-letter-accent-rgb);
+    --key-edge-rgb: var(--g-modifier-accent-rgb);
+    --move-rgb: var(--g-letter-accent-rgb);
+    --gem-rgb: var(--g-modifier-accent-rgb);
+}

@@ -4,7 +4,10 @@
     --wheel-w: 22px;
     --wheel-h: 58px;
     --rib: 8px;
-    --move-rgb: var(--click-accent-rgb);
+    --move-rgb: var(--click-rgb);
+    /* what the colors are drawn with: the theme picks which settings they come from */
+    --click-rgb: var(--click-accent-rgb);
+    --motion-rgb: var(--motion-accent-rgb);
 
     /* defaults: the settings in overlay.json override them */
     --click-accent-rgb: 139 92 246;
@@ -19,8 +22,8 @@
 }
 
 .buttons .key {
-    --accent: var(--click-accent-rgb);
-    --edge: var(--motion-accent-rgb);
+    --accent: var(--click-rgb);
+    --edge: var(--motion-rgb);
 
     width: var(--btn-w);
     height: var(--btn-h);
@@ -39,7 +42,7 @@
 
 /* the wheel: a well like the keys', with a ribbed roller turning in it */
 .wheel {
-    --accent: var(--click-accent-rgb);
+    --accent: var(--click-rgb);
 
     position: relative;
     width: var(--wheel-w);
@@ -127,7 +130,7 @@
     inset: -8px -10px;
     z-index: -1;
     border-radius: 16px;
-    background: radial-gradient(closest-side, rgb(var(--motion-accent-rgb) / 55%), rgb(var(--motion-accent-rgb) / 0%));
+    background: radial-gradient(closest-side, rgb(var(--motion-rgb) / 55%), rgb(var(--motion-rgb) / 0%));
     filter: blur(6px);
     opacity: var(--spin, 0);
 }
@@ -139,7 +142,7 @@
     width: 8px;
     height: 5px;
     margin-left: -4px;
-    background: rgb(var(--motion-accent-rgb));
+    background: rgb(var(--motion-rgb));
     clip-path: polygon(50% 0, 100% 100%, 0 100%);
     opacity: 0;
     transition: opacity 140ms ease-out;
@@ -202,8 +205,8 @@
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #fff, rgb(var(--motion-accent-rgb)) 62%);
-    box-shadow: 0 0 14px 2px rgb(var(--motion-accent-rgb) / 55%);
+    background: radial-gradient(circle at 35% 30%, #fff, rgb(var(--motion-rgb)) 62%);
+    box-shadow: 0 0 14px 2px rgb(var(--motion-rgb) / 55%);
     will-change: transform;
 }
 

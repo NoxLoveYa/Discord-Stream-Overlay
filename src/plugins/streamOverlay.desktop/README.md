@@ -17,9 +17,8 @@ my-overlay/
   overlay.json     optional
 ```
 
-The defaults in `defaultOverlays/` (`red-border`, `keyboard`, `mouse`, `spotify`, and the gothic set `obnoxious-frame`,
-`obnoxious-keyboard`, `obnoxious-mouse`, `obnoxious-spotify`, which share an embedded blackletter font) are copied into the default folder (see
-`main/defaults.ts`): a copy you did not edit is updated when the plugin ships a newer version, a copy you edited is left
+The defaults in `defaultOverlays/` (`red-border`, `obnoxious-frame`, `keyboard`, `mouse` and `spotify`; the last three have a
+default and a gothic **theme**, see below) are copied into the default folder (see `main/defaults.ts`): a copy you did not edit is updated when the plugin ships a newer version, a copy you edited is left
 alone (so edit the copies, or make your own folder), and one you deleted stays deleted. The first time the plugin finds
 a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before updating it. `keyboard` and `mouse` look alike because they are built from the same files in
 `defaultOverlays/shared/`, which are copied into each of them (a folder has to be complete on its own):
@@ -29,6 +28,7 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
 | `board.css` | the panel, its position presets (`data-position`) and the shared look (colors, shadow, intro) |
 | `keys.css`, `keys.js` | keys and buttons: `[data-key]` elements get `.is-down` while that key is held |
 | `move.css`, `move.js` | Alt + Caps to move and resize the `.board`, saved on release (needs the `.resize` and `.hint` elements) |
+| `gothic-panel.css`, `gothic-keys.css` | the gothic theme of the window and of the keys (see below) |
 
 ### overlay.json
 
@@ -36,15 +36,18 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
 {
     "title": "My overlay",
     "description": "What it shows, in a sentence.",
+    "category": "Input",
     "keys": ["W", "SHIFT"],
     "mouse": true,
     "media": true,
     "interactive": ["ALT", "CAPS"],
     "draggable": true,
     "settings": [
-        { "id": "accent", "type": "color", "label": "Accent", "default": "#8b5cf6" },
-        { "id": "width", "type": "number", "label": "Width", "min": 1, "max": 32, "step": 1, "unit": "px", "default": 4 },
-        { "id": "glow", "type": "boolean", "label": "Glow", "default": true },
+        { "id": "theme", "type": "select", "label": "Theme", "group": "Look", "default": "plain", "options": ["plain", "fancy"] },
+        { "id": "accent", "type": "color", "label": "Accent", "group": "Look", "when": { "theme": "plain" }, "default": "#8b5cf6" },
+        { "id": "fancy-accent", "type": "color", "label": "Accent", "group": "Look", "when": { "theme": "fancy" }, "default": "#e4def0" },
+        { "id": "width", "type": "number", "label": "Width", "group": "Layout", "min": 1, "max": 32, "step": 1, "unit": "px", "default": 4 },
+        { "id": "glow", "type": "boolean", "label": "Glow", "group": "Layout", "default": true },
         { "id": "corner", "type": "select", "label": "Corner", "default": "left", "options": ["left", "right"] },
         { "id": "x", "type": "number", "label": "X", "min": 0, "max": 20000, "default": 0, "hidden": true }
     ]
@@ -53,12 +56,17 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
 
 - `title`, `description`: shown on the overlay's card in the plugin settings (the folder name is the title when there is
   none).
+- `category`: the heading the card is listed under in the Overlays tab (the built-in ones use `Input`, `Media` and `Frames`).
+  The headings only show when the overlays are in more than one category; those without one are listed last.
 - `settings`: a control per entry on the overlay's page in the plugin settings (`hidden` ones are only set by the
   overlay itself). Each value reaches the page as:
   - a CSS variable on `<html>`: `--id` (numbers get their `unit`, booleans are `1` / `0`); colors also get `--id-rgb`
     (`"139 92 246"`), which allows `rgb(var(--accent-rgb) / 50%)`
   - a `data-id` attribute on `<html>`, for selectors like `html[data-corner="right"]`
   - a `streamoverlay:settings` event on `window` (`detail` holds every value)
+  - `group` puts a setting on a tab of the overlay's page (`Look`, `Layout`...), in the order the groups first appear; settings
+    without one are on the first tab. `when` shows a setting only while another setting has a value (`{ "theme": "fancy" }`,
+    or `{ "flap": true }` for a switch): the value of a setting that is not shown is still sent to the page.
 - `keys`: key states the page may receive. Only these are read, only while the overlay is visible, and an overlay only
   ever gets the keys it listed. Allowed names are in `main/keys.ts` (letters, digits, `SHIFT`, `CTRL`, `ALT`, `CAPS`,
   `SPACE`, `TAB`, `ENTER`, `ESC`, arrows, and the mouse buttons `LMB`, `RMB`, `MMB`).
@@ -72,6 +80,18 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
 
 Everything in `overlay.json` is validated (`main/manifest.ts`, `main/values.ts`): invalid entries are dropped, invalid
 values fall back to the default.
+
+### Themes
+
+An overlay with more than one look has a `select` setting named `theme`, which reaches the page as `html[data-theme="..."]`.
+The keyboard, the mouse and the Spotify card are built that way: their own CSS is the default theme and is not touched, and the
+gothic one is only rules inside `:where(html[data-theme="gothic"]) { ... }` (native CSS nesting). `:where()` weighs nothing,
+so a rule weighs what it would without the scope and the order of the style sheets decides ties as before; variables that have
+to beat `:root` use `html[data-theme="gothic"] { ... }` instead. The colors of a theme are settings of their own (`letter-accent`
+and `g-letter-accent`), each shown only with its theme (`when`) and with its own default, and the CSS draws with an
+intermediate variable (`--key-accent-rgb`, `--click-rgb`, `--card-accent-rgb`) that the theme points at its own setting. The
+gothic keyboard, mouse and Spotify card used to be overlays of their own (`obnoxious-keyboard`...): `migrate.ts` moves what was
+saved for them (what is on, settings, presets, global presets) to the theme when the plugin starts.
 
 ### Messages
 
@@ -157,6 +177,7 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `settings.ts`, `presets.ts` | the stored settings and helpers to edit them; the preset logic (no React, no store) |
 | `apps.ts`, `appPresets.ts` | presets by app: matching a program to its binding (no React, no store); following the program in focus and applying / going back |
 | `components/` | the settings page: `OverlayPicker` switches between `OverlayGrid` (tabs: cards and folder tools, layout, global presets, presets by app) and `OverlayDetail` (one overlay: tabs for its settings and its presets); Discord's `TextInput`, `Slider` and select; the color picker is built here (like Discord's role color picker) because Discord's own `ColorPicker` is only filled in once Discord has loaded it |
+| `groups.ts`, `migrate.ts` | how an overlay's settings are split into tabs and which are shown (`group`, `when`) and the grouping of the cards; moving what was saved for the old gothic overlays to the theme (no React, no store) |
 | `sync.ts` | keeps the overlay window in line with the stream and the settings; collects what overlays save |
 | `menu.tsx` | "Overlay Settings" in the stream menu |
 | `types.ts` | types shared by both sides, no runtime code |

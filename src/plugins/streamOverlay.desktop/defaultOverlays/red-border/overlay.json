@@ -1,5 +1,6 @@
 {
     "title": "Red border",
+    "category": "Frames",
     "description": "A colored frame around the whole screen.",
     "settings": [
         { "id": "color", "type": "color", "label": "Color", "default": "#ff0000" },

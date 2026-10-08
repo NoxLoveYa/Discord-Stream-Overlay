@@ -8,6 +8,7 @@ import { Button } from "@components/Button";
 import { Heading } from "@components/Heading";
 import { Paragraph } from "@components/Paragraph";
 import { Switch } from "@components/Switch";
+import { settingsTabs } from "@plugins/streamOverlay.desktop/groups";
 import { copyName, presetsOf, renamePreset, sameSettings, withoutPreset, withPreset } from "@plugins/streamOverlay.desktop/presets";
 import { plain, setOverlayEnabled, settings, updateStored, updateValues } from "@plugins/streamOverlay.desktop/settings";
 import type { OverlayInfo, OverlayPreset, OverlayValue } from "@plugins/streamOverlay.desktop/types";
@@ -18,26 +19,30 @@ import { PresetManager } from "./PresetManager";
 import { OverlayPresetSummary } from "./PresetSummary";
 import { Tabs } from "./Tabs";
 
-const TABS = [
-    { id: "settings", label: "Settings" },
-    { id: "presets", label: "Presets" }
-] as const;
-type Tab = (typeof TABS)[number]["id"];
+const PRESETS = "presets";
 
 export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBack(): void; }) {
     const { enabledOverlays, overlayValues, overlayPresets } = settings.use(["enabledOverlays", "overlayValues", "overlayPresets"]);
-    const [tab, setTab] = useState<Tab>("settings");
+    const [tab, setTab] = useState("");
 
     const { name } = overlay;
     const enabled = enabledOverlays.includes(name);
-    const options = overlay.settings.filter(s => !s.hidden);
     const current: Record<string, OverlayValue> | undefined = plain(overlayValues[name]);
     const presets: OverlayPreset[] = plain(presetsOf(overlayPresets, name));
+
+    // one tab per group of settings (what is on them can change with a setting, like the colors of a theme), then the presets
+    const groups = settingsTabs(overlay.settings, current);
+    const tabs = [...(groups.length ? groups : [{ id: "settings", label: "Settings", settings: [] }]), { id: PRESETS, label: "Presets", settings: [] }];
+    const open = tabs.find(t => t.id === tab) ?? tabs[0];
 
     const setPresets = (next: OverlayPreset[]) => updateStored("overlayPresets", all => { all[name] = next; });
     const setValues = (values: Record<string, OverlayValue> | undefined) => updateValues(all => {
         if (values) all[name] = values;
         else delete all[name];
+    });
+    // only what is on this tab: where the overlay was dragged to and what is on the other tabs stay
+    const resetTab = () => updateValues(all => {
+        for (const setting of open.settings) delete all[name]?.[setting.id];
     });
 
     return (
@@ -59,22 +64,22 @@ export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBac
                 </div>
             </header>
 
-            <Tabs<Tab> label={`${overlay.title} settings`} tabs={TABS} current={tab} onChange={setTab}>
-                {tab === "settings" && (options.length > 0 ? (
+            <Tabs<string> label={`${overlay.title} settings`} tabs={tabs} current={open.id} onChange={setTab}>
+                {open.id !== PRESETS && (open.settings.length > 0 ? (
                     <div>
                         <div className="vc-so-section-head">
                             <Paragraph size="sm" defaultColor={false} className="vc-so-muted">Changes apply right away.</Paragraph>
-                            <Button variant="dangerSecondary" size="small" onClick={() => setValues(undefined)}>
-                                Reset to defaults
+                            <Button variant="dangerSecondary" size="small" onClick={resetTab}>
+                                {tabs.length > 2 ? `Reset ${open.label.toLowerCase()}` : "Reset to defaults"}
                             </Button>
                         </div>
-                        <OverlayOptionList overlay={name} options={options} />
+                        <OverlayOptionList overlay={name} options={open.settings} />
                     </div>
                 ) : (
                     <Paragraph size="sm" defaultColor={false} className="vc-so-muted">This overlay has no settings.</Paragraph>
                 ))}
 
-                {tab === "presets" && (
+                {open.id === PRESETS && (
                     <PresetManager
                         hint="A preset keeps all the settings of this overlay, including where you moved it and how big you made it."
                         emptyText="No presets for this overlay yet. Set it up the way you like, then save it here to come back to it later."
