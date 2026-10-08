@@ -32,6 +32,8 @@ export interface Manifest {
     keys: string[];
     /** the overlay receives how far the mouse moved and the wheel turned (not where the cursor is) */
     mouse: boolean;
+    /** the overlay receives the track that is playing in Spotify */
+    media: boolean;
     /** while all of these are held, the overlay window takes the mouse */
     interactive: string[];
     /** can be moved and resized with the `interactive` keys, so the Layout tab lets you drag it */
@@ -46,6 +48,20 @@ export interface OverlayInfo {
     description: string;
     draggable: boolean;
     settings: OverlaySetting[];
+}
+
+/** The track playing in Spotify; `position` was true at `at` (Date.now()), and moves on from there while `playing` */
+export interface MediaState {
+    id: string;
+    title: string;
+    artists: string[];
+    album: string;
+    /** an https address on Spotify's image servers, or "" */
+    cover: string;
+    duration: number;
+    position: number;
+    playing: boolean;
+    at: number;
 }
 
 /** One overlay's settings under a name; only the values that differ from the defaults are kept */

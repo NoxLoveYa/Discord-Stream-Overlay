@@ -9,6 +9,7 @@ import { BrowserWindow, type IpcMainInvokeEvent, shell } from "electron";
 import { FocusWatcher } from "./main/focus";
 import { listOverlays as listOverlayFolder, pickFolder as pickOverlayFolder, resolveRoot } from "./main/folder";
 import { LayoutSink, screenshot } from "./main/layout";
+import { cleanMedia } from "./main/media";
 import { Nvenc } from "./main/nvenc";
 import { OverlayWindow } from "./main/window";
 import type { OverlayValues } from "./types";
@@ -48,6 +49,12 @@ export function reload() {
 
 export function takeChanges() {
     return overlay.takeChanges();
+}
+
+/** The track playing in Spotify (null when none), for the overlays that ask for it. */
+export function setMedia(_: IpcMainInvokeEvent, state: unknown) {
+    const media = cleanMedia(state);
+    return Promise.all([overlay.setMedia(media), layout.setMedia(media)]).then(() => { });
 }
 
 // The Layout tab: the overlays rendered offscreen and shown on the settings page, where the draggable ones can be moved.

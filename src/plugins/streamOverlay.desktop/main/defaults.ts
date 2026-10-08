@@ -36,6 +36,10 @@ import keysCss from "file://../defaultOverlays/shared/keys.css";
 import keysScript from "file://../defaultOverlays/shared/keys.js";
 import moveCss from "file://../defaultOverlays/shared/move.css";
 import moveScript from "file://../defaultOverlays/shared/move.js";
+import spotifyHtml from "file://../defaultOverlays/spotify/index.html";
+import spotifyManifest from "file://../defaultOverlays/spotify/overlay.json";
+import spotifyScript from "file://../defaultOverlays/spotify/script.js";
+import spotifyCss from "file://../defaultOverlays/spotify/style.css";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
 
@@ -96,6 +100,15 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "style.css": obnoxiousMouseCss,
         "theme.css": obnoxiousMouseBoardTheme,
         "overlay.json": obnoxiousMouseManifest
+    },
+    "spotify": {
+        "board.css": boardCss,
+        "move.css": moveCss,
+        "move.js": moveScript,
+        "index.html": spotifyHtml,
+        "script.js": spotifyScript,
+        "style.css": spotifyCss,
+        "overlay.json": spotifyManifest
     }
 };
 

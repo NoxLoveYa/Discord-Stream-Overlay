@@ -40,48 +40,52 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         return addon = module.exports;
     };
 
-    // the latest overlay as a small RGBA canvas; one canvas per preview sits over its <video>
-    const source = document.createElement("canvas");
+    // one canvas per preview sits over its <video>. The overlay (premultiplied BGRA) is uploaded to the GPU as it is and
+    // the channels are swapped in a shader: the preview gets the full size picture with no per-pixel work here
     const shown = new Map();
     let ratio = 0;
     let raf = 0;
     let active = false;
     let latest = null;
     let stale = false;
-    let out = new Uint32Array(0);
-    let image = null;
 
-    const convert = (bitmap, width, height) => {
-        if (bitmap.byteOffset & 3) bitmap = Uint8Array.from(bitmap);
-        const step = Math.max(1, Math.floor(width / 1280));
-        const w = Math.floor(width / step);
-        const h = Math.floor(height / step);
-        const src = new Uint32Array(bitmap.buffer, bitmap.byteOffset, width * height);
-        if (!image || image.width !== w || image.height !== h) {
-            out = new Uint32Array(w * h);
-            image = new ImageData(new Uint8ClampedArray(out.buffer), w, h);
-            source.width = w;
-            source.height = h;
+    const VERTEX = "attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}";
+    const FRAGMENT = "precision mediump float;varying vec2 uv;uniform sampler2D t;void main(){gl_FragColor=texture2D(t,uv).bgra;}";
+
+    const painterFor = canvas => {
+        const gl = canvas.getContext("webgl", { premultipliedAlpha: true, antialias: false });
+        if (!gl) return null;
+
+        const program = gl.createProgram();
+        for (const [type, code] of [[gl.VERTEX_SHADER, VERTEX], [gl.FRAGMENT_SHADER, FRAGMENT]]) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, code);
+            gl.compileShader(shader);
+            gl.attachShader(program, shader);
         }
-        let i = 0;
-        for (let y = 0; y < h; y++) {
-            const row = y * step * width;
-            for (let x = 0; x < w; x++, i++) {
-                const v = src[row + x * step];
-                const a = v >>> 24;
-                if (a === 255) {
-                    out[i] = (v & 0xff00ff00) | ((v & 0xff) << 16) | ((v >>> 16) & 0xff);
-                } else if (a) {
-                    const r = Math.min(255, ((v >>> 16) & 0xff) * 255 / a | 0);
-                    const g = Math.min(255, ((v >>> 8) & 0xff) * 255 / a | 0);
-                    const b = Math.min(255, (v & 0xff) * 255 / a | 0);
-                    out[i] = (a << 24 | b << 16 | g << 8 | r) >>> 0;
-                } else {
-                    out[i] = 0;
-                }
+        gl.linkProgram(program);
+        gl.useProgram(program);
+
+        // one triangle that covers the canvas
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+        const position = gl.getAttribLocation(program, "p");
+        gl.enableVertexAttribArray(position);
+        gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+
+        gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+        for (const [name, value] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]])
+            gl.texParameteri(gl.TEXTURE_2D, name, value);
+
+        return (bitmap, width, height) => {
+            if (canvas.width !== width || canvas.height !== height) {
+                canvas.width = width;
+                canvas.height = height;
             }
-        }
-        source.getContext("2d").putImageData(image, 0, 0);
+            gl.viewport(0, 0, width, height);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, bitmap);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+        };
     };
 
     // videos shaped like the shared screen; the stream is fed natively, media in chats are files loaded over http(s)
@@ -99,7 +103,6 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         const live = new Set(previews());
         if (stale && live.size) {
             stale = false;
-            try { convert(latest.bitmap, latest.width, latest.height); } catch { }
             for (const canvas of shown.values()) canvas.dirty = true;
         }
 
@@ -128,15 +131,9 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
             s.width = w + "px";
             s.height = h + "px";
 
-            if (canvas.dirty) {
+            if (canvas.dirty && latest) {
                 canvas.dirty = false;
-                if (canvas.width !== source.width || canvas.height !== source.height) {
-                    canvas.width = source.width;
-                    canvas.height = source.height;
-                }
-                const context = canvas.getContext("2d");
-                context.clearRect(0, 0, canvas.width, canvas.height);
-                context.drawImage(source, 0, 0);
+                try { (canvas.paint ??= painterFor(canvas))?.(latest.bitmap, latest.width, latest.height); } catch { }
             }
         }
         raf = requestAnimationFrame(place);

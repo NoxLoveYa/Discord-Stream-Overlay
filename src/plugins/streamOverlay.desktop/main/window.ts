@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import type { Manifest, OverlayValue, OverlayValues } from "@plugins/streamOverlay.desktop/types";
+import type { Manifest, MediaState, OverlayValue, OverlayValues } from "@plugins/streamOverlay.desktop/types";
 import { app, BrowserWindow, type Display } from "electron";
 import { writeFileSync } from "fs";
 import { join } from "path";
@@ -16,6 +16,7 @@ import { findOverlays } from "./folder";
 import { hostHtml } from "./host";
 import { OverlayInput } from "./input";
 import { readManifest, unionKeys } from "./manifest";
+import { SAMPLE_MEDIA } from "./media";
 import type { StreamSink } from "./nvenc";
 import { resolveValue, settingsScript } from "./values";
 
@@ -41,6 +42,7 @@ export class OverlayWindow {
     private shown = false;
     private suspended = false;
     private pressed = false;
+    private media: MediaState | null = null;
     /** what is loaded, in iframe order */
     private entries: Entry[] = [];
     private loadedKey = "";
@@ -93,6 +95,21 @@ export class OverlayWindow {
         if (this.shown && !this.offscreen) this.live()?.showInactive();
     }
 
+    /** The track that is playing, for the overlays that asked for it. */
+    setMedia(state: MediaState | null) {
+        this.media = state;
+        return this.pushMedia();
+    }
+
+    private pushMedia() {
+        const win = this.live();
+        if (!win) return Promise.resolve();
+
+        // the Layout tab has no music of its own to show: a sample gives the overlay something to drag
+        const state = this.media ?? (this.layout ? SAMPLE_MEDIA() : null);
+        return win.webContents.executeJavaScript(`window.__streamOverlayMedia?.(${JSON.stringify(state)})`).catch(() => { });
+    }
+
     private armed() {
         return this.layout ? this.entries.flatMap(e => e.manifest.draggable ? e.manifest.interactive : []) : [];
     }
@@ -131,7 +148,8 @@ export class OverlayWindow {
             file: o.file,
             keys: manifests[i].keys,
             interactive: manifests[i].interactive.length > 0,
-            mouse: manifests[i].mouse
+            mouse: manifests[i].mouse,
+            media: manifests[i].media
         }));
         const key = JSON.stringify(overlays);
         const fresh = key !== this.loadedKey;
@@ -143,6 +161,7 @@ export class OverlayWindow {
 
         // before it becomes visible, so the first frame already has the right values
         await this.applySettings();
+        await this.pushMedia();
         if (!offscreen && !this.suspended) win.showInactive();
         this.shown = true;
         if (fresh) await playEnter(win);
