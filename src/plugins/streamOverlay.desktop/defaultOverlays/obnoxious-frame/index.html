@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Obnoxious frame</title>
+    <link rel="stylesheet" href="font.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- the ragged dark edge: its mask is drawn by script.js -->
+    <div class="ink"></div>
+
+    <!-- every shape is placed by script.js, from the size of the screen and the settings -->
+    <svg aria-hidden="true">
+        <defs>
+            <linearGradient id="grad-plate" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#14091a" stop-opacity=".94"></stop>
+                <stop offset="1" stop-color="#060309" stop-opacity=".88"></stop>
+            </linearGradient>
+            <linearGradient id="grad-wing" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#07040b" stop-opacity=".84"></stop>
+                <stop offset="1" stop-color="#07040b" stop-opacity=".3"></stop>
+            </linearGradient>
+
+            <g id="skull">
+                <path class="sk-bone" d="M-21 4C-24 -21 -11 -30 0 -30C11 -30 24 -21 21 4C20 10 15 12 12 15L11 27L-11 27L-12 15C-15 12 -20 10 -21 4Z"></path>
+                <path class="sk-crack" d="M2 -30L-1 -22L3 -17L0 -12M-17 10L-12 13M17 10L12 13"></path>
+                <ellipse class="sk-hole" cx="-8.5" cy="3" rx="6.5" ry="7.5"></ellipse>
+                <ellipse class="sk-hole" cx="8.5" cy="3" rx="6.5" ry="7.5"></ellipse>
+                <circle class="sk-eye" cx="-8.5" cy="4" r="2"></circle>
+                <circle class="sk-eye" cx="8.5" cy="4" r="2"></circle>
+                <path class="sk-hole" d="M0 11L-3.4 18L3.4 18Z"></path>
+                <path class="sk-line" d="M-13 20H13M-8.7 20V27M-4.3 20V27M0 20V27M4.3 20V27M8.7 20V27"></path>
+            </g>
+
+            <path id="star" d="M0 -6L1.4 -1.9L5.7 -1.9L2.3 .7L3.5 4.9L0 2.4L-3.5 4.9L-2.3 .7L-5.7 -1.9L-1.4 -1.9Z"></path>
+        </defs>
+
+        <path id="webs" class="web"></path>
+
+        <g class="wings">
+            <g class="wing left">
+                <path class="membrane"></path>
+                <path class="veins"></path>
+                <g class="neon"><path class="bones"></path></g>
+            </g>
+            <g class="wing right">
+                <path class="membrane"></path>
+                <path class="veins"></path>
+                <g class="neon"><path class="bones"></path></g>
+            </g>
+        </g>
+
+        <g class="neon">
+            <path id="vine-shade" class="shade"></path>
+            <path id="vine" class="vine" pathLength="1"></path>
+            <path id="curls" class="curls"></path>
+            <path id="thorns" class="thorns"></path>
+            <path id="leaves" class="leaf"></path>
+        </g>
+
+        <path id="plate" class="plate"></path>
+        <path id="plate-inner" class="plate-inner"></path>
+        <use class="plate-star" href="#star"></use>
+        <use class="plate-star" href="#star"></use>
+
+        <use class="skull" href="#skull"></use>
+        <use class="skull" href="#skull"></use>
+    </svg>
+
+    <!-- the name: change it here -->
+    <div id="name" class="name"><span id="text" class="text">Obnoxious</span></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Keyboard</title>
+    <link rel="stylesheet" href="board.css">
+    <link rel="stylesheet" href="keys.css">
+    <link rel="stylesheet" href="move.css">
+    <link rel="stylesheet" href="font.css">
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="board">
+        <!-- --span is the width of a key, in key widths; the last row is as wide as the widest one -->
+        <div class="row">
+            <div class="key mod" data-key="TAB" style="--span: 1.5"><div class="cap"><span>TAB</span></div></div>
+            <div class="key" data-key="Q"><div class="cap"><span>Q</span></div></div>
+            <div class="key" data-key="W"><div class="cap"><span>W</span></div></div>
+            <div class="key" data-key="E"><div class="cap"><span>E</span></div></div>
+            <div class="key" data-key="R"><div class="cap"><span>R</span></div></div>
+            <div class="key" data-key="T"><div class="cap"><span>T</span></div></div>
+        </div>
+        <div class="row">
+            <div class="key mod" data-key="CAPS" style="--span: 1.75"><div class="cap"><span>CAPS</span></div></div>
+            <div class="key" data-key="A"><div class="cap"><span>A</span></div></div>
+            <div class="key" data-key="S"><div class="cap"><span>S</span></div></div>
+            <div class="key" data-key="D"><div class="cap"><span>D</span></div></div>
+            <div class="key" data-key="F"><div class="cap"><span>F</span></div></div>
+            <div class="key" data-key="G"><div class="cap"><span>G</span></div></div>
+        </div>
+        <div class="row">
+            <div class="key mod" data-key="SHIFT" style="--span: 2.25"><div class="cap"><span>SHIFT</span></div></div>
+            <div class="key" data-key="Z"><div class="cap"><span>Z</span></div></div>
+            <div class="key" data-key="X"><div class="cap"><span>X</span></div></div>
+            <div class="key" data-key="C"><div class="cap"><span>C</span></div></div>
+            <div class="key" data-key="V"><div class="cap"><span>V</span></div></div>
+            <div class="key" data-key="B"><div class="cap"><span>B</span></div></div>
+        </div>
+        <div class="row">
+            <div class="key mod" data-key="CTRL" style="--span: 1.25"><div class="cap"><span>CTRL</span></div></div>
+            <div class="key mod" data-key="SPACE" style="--span: 6"><div class="cap"><span>SPACE</span></div></div>
+        </div>
+
+        <div class="resize" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9" />
+            </svg>
+        </div>
+        <div class="hint">
+            <span class="hint-idle">Hold <kbd>Alt</kbd> + <kbd>Caps</kbd> to move or resize</span>
+            <span class="hint-armed">Drag to move · drag the corner to resize</span>
+        </div>
+    </main>
+
+    <script src="keys.js"></script>
+    <script src="move.js"></script>
+</body>
+</html>

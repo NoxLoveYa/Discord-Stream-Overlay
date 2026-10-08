@@ -12,6 +12,22 @@ import mouseHtml from "file://../defaultOverlays/mouse/index.html";
 import mouseManifest from "file://../defaultOverlays/mouse/overlay.json";
 import mouseScript from "file://../defaultOverlays/mouse/script.js";
 import mouseCss from "file://../defaultOverlays/mouse/style.css";
+import obnoxiousFont from "file://../defaultOverlays/obnoxious-frame/font.css";
+import obnoxiousFontLicense from "file://../defaultOverlays/obnoxious-frame/FONT-LICENSE.txt";
+import obnoxiousFrameHtml from "file://../defaultOverlays/obnoxious-frame/index.html";
+import obnoxiousFrameManifest from "file://../defaultOverlays/obnoxious-frame/overlay.json";
+import obnoxiousFrameScript from "file://../defaultOverlays/obnoxious-frame/script.js";
+import obnoxiousFrameCss from "file://../defaultOverlays/obnoxious-frame/style.css";
+import obnoxiousKeyboardHtml from "file://../defaultOverlays/obnoxious-keyboard/index.html";
+import obnoxiousKeyboardManifest from "file://../defaultOverlays/obnoxious-keyboard/overlay.json";
+import obnoxiousKeyboardCss from "file://../defaultOverlays/obnoxious-keyboard/style.css";
+import obnoxiousKeyboardTheme from "file://../defaultOverlays/obnoxious-keyboard/theme.css";
+import obnoxiousMouseHtml from "file://../defaultOverlays/obnoxious-mouse/index.html";
+import obnoxiousMouseTheme from "file://../defaultOverlays/obnoxious-mouse/mouse-theme.css";
+import obnoxiousMouseManifest from "file://../defaultOverlays/obnoxious-mouse/overlay.json";
+import obnoxiousMouseScript from "file://../defaultOverlays/obnoxious-mouse/script.js";
+import obnoxiousMouseCss from "file://../defaultOverlays/obnoxious-mouse/style.css";
+import obnoxiousMouseBoardTheme from "file://../defaultOverlays/obnoxious-mouse/theme.css";
 import redBorderHtml from "file://../defaultOverlays/red-border/index.html";
 import redBorderManifest from "file://../defaultOverlays/red-border/overlay.json";
 import redBorderCss from "file://../defaultOverlays/red-border/style.css";
@@ -51,6 +67,35 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "script.js": mouseScript,
         "style.css": mouseCss,
         "overlay.json": mouseManifest
+    },
+    // the gothic set: a frame, and a keyboard and mouse to go with it
+    "obnoxious-frame": {
+        "font.css": obnoxiousFont,
+        "FONT-LICENSE.txt": obnoxiousFontLicense,
+        "index.html": obnoxiousFrameHtml,
+        "script.js": obnoxiousFrameScript,
+        "style.css": obnoxiousFrameCss,
+        "overlay.json": obnoxiousFrameManifest
+    },
+    "obnoxious-keyboard": {
+        ...board,
+        "font.css": obnoxiousFont,
+        "FONT-LICENSE.txt": obnoxiousFontLicense,
+        "index.html": obnoxiousKeyboardHtml,
+        "style.css": obnoxiousKeyboardCss,
+        "theme.css": obnoxiousKeyboardTheme,
+        "overlay.json": obnoxiousKeyboardManifest
+    },
+    "obnoxious-mouse": {
+        ...board,
+        "font.css": obnoxiousFont,
+        "FONT-LICENSE.txt": obnoxiousFontLicense,
+        "index.html": obnoxiousMouseHtml,
+        "mouse-theme.css": obnoxiousMouseTheme,
+        "script.js": obnoxiousMouseScript,
+        "style.css": obnoxiousMouseCss,
+        "theme.css": obnoxiousMouseBoardTheme,
+        "overlay.json": obnoxiousMouseManifest
     }
 };
 

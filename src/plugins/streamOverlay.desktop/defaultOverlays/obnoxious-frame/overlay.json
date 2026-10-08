@@ -1,0 +1,18 @@
+{
+    "title": "Obnoxious frame",
+    "description": "A gothic frame in silver and black: filigree vines, bat wings that can flap, cobwebs, skulls, a ragged dark edge and a blackletter name.",
+    "settings": [
+        { "id": "metal", "type": "color", "label": "Frame", "default": "#d9d6e0" },
+        { "id": "accent", "type": "color", "label": "Eyes and gems", "default": "#b3122e" },
+        { "id": "bone", "type": "color", "label": "Name color", "default": "#f1ebf5" },
+        { "id": "wings", "type": "number", "label": "Wings", "min": 0, "max": 1.5, "step": 0.05, "default": 1 },
+        { "id": "flap", "type": "boolean", "label": "Flap the wings", "default": false },
+        { "id": "flap-speed", "type": "number", "label": "Time of one flap", "min": 0.6, "max": 6, "step": 0.1, "unit": "s", "default": 2.2 },
+        { "id": "skulls", "type": "boolean", "label": "Skulls", "default": true },
+        { "id": "edge", "type": "boolean", "label": "Ragged dark edge", "default": true },
+        { "id": "width", "type": "number", "label": "Line width", "min": 1, "max": 4, "step": 0.1, "unit": "px", "default": 1.6 },
+        { "id": "inset", "type": "number", "label": "Distance from the edge", "min": 0, "max": 60, "step": 1, "unit": "px", "default": 14 },
+        { "id": "size", "type": "number", "label": "Name size", "min": 20, "max": 110, "step": 1, "unit": "px", "default": 46 },
+        { "id": "glow", "type": "number", "label": "Glow", "min": 0, "max": 2, "step": 0.05, "default": 0.8 }
+    ]
+}

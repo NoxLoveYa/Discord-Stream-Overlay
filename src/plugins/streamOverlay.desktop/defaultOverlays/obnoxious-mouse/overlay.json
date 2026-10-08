@@ -1,0 +1,30 @@
+{
+    "title": "Mouse (Obnoxious)",
+    "description": "The mouse buttons, wheel and movement, in the gothic look of the Obnoxious frame. Hold Alt + Caps to move or resize it.",
+    "keys": ["LMB", "RMB", "MMB"],
+    "mouse": true,
+    "interactive": ["ALT", "CAPS"],
+    "draggable": true,
+    "settings": [
+        { "id": "click-accent", "type": "color", "label": "Buttons accent", "default": "#e4def0" },
+        { "id": "motion-accent", "type": "color", "label": "Movement and wheel accent", "default": "#b3122e" },
+        { "id": "shadow", "type": "color", "label": "Shadow color", "default": "#000000" },
+        { "id": "sensitivity", "type": "number", "label": "Movement sensitivity", "min": 0.25, "max": 3, "step": 0.05, "default": 1 },
+        { "id": "scale", "type": "number", "label": "Scale", "min": 0.6, "max": 2, "step": 0.05, "default": 1 },
+        {
+            "id": "position",
+            "type": "select",
+            "label": "Position",
+            "default": "bottom-right",
+            "options": [
+                { "label": "Bottom left", "value": "bottom-left" },
+                { "label": "Bottom right", "value": "bottom-right" },
+                { "label": "Top left", "value": "top-left" },
+                { "label": "Top right", "value": "top-right" },
+                { "label": "Custom (moved by hand)", "value": "custom" }
+            ]
+        },
+        { "id": "x", "type": "number", "label": "X", "min": 0, "max": 20000, "step": 1, "unit": "px", "default": 0, "hidden": true },
+        { "id": "y", "type": "number", "label": "Y", "min": 0, "max": 20000, "step": 1, "unit": "px", "default": 0, "hidden": true }
+    ]
+}

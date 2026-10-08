@@ -1,0 +1,247 @@
+html,
+body {
+    margin: 0;
+    background: transparent;
+    overflow: hidden;
+}
+
+/* the settings of overlay.json set these; these are their defaults, for when the page is opened on its own */
+:root {
+    --metal: #d9d6e0;
+    --metal-rgb: 217 214 224;
+    --accent: #b3122e;
+    --accent-rgb: 179 18 46;
+    --bone: #f1ebf5;
+    --wings: 1;
+    --flap-speed: 2.2s;
+    --width: 1.6px;
+    --inset: 14px;
+    --size: 46px;
+    --glow: 0.8;
+}
+
+/* ---- the dark edge: its mask arrives from script.js, without it this would be solid ---- */
+
+.ink {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: #040207;
+    mask-image: var(--ink-mask);
+    mask-size: 100% 100%;
+    mask-repeat: no-repeat;
+    opacity: 0.96;
+    animation: fade 1.4s 0.2s both;
+}
+
+html:not([data-ink-ready]) .ink,
+html[data-edge="false"] .ink {
+    display: none;
+}
+
+/* ---- drawing ---- */
+
+svg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.neon {
+    filter:
+        drop-shadow(0 1px 1.5px rgb(0 0 0 / 85%))
+        drop-shadow(0 0 calc(3px * var(--glow)) rgb(var(--metal-rgb) / 45%));
+}
+
+/* a dark line under the pale one, so the vines stay visible over bright pictures */
+.shade {
+    fill: none;
+    stroke: rgb(0 0 0 / 50%);
+    stroke-width: calc(var(--width) + 3px);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    animation: fade 1s 0.5s both;
+}
+
+.vine,
+.curls {
+    fill: none;
+    stroke: var(--metal);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.vine {
+    stroke-width: var(--width);
+    animation: draw 2s cubic-bezier(0.6, 0.05, 0.2, 1) both;
+}
+
+.curls {
+    stroke-width: calc(var(--width) * 0.75);
+    animation: fade 0.9s 1.2s both;
+}
+
+.thorns {
+    fill: var(--metal);
+    animation: fade 0.9s 1.3s both;
+}
+
+.leaf {
+    fill: #0a0610;
+    stroke: var(--metal);
+    stroke-width: calc(var(--width) * 0.7);
+    stroke-linejoin: round;
+    animation: fade 0.9s 1.2s both;
+}
+
+.web {
+    fill: none;
+    stroke: rgb(var(--metal-rgb) / 62%);
+    stroke-width: calc(var(--width) * 0.5);
+    stroke-linecap: round;
+    animation: fade 1.4s 1.1s both;
+}
+
+.wings {
+    animation: fade 1.2s 0.9s both;
+}
+
+/* flapping: each wing swings around its shoulder (script.js sets the origin) and its membrane stretches and folds */
+.wing {
+    transform-box: view-box;
+    will-change: transform;
+}
+
+.wing.left { --dir: 1; }
+.wing.right { --dir: -1; }
+
+html[data-flap="true"] .wing {
+    animation: flap var(--flap-speed) infinite;
+}
+
+.membrane {
+    fill: url(#grad-wing);
+    stroke: rgb(var(--metal-rgb) / 70%);
+    stroke-width: calc(var(--width) * 0.6);
+    stroke-linejoin: round;
+}
+
+.veins {
+    fill: none;
+    stroke: rgb(var(--metal-rgb) / 34%);
+    stroke-width: calc(var(--width) * 0.45);
+}
+
+.bones {
+    fill: var(--metal);
+    stroke: rgb(0 0 0 / 55%);
+    stroke-width: 0.8px;
+    stroke-linejoin: round;
+}
+
+.plate {
+    fill: url(#grad-plate);
+    stroke: var(--metal);
+    stroke-width: var(--width);
+    stroke-linejoin: round;
+    filter: drop-shadow(0 2px 4px rgb(0 0 0 / 70%));
+    animation: fade 0.7s 0.7s both;
+}
+
+.plate-inner {
+    fill: none;
+    stroke: rgb(var(--metal-rgb) / 45%);
+    stroke-width: 1px;
+    animation: fade 0.8s 1s both;
+}
+
+.plate-star {
+    fill: var(--metal);
+    animation: fade 0.8s 1.1s both;
+}
+
+/* styled where they are defined: a rule through the <use> would not reach them */
+.sk-bone {
+    fill: #0c070f;
+    stroke: var(--metal);
+    stroke-width: 1.6px;
+    stroke-linejoin: round;
+}
+
+.sk-crack,
+.sk-line {
+    fill: none;
+    stroke: rgb(var(--metal-rgb) / 75%);
+    stroke-width: 1.1px;
+    stroke-linecap: round;
+}
+
+.sk-hole {
+    fill: #000;
+    stroke: rgb(var(--metal-rgb) / 55%);
+    stroke-width: 0.8px;
+}
+
+.sk-eye {
+    fill: var(--accent);
+    filter: drop-shadow(0 0 3px rgb(var(--accent-rgb) / 95%));
+}
+
+.skull {
+    animation: fade 1.6s 1.4s both;
+}
+
+html[data-skulls="false"] .skull {
+    display: none;
+}
+
+.name {
+    position: fixed;
+    left: 50%;
+    /* top is set by script.js, to the middle of the plate */
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.text {
+    display: block;
+    font: 700 var(--size) / 1 "ObnoxiousGothic", "Old English Text MT", "Palatino Linotype", Georgia, serif;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    color: var(--bone);
+    text-shadow:
+        0 2px 0 rgb(0 0 0 / 85%),
+        0 0 calc(10px * var(--glow)) rgb(var(--metal-rgb) / 55%),
+        0 0 calc(26px * var(--glow)) rgb(var(--metal-rgb) / 25%);
+    animation: name-in 1.3s 0.7s both;
+}
+
+@keyframes draw {
+    from {
+        stroke-dasharray: 1;
+        stroke-dashoffset: 1;
+    }
+    to {
+        stroke-dasharray: 1;
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes fade {
+    from { opacity: 0; }
+}
+
+/* the name comes out of the dark */
+@keyframes name-in {
+    from { opacity: 0; filter: blur(12px); transform: scale(1.12); }
+    55% { opacity: 0.9; filter: blur(3px); }
+    to { opacity: 1; filter: none; transform: none; }
+}
+
+/* up: raised and folded, down: lowered and stretched; the downstroke is quicker than the way back up */
+@keyframes flap {
+    0%, 100% { transform: rotate(calc(var(--dir) * 6deg)) scaleY(0.72); animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); }
+    38% { transform: rotate(calc(var(--dir) * -9deg)) scaleY(1.05); animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); }
+}
