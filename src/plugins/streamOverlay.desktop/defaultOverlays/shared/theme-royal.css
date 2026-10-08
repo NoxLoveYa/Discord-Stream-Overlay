@@ -1,14 +1,11 @@
 /* Royal Gold: black with fine gold hairlines and ivory light, restrained and sharp.
-   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "royal".
-   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+   Fixed palette: the accent settings only apply to the Default theme. */
 html[data-theme="royal"] {
     --graphite-900: #0a0a0f;
     --graphite-700: #101016;
     --graphite-500: #1a1a22;
     --text: #f4ecd8;
     --text-muted: #a89a75;
-
-    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
     --key-accent-rgb: 212 175 55;
     --key-edge-rgb: 240 230 200;
     --click-rgb: 212 175 55;
@@ -16,7 +13,6 @@ html[data-theme="royal"] {
     --card-accent-rgb: 212 175 55;
     --card-accent2-rgb: 240 230 200;
     --move-rgb: 212 175 55;
-    --gem-rgb: 212 175 55;
 }
 
 :where(html[data-theme="royal"]) {

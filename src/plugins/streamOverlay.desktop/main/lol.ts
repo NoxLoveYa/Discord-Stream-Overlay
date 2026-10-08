@@ -7,12 +7,16 @@
 import type { LolState } from "@plugins/streamOverlay.desktop/types";
 import { get } from "https";
 
-// The local League of Legends player, read straight from the game client on this machine: no login, no key,
-// nothing leaves the machine. The Live Client API only answers while a game is live (never in champ select),
-// so outside a game this reports null and the overlay falls back to its manual settings.
+// The Live Client API only answers while a game is live (never in champ select), so outside a game this reports null
+// and the overlay falls back to its manual settings. Nothing leaves the machine except the public Data Dragon lookups.
 const LIVE_URL = "https://127.0.0.1:2999/liveclientdata/allgamedata";
 const DD_VERSIONS = "https://ddragon.leagueoflegends.com/api/versions.json";
 const ddragon = (version: string, path: string) => `https://ddragon.leagueoflegends.com/cdn/${version}/${path}`;
+
+const REQUEST_TIMEOUT_MS = 4000;
+const MAX_RESPONSE_CHARS = 4_000_000;
+const ACTIVE_POLL_MS = 2000;
+const IDLE_POLL_MS = 5000;
 
 // addresses the overlay may show as images: Data Dragon spell icons only (like cleanMedia's cover check)
 const DD_SPELL = /^https:\/\/ddragon\.leagueoflegends\.com\/cdn\/[\w.]+\/img\/spell\/[\w%.-]+\.png$/;
@@ -46,9 +50,42 @@ const SUMMONER_NAMES: Record<string, string> = {
 // live names that match neither the Data Dragon id nor the display name ("Wukong" for id "MonkeyKing")
 const SPECIAL_CHAMPIONS: Record<string, string> = { wukong: "MonkeyKing" };
 
+// everything below comes from a local process or the network: shapes are checked before use
+interface LiveSpell {
+    displayName?: unknown;
+    name?: unknown;
+    rawDisplayName?: unknown;
+}
+
+interface LivePlayer {
+    summonerName?: unknown;
+    championName?: unknown;
+    rawChampionName?: unknown;
+    summonerSpells?: { summonerSpellOne?: LiveSpell; summonerSpellTwo?: LiveSpell; };
+}
+
+interface LiveGame {
+    allPlayers?: unknown;
+    playerlist?: unknown;
+    activePlayer?: { summonerName?: unknown; };
+    activePlayerName?: unknown;
+}
+
+interface DdragonChampionJson {
+    id?: unknown;
+    name?: unknown;
+    spells?: { image?: { full?: unknown; }; }[];
+}
+
+interface DdragonChampion {
+    id: string;
+    spells: string[];
+}
+
 const live = <T>(url: string): Promise<T | null> => getJson(url, true);
 const web = <T>(url: string): Promise<T | null> => getJson(url, false);
 
+// `insecure`: the game's local server presents a self-signed certificate
 function getJson<T>(url: string, insecure: boolean): Promise<T | null> {
     return new Promise(resolve => {
         const req = get(url, { rejectUnauthorized: !insecure }, res => {
@@ -57,10 +94,11 @@ function getJson<T>(url: string, insecure: boolean): Promise<T | null> {
                 resolve(null);
                 return;
             }
+            res.setEncoding("utf8");
             let raw = "";
             res.on("data", chunk => {
                 raw += chunk;
-                if (raw.length > 4_000_000) {
+                if (raw.length > MAX_RESPONSE_CHARS) {
                     req.destroy();
                     resolve(null);
                 }
@@ -72,22 +110,23 @@ function getJson<T>(url: string, insecure: boolean): Promise<T | null> {
                     resolve(null);
                 }
             });
+            res.on("error", () => resolve(null));
         });
         req.on("error", () => resolve(null));
-        req.setTimeout(4000, () => {
+        req.setTimeout(REQUEST_TIMEOUT_MS, () => {
             req.destroy();
             resolve(null);
         });
     });
 }
 
-/** "Saut éclair" -> "sauteclair", so every client language matches the same table. */
+// "Saut éclair" -> "sauteclair", so every client language matches the same table
 const norm = (value: unknown) =>
     typeof value === "string"
         ? value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "")
         : "";
 
-const summonerId = (spell: any) => {
+const summonerId = (spell: LiveSpell | undefined) => {
     for (const field of [spell?.displayName, spell?.name, spell?.rawDisplayName]) {
         const id = SUMMONER_NAMES[norm(field)];
         if (id) return id;
@@ -95,12 +134,6 @@ const summonerId = (spell: any) => {
     return "";
 };
 
-interface DdragonChampion {
-    id: string;
-    spells: string[];
-}
-
-let ddragonVersion: string | null = null;
 let ddragonChampions: Map<string, DdragonChampion> | null = null;
 let ddragonFailed = false;
 
@@ -113,17 +146,16 @@ async function ddragonData() {
             ddragonFailed = true;
             return null;
         }
-        ddragonVersion = version;
-        const json = await web<any>(ddragon(ddragonVersion, "data/en_US/champion.json"));
-        if (!json || typeof json.data !== "object") {
+        const json = await web<{ data?: Record<string, DdragonChampionJson>; }>(ddragon(version, "data/en_US/champion.json"));
+        if (!json?.data || typeof json.data !== "object") {
             ddragonFailed = true;
             return null;
         }
         const map = new Map<string, DdragonChampion>();
-        for (const entry of Object.values<any>(json.data)) {
+        for (const entry of Object.values(json.data)) {
             if (typeof entry?.id !== "string" || !Array.isArray(entry.spells)) continue;
-            const spells = entry.spells.slice(0, 4).map((s: any) =>
-                typeof s?.image?.full === "string" ? ddragon(ddragonVersion!, `img/spell/${s.image.full}`) : "");
+            const spells = entry.spells.slice(0, 4).map(s =>
+                typeof s?.image?.full === "string" ? ddragon(version, `img/spell/${s.image.full}`) : "");
             const champion = { id: entry.id, spells };
             map.set(norm(entry.id), champion);
             if (typeof entry.name === "string") map.set(norm(entry.name), champion);
@@ -136,39 +168,34 @@ async function ddragonData() {
     }
 }
 
-async function resolveChampion(raw: string): Promise<DdragonChampion | null> {
+async function resolveChampion(raw: unknown): Promise<DdragonChampion | null> {
     const name = norm(typeof raw === "string" ? raw.replace(/^game_character_displayname_/, "") : "");
     if (!name) return null;
-    if (SPECIAL_CHAMPIONS[name]) {
-        const data = await ddragonData();
-        return data?.get(norm(SPECIAL_CHAMPIONS[name])) ?? null;
-    }
-    return (await ddragonData())?.get(name) ?? null;
+    return (await ddragonData())?.get(norm(SPECIAL_CHAMPIONS[name] ?? name)) ?? null;
 }
 
-/** The state comes from the game client: shapes are checked, image addresses whitelisted. */
-export function cleanLol(raw: any): LolState | null {
-    const champion = typeof raw?.champion === "string" && CHAMPION_ID.test(raw.champion) ? raw.champion : "";
-    const spells = (Array.isArray(raw?.spells) ? raw.spells : []).slice(0, 4)
-        .map((u: unknown) => typeof u === "string" && DD_SPELL.test(u) ? u : "");
+// image addresses are whitelisted and ids shape-checked: this goes straight to the overlay page
+function cleanLol(raw: LolState): LolState | null {
+    const champion = CHAMPION_ID.test(raw.champion) ? raw.champion : "";
+    const spells = raw.spells.slice(0, 4).map(u => DD_SPELL.test(u) ? u : "");
     while (spells.length < 4) spells.push("");
-    const summonerD = SUMMONERS.has(raw?.summonerD) ? raw.summonerD : "";
-    const summonerF = SUMMONERS.has(raw?.summonerF) ? raw.summonerF : "";
+    const summonerD = SUMMONERS.has(raw.summonerD) ? raw.summonerD : "";
+    const summonerF = SUMMONERS.has(raw.summonerF) ? raw.summonerF : "";
     if (!champion && spells.every(s => !s) && !summonerD && !summonerF) return null;
     return { champion, spells, summonerD, summonerF };
 }
 
 async function readLive(): Promise<LolState | null> {
-    const json = await live<any>(LIVE_URL);
+    const json = await live<LiveGame>(LIVE_URL);
     if (!json) return null;
-    const players: any[] = Array.isArray(json.allPlayers) ? json.allPlayers
+    const players: LivePlayer[] = Array.isArray(json.allPlayers) ? json.allPlayers
         : Array.isArray(json.playerlist) ? json.playerlist : [];
     const active = typeof json.activePlayer?.summonerName === "string" ? json.activePlayer.summonerName
         : typeof json.activePlayerName === "string" ? json.activePlayerName : "";
-    const me = players.find(p => p?.summonerName === active) ?? null;
+    const me = players.find(p => p?.summonerName === active);
     if (!me) return null;
 
-    const champion = await resolveChampion(me.championName ?? me.rawChampionName ?? "");
+    const champion = await resolveChampion(me.championName ?? me.rawChampionName);
     return cleanLol({
         champion: champion?.id ?? "",
         spells: champion?.spells ?? [],
@@ -181,53 +208,45 @@ type Listener = (state: LolState | null) => void;
 
 const listeners = new Set<Listener>();
 let timer: NodeJS.Timeout | null = null;
+let busy = false;
 let last: LolState | null = null;
-let misses = 0;
 
 const same = (a: LolState | null, b: LolState | null) => JSON.stringify(a) === JSON.stringify(b);
 
-function schedule() {
-    // no game around: poll lazily, so an idle client costs nothing
-    timer = setTimeout(() => void tick(), last ? 2000 : misses ? 5000 : 2000);
+function notify(fn: Listener, state: LolState | null) {
+    try {
+        fn(state);
+    } catch { /* a closed window unsubscribes on its own */ }
 }
 
 async function tick() {
     timer = null;
-    let next: LolState | null = null;
-    try {
-        next = await readLive();
-    } catch {
-        next = null;
-    }
-    misses = next ? 0 : misses + 1;
+    busy = true;
+    const next = await readLive().catch(() => null);
+    busy = false;
+    if (!listeners.size) return; // everyone left while the request was in flight
+
     if (!same(next, last)) {
         last = next;
-        for (const fn of [...listeners]) {
-            try {
-                fn(next);
-            } catch { /* a closed window unsubscribes on its own */ }
-        }
+        for (const fn of [...listeners]) notify(fn, next);
     }
-    if (listeners.size) schedule();
+    // no game around: poll lazily, so an idle client costs nothing
+    timer = setTimeout(() => void tick(), last ? ACTIVE_POLL_MS : IDLE_POLL_MS);
 }
 
-/**
- * Calls back with the live LoL state whenever it changes (null outside a game), starting the poll on the
- * first subscriber and stopping it with the last one: nothing runs while no overlay asked for it.
- */
+/** Calls back whenever the live LoL state changes (null outside a game). Polls only while someone is subscribed. */
 export function subscribeLol(fn: Listener) {
     listeners.add(fn);
-    if (!timer) void tick();
-    else {
-        try {
-            fn(last);
-        } catch { /* ignore */ }
-    }
+    if (last) notify(fn, last);
+    if (!timer && !busy) void tick();
+
     return () => {
         listeners.delete(fn);
-        if (!listeners.size && timer) {
-            clearTimeout(timer);
-            timer = null;
-        }
+        if (listeners.size) return;
+
+        if (timer) clearTimeout(timer);
+        timer = null;
+        // a later subscriber has to be told the state again, even if the game did not change meanwhile
+        last = null;
     };
 }

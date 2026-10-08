@@ -15,9 +15,19 @@ const MAX_KEYS = 32;
 const MAX_INTERACTIVE = 4;
 const MAX_SETTINGS = 24;
 const MAX_OPTIONS = 20;
+const MAX_FONT_LABEL = 40;
 const ID = /^[a-z][a-z0-9-]{0,31}$/;
 const OPTION_VALUE = /^[\w .-]{1,40}$/;
 const UNIT = /^(px|%|em|rem|vw|vh|deg|s|ms)?$/;
+
+function parseOptions(raw: any, valid: RegExp, labelMax = Infinity) {
+    const options: { label: string; value: string; }[] = (Array.isArray(raw.options) ? raw.options : [])
+        .map((o: any) => typeof o === "string" ? { label: o, value: o } : { label: String(o?.label ?? o?.value).slice(0, labelMax), value: String(o?.value) })
+        .filter((o: { value: string; }) => valid.test(o.value))
+        .slice(0, MAX_OPTIONS);
+    if (!options.length) return null;
+    return { options, default: options.find(o => o.value === raw.default)?.value ?? options[0].value };
+}
 
 // overlay.json belongs to a folder the user picked: nothing in it is trusted
 function parseSetting(raw: any): OverlaySetting | null {
@@ -51,22 +61,14 @@ function parseSetting(raw: any): OverlaySetting | null {
             return { ...base, type: "boolean", default: raw.default === true };
 
         case "select": {
-            const options = (Array.isArray(raw.options) ? raw.options : [])
-                .map((o: any) => typeof o === "string" ? { label: o, value: o } : { label: String(o?.label ?? o?.value), value: String(o?.value) })
-                .filter((o: { value: string; }) => OPTION_VALUE.test(o.value))
-                .slice(0, MAX_OPTIONS);
-            if (!options.length) return null;
-            return { ...base, type: "select", options, default: options.find((o: { value: string; }) => o.value === raw.default)?.value ?? options[0].value };
+            const choices = parseOptions(raw, OPTION_VALUE);
+            return choices && { ...base, type: "select", ...choices };
         }
 
+        // the family's own names: customs a user added are merged in by the settings page, not the manifest
         case "font": {
-            // the family's own names: customs a user added are merged in by the settings page, not the manifest
-            const options = (Array.isArray(raw.options) ? raw.options : [])
-                .map((o: any) => typeof o === "string" ? { label: o, value: o } : { label: String(o?.label ?? o?.value).slice(0, 40), value: String(o?.value) })
-                .filter((o: { value: string; }) => FONT_FAMILY.test(o.value))
-                .slice(0, 20);
-            if (!options.length) return null;
-            return { ...base, type: "font", options, default: options.find((o: { value: string; }) => o.value === raw.default)?.value ?? options[0].value };
+            const choices = parseOptions(raw, FONT_FAMILY, MAX_FONT_LABEL);
+            return choices && { ...base, type: "font", ...choices };
         }
 
         default:

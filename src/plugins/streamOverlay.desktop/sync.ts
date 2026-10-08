@@ -12,7 +12,7 @@ import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore, UserStore 
 import { startAppPresets, stopAppPresets } from "./appPresets";
 import { explainEncoder } from "./encoders";
 import { GRACE_MS, judgeHook } from "./health";
-import { Native, plain, settings, updateValues, withGlobalFont } from "./settings";
+import { Native, plain, saveOverlayChanges, settings, withGlobalFont } from "./settings";
 import { startSpotify, stopSpotify } from "./spotify";
 import { streamState } from "./streamState";
 
@@ -125,16 +125,11 @@ async function doSync() {
 
 const sync = () => queue = queue.then(doSync).catch(e => logger.error("sync failed", e));
 
-// overlays save values themselves (where the keyboard was dragged to): they end up in the settings
 async function collect() {
     if (!running || !visible) return;
 
     const changes = await Native.takeChanges();
-    if (!Object.keys(changes).length) return;
-
-    updateValues(values => {
-        for (const [name, saved] of Object.entries(changes)) Object.assign(values[name] ??= {}, saved);
-    });
+    if (Object.keys(changes).length) saveOverlayChanges(changes);
 }
 
 export function startSync() {

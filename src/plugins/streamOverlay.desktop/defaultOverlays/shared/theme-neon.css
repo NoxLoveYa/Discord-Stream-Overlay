@@ -1,14 +1,11 @@
-/* Neon Nights: a cyberpunk cabinet in near-black blue, pink neon letters and a cyan edge.
-   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "neon".
-   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+/* Neon Nights: a cyberpunk cabinet in near-black blue, pink neon letters, a cyan edge and faint scanlines.
+   Fixed palette: the accent settings only apply to the Default theme. */
 html[data-theme="neon"] {
     --graphite-900: #070a16;
     --graphite-700: #0d1326;
     --graphite-500: #162040;
     --text: #f2f6ff;
     --text-muted: #8b98b8;
-
-    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
     --key-accent-rgb: 255 45 149;
     --key-edge-rgb: 34 211 238;
     --click-rgb: 255 45 149;
@@ -16,7 +13,6 @@ html[data-theme="neon"] {
     --card-accent-rgb: 255 45 149;
     --card-accent2-rgb: 34 211 238;
     --move-rgb: 34 211 238;
-    --gem-rgb: 255 45 149;
 }
 
 :where(html[data-theme="neon"]) {
@@ -31,7 +27,6 @@ html[data-theme="neon"] {
             inset 0 1px 0 color-mix(in srgb, rgb(140 200 255 / 14%) var(--panel-opacity, 100%), transparent);
     }
 
-    /* faint scanlines over the panel */
     .board::before {
         content: "";
         position: absolute;
@@ -68,10 +63,7 @@ html[data-theme="neon"] {
 
     .wheel,
     .roller,
-    .pad {
-        border-radius: 7px;
-    }
-
+    .pad,
     .cover {
         border-radius: 7px;
     }

@@ -8,7 +8,6 @@
 
 export type OverlayValue = string | number | boolean;
 
-/** { overlayName: { settingId: value } } */
 export type OverlayValues = Record<string, Record<string, OverlayValue>>;
 
 export interface OverlaySetting {
@@ -18,7 +17,7 @@ export interface OverlaySetting {
     default: OverlayValue;
     /** not shown in the settings window, the overlay sets it itself (a dragged position) */
     hidden?: boolean;
-    /** the tab of the overlay's settings page it is on */
+    /** the settings tab it is on */
     group?: string;
     /** only shown while the setting `id` has this value, like the colors of one theme */
     when?: { id: string; value: OverlayValue; };
@@ -30,10 +29,8 @@ export interface OverlaySetting {
 }
 
 export interface Manifest {
-    /** shown on the overlay's card in the settings, instead of the folder name */
     title: string;
     description: string;
-    /** the heading its card is listed under ("Input", "Media"...) */
     category: string;
     keys: string[];
     /** the overlay receives how far the mouse moved and the wheel turned (not where the cursor is) */
@@ -73,8 +70,6 @@ export interface MediaState {
     at: number;
 }
 
-
-/** The local League of Legends player while a game is live, or null outside one. */
 export interface LolState {
     /** Data Dragon champion id ("Fiora") */
     champion: string;
@@ -85,12 +80,11 @@ export interface LolState {
     summonerF: string;
 }
 
-/** A font the user added: a file imported into the fonts folder, or a system font by name (`file` is null). */
 export interface FontEntry {
-    /** shown in the font picker */
     name: string;
     /** the CSS family, like "ObnoxiousGothic" or "Consolas" */
     family: string;
+    /** null for a system font, which has no file in the fonts folder */
     file: string | null;
 }
 

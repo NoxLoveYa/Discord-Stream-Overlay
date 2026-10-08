@@ -23,8 +23,7 @@
     align-items: end;
 }
 
-/* invisible spacer balancing the thin side barrettes, so the sensor stays centered under the wheel
-   while taking almost the whole width of the board */
+/* balances the side barrettes, so the sensor stays centered under the wheel */
 .mouse-bottom::after {
     content: "";
     width: var(--side-w);
@@ -37,15 +36,17 @@
     gap: var(--gap);
 }
 
-.side .key {
+.side .key,
+.buttons .key {
     --accent: var(--click-rgb);
     --edge: var(--motion-rgb);
+}
 
+.side .key {
     width: var(--side-w);
     height: var(--side-h);
 }
 
-/* no labels on the thin macro barrettes: they light up like the rest, without text */
 .side .cap span {
     display: none;
 }
@@ -58,9 +59,6 @@
 }
 
 .buttons .key {
-    --accent: var(--click-rgb);
-    --edge: var(--motion-rgb);
-
     width: var(--btn-w);
     height: var(--btn-h);
 }
@@ -75,7 +73,6 @@
     border-radius: 7px 28px 9px 7px;
 }
 
-/* the macro side buttons are thin barrettes, soberly round */
 .btn-m4,
 .btn-m4 .cap,
 .btn-m5,
@@ -164,7 +161,7 @@
     will-change: transform;
 }
 
-/* --spin is how fast the wheel turns, set by script.js */
+/* --spin is how fast the wheel turns (script.js) */
 .spin {
     position: absolute;
     inset: -8px -10px;

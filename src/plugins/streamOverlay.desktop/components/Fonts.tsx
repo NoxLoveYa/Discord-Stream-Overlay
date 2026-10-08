@@ -10,12 +10,12 @@ import { settings } from "@plugins/streamOverlay.desktop/settings";
 
 import { FontControl } from "./FontControl";
 
-/** The default font of every overlay, and the custom fonts (imported files or system names). */
 export function Fonts() {
     const { globalFont } = settings.use(["globalFont"]);
+    const family = typeof globalFont === "string" ? globalFont : "default";
 
     return (
-        <section className="vc-so-fonts">
+        <section>
             <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
                 The font of every overlay that has no font of its own. An overlay's own page can override it,
                 and that choice is saved per preset, so a game can have its own font through the Apps tab.
@@ -25,8 +25,8 @@ export function Fonts() {
                 <Paragraph>Default font</Paragraph>
                 <FontControl
                     label="Default font"
-                    value={typeof globalFont === "string" ? globalFont : "default"}
-                    stored={typeof globalFont === "string" ? globalFont : "default"}
+                    value={family}
+                    stored={family}
                     builtin={BUILTIN_FONTS}
                     follows={null}
                     onChange={family => { settings.store.globalFont = family; }}

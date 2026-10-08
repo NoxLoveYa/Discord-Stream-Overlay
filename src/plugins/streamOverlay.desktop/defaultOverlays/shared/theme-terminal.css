@@ -1,15 +1,12 @@
 /* Retro Terminal: green phosphor on near-black, square keys, CRT scanlines and a glowing tube text.
-   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "terminal".
-   The font falls back to Consolas while nothing else is picked (see themeFontDefault). The rules are inside :where(),
-   which counts for nothing; the variables have to beat :root, so they are not. */
+   Fixed palette: the accent settings only apply to the Default theme.
+   The font falls back to Consolas while nothing else is picked (see themeFontDefault). */
 html[data-theme="terminal"] {
     --graphite-900: #020805;
     --graphite-700: #04140a;
     --graphite-500: #0a2a16;
     --text: #c9ffd9;
     --text-muted: #4da86a;
-
-    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
     --key-accent-rgb: 51 255 102;
     --key-edge-rgb: 20 120 60;
     --click-rgb: 51 255 102;
@@ -17,7 +14,6 @@ html[data-theme="terminal"] {
     --card-accent-rgb: 51 255 102;
     --card-accent2-rgb: 20 120 60;
     --move-rgb: 51 255 102;
-    --gem-rgb: 51 255 102;
 }
 
 :where(html[data-theme="terminal"]) {
@@ -30,7 +26,6 @@ html[data-theme="terminal"] {
             inset 0 0 30px color-mix(in srgb, rgb(51 255 102 / 5%) var(--panel-opacity, 100%), transparent);
     }
 
-    /* CRT scanlines over the panel */
     .board::before {
         content: "";
         position: absolute;
@@ -47,7 +42,6 @@ html[data-theme="terminal"] {
 
     .cap {
         border-radius: 2px;
-        background: linear-gradient(180deg, var(--graphite-500), var(--graphite-700));
     }
 
     .cap span {
@@ -77,10 +71,7 @@ html[data-theme="terminal"] {
 
     .wheel,
     .roller,
-    .pad {
-        border-radius: 3px;
-    }
-
+    .pad,
     .cover {
         border-radius: 3px;
     }

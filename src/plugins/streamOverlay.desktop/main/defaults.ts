@@ -76,7 +76,6 @@ const gothic = {
     "gothic-panel.css": gothicPanel
 };
 
-// shared theme files, copied into the keyboard, the mouse and the Spotify card
 const themes = {
     "theme-neon.css": themeNeon,
     "theme-porcelain.css": themePorcelain,
@@ -87,7 +86,6 @@ const themes = {
     "theme-ocean.css": themeOcean
 };
 
-// folder name -> files
 const defaultOverlays: Record<string, Record<string, string>> = {
     "red-border": {
         "index.html": redBorderHtml,
@@ -103,7 +101,6 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "index.html": keyboardHtml,
         "style.css": keyboardCss,
         "overlay.json": keyboardManifest,
-        // spell icons for the MOBA arrangement (Data Dragon, see docs/usage.md)
         "spells/akali-e.png": akaliE,
         "spells/akali-q.png": akaliQ,
         "spells/akali-r.png": akaliR,
@@ -154,7 +151,6 @@ const defaultOverlays: Record<string, Record<string, string>> = {
     }
 };
 
-// marker value of an overlay that is not one of ours
 const CUSTOM = "custom";
 
 const hashOf = (files: string[], read: (file: string) => string | null) => {
@@ -177,7 +173,6 @@ const readInstalled = (target: string, name: string, file: string) => {
     }
 };
 
-/** The hash of these files of the copy in `target`. */
 const installedHash = (target: string, name: string, files: string[]) => hashOf(files, file => readInstalled(target, name, file));
 
 const filesIn = (target: string) => readdirSync(target, { withFileTypes: true }).filter(d => d.isFile()).map(d => d.name);

@@ -8,15 +8,15 @@ import type { OverlaySetting, OverlayValue } from "@plugins/streamOverlay.deskto
 
 export const COLOR = /^#[0-9a-f]{6}$/i;
 
-/** A font family is a plain name: no quotes, commas or semicolons, so a value can never break out of a `font-family`. */
+// no quotes, commas or semicolons, so a value can never break out of a `font-family`
 export const FONT_FAMILY = /^[A-Za-z0-9][A-Za-z0-9 -]{0,59}$/;
 
 export const MAX_FONT_FILE_MB = 5;
 
-/** What "Default" draws with: the look the overlays had before the font setting existed. */
-export const DEFAULT_FONT_STACK = "'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif";
+const FALLBACK_FONTS = "'Segoe UI', system-ui, sans-serif";
+const DEFAULT_FONT_STACK = `'Segoe UI Variable Display', ${FALLBACK_FONTS}`;
 
-/** The choices every bundled overlay offers besides its customs ("ObnoxiousGothic" ships in their font.css). */
+// "ObnoxiousGothic" ships in the font.css of the bundled overlays
 export const BUILTIN_FONTS = [
     { label: "Default", value: "default" },
     { label: "Gothic blackletter", value: "ObnoxiousGothic" },
@@ -25,47 +25,41 @@ export const BUILTIN_FONTS = [
     { label: "Palatino Linotype", value: "Palatino Linotype" }
 ];
 
-/** A resolved font value as CSS: the default stack, or the family with a readable fallback. */
-export const fontCssValue = (family: string) =>
-    family === "default" ? DEFAULT_FONT_STACK : `'${family}', 'Segoe UI', system-ui, sans-serif`;
+const fontCssValue = (family: string) => family === "default" ? DEFAULT_FONT_STACK : `'${family}', ${FALLBACK_FONTS}`;
 
-/** The font a theme draws with when nothing else is picked (blackletter for gothic, mono for terminal). */
+// what a theme draws with when no font is picked
 const THEME_FONTS: Record<string, string> = { gothic: "ObnoxiousGothic", terminal: "Consolas" };
 
-export function themeFontDefault(settings: OverlaySetting[], stored: Record<string, unknown>) {
-    const theme = settings.find(s => s.id === "theme" && s.type === "select");
-    if (!theme) return "default";
-    const value = resolveValue(theme, stored[theme.id]);
-    return typeof value === "string" && THEME_FONTS[value] ? THEME_FONTS[value] : "default";
-}
+const globalFamily = (globalFont: unknown) =>
+    typeof globalFont === "string" && globalFont !== "default" && FONT_FAMILY.test(globalFont) ? globalFont : null;
 
-/** The theme behind a theme font, for the picker's hint ("gothic", "terminal", null when none). */
-export function themeFontName(settings: OverlaySetting[], stored: Record<string, unknown>): string | null {
+// the theme that has a font of its own, or null
+function themeWithFont(settings: OverlaySetting[], stored: Record<string, unknown>) {
     const theme = settings.find(s => s.id === "theme" && s.type === "select");
     if (!theme) return null;
     const value = resolveValue(theme, stored[theme.id]);
     return typeof value === "string" && THEME_FONTS[value] ? value : null;
 }
 
-/** Where an unset font follows, for the picker's hint: null when it is just the default stack. */
+const themeFontDefault = (settings: OverlaySetting[], stored: Record<string, unknown>) => {
+    const theme = themeWithFont(settings, stored);
+    return theme ? THEME_FONTS[theme] : "default";
+};
+
+// the picker's hint for an unset font: null when it is just the default stack
 export function fontFollows(settings: OverlaySetting[], stored: Record<string, unknown>, globalFont: unknown = "default"): string | null {
-    if (typeof globalFont === "string" && globalFont !== "default" && FONT_FAMILY.test(globalFont))
-        return `the default font (${globalFont})`;
-    const themeDefault = themeFontDefault(settings, stored);
-    const theme = themeFontName(settings, stored);
-    return theme && themeDefault !== "default" ? `the ${theme} theme (${themeDefault})` : null;
+    const family = globalFamily(globalFont);
+    if (family) return `the default font (${family})`;
+    const theme = themeWithFont(settings, stored);
+    return theme ? `the ${theme} theme (${THEME_FONTS[theme]})` : null;
 }
 
-/**
- * What a font setting draws with: the stored family ("default" stored is an explicit choice of the Segoe stack),
- * or the global font when it names another family, or the theme's default. Only nothing stored follows the theme,
- * so a gothic preset applies its blackletter without storing a font, and picking one overrides it.
- */
+// "default" stored is an explicit choice of the Segoe stack: only nothing stored follows the global font or the theme,
+// so a gothic preset applies its blackletter without storing a font, and picking one overrides it
 export function effectiveFontValue(setting: OverlaySetting, settings: OverlaySetting[], stored: Record<string, unknown>, globalFont: unknown = "default") {
     const raw = stored[setting.id];
     if (typeof raw === "string" && FONT_FAMILY.test(raw)) return raw;
-    if (typeof globalFont === "string" && globalFont !== "default" && FONT_FAMILY.test(globalFont)) return globalFont;
-    return themeFontDefault(settings, stored);
+    return globalFamily(globalFont) ?? themeFontDefault(settings, stored);
 }
 
 export const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -89,8 +83,8 @@ export function resolveValue(setting: OverlaySetting, stored: unknown): OverlayV
     }
 }
 
-// Applies the settings inside an overlay's frame: a CSS variable and a data attribute per setting on <html> (colors also
-// get `--id-rgb`, "r g b"), and a `streamoverlay:settings` event with every value.
+// a CSS variable and a data attribute per setting on <html> (colors also get `--id-rgb`, "r g b"),
+// and a `streamoverlay:settings` event with every value
 export function settingsScript(settings: OverlaySetting[], stored: Record<string, unknown> = {}) {
     const vars: Record<string, string> = {};
     const attrs: Record<string, string> = {};

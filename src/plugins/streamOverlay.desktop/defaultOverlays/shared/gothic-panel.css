@@ -1,5 +1,5 @@
 /* The rules are inside :where(), which weighs nothing; the variables have to beat :root, so they are not.
-   The gems take their color from --gem-rgb, which the gothic.css of each widget sets. */
+   --gem-rgb is set by each widget's gothic.css. */
 html[data-theme="gothic"] {
     --graphite-900: #030204;
     --graphite-700: #09050c;

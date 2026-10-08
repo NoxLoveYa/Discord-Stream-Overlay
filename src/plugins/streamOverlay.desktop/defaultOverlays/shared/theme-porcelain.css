@@ -1,14 +1,11 @@
 /* Porcelain Light: the only bright theme, an ivory glass panel with soft shadows and dark ink.
-   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "porcelain".
-   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+   Fixed palette: the accent settings only apply to the Default theme. */
 html[data-theme="porcelain"] {
     --graphite-900: #fff;
     --graphite-700: #f3eee3;
     --graphite-500: #e3dac7;
     --text: #26222c;
     --text-muted: #6f6a7a;
-
-    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
     --key-accent-rgb: 124 92 255;
     --key-edge-rgb: 14 165 233;
     --click-rgb: 124 92 255;
@@ -16,7 +13,6 @@ html[data-theme="porcelain"] {
     --card-accent-rgb: 124 92 255;
     --card-accent2-rgb: 14 165 233;
     --move-rgb: 124 92 255;
-    --gem-rgb: 124 92 255;
 }
 
 :where(html[data-theme="porcelain"]) {
@@ -32,8 +28,6 @@ html[data-theme="porcelain"] {
 
     .key {
         border-radius: 12px;
-        background: var(--graphite-900);
-        background: color-mix(in srgb, var(--graphite-900) var(--well-opacity, 100%), transparent);
         box-shadow: inset 0 0 0 1px rgb(70 58 35 / 12%);
     }
 

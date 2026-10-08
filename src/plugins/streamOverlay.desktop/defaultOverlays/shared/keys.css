@@ -1,5 +1,5 @@
 /* --accent is the light under the key, --edge the hairline on the cap; the overlay's style.css defines --key-accent-rgb and
-   --key-edge-rgb (.mod swaps them). Typography follows the overlay's settings of the active theme. */
+   --key-edge-rgb (.mod swaps them) */
 :root {
     --key-font-weight: var(--font-weight);
     --key-letter-spacing: var(--letter-spacing);
@@ -18,15 +18,13 @@ html[data-theme="gothic"] {
     width: calc(var(--pitch) * var(--span, 1) - var(--gap));
     height: var(--key);
     border-radius: 9px;
-    background: var(--graphite-900);
 
-    /* the keyboard's "well-opacity" setting fades the well (0 removes the rectangle); every theme redefines
-       --graphite-900, so this follows without touching them, and the mouse has no such setting (always full) */
+    /* the keyboard's "well-opacity" setting fades the well; the mouse has none (always full) */
     background: color-mix(in srgb, var(--graphite-900) var(--well-opacity, 100%), transparent);
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 4%);
 }
 
-/* the hairline would outlive a removed well, so it goes with it */
+/* the hairline would outlive a removed well */
 html[data-well-opacity="0"] .key {
     box-shadow: none;
 }
@@ -61,7 +59,7 @@ html[data-well-opacity="0"] .key {
 }
 
 /* Only transform and opacity are transitioned: animating shadows or colors repaints every frame, which costs a lot in a
-   window this large. The pressed look is layered on top and faded in (.cap::before, .cap::after). */
+   window this large. The pressed look is layered on top and faded in instead. */
 .cap {
     position: absolute;
     inset: 0 0 4px;
@@ -136,12 +134,10 @@ html[data-well-opacity="0"] .key {
     color: #fff;
 }
 
-/* hidden by a game arrangement (the keyboard's "arrangement" setting): only its keys show */
 [data-key].is-hidden {
     display: none;
 }
 
-/* a spell icon (MOBA champions and summoners): the letter hides while the icon loads */
 .cap img.spell {
     display: none;
     position: absolute;

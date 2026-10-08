@@ -1,14 +1,11 @@
 /* Molten Lava: basalt with an ember gradient, lava-orange light and a hot red edge.
-   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "molten".
-   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+   Fixed palette: the accent settings only apply to the Default theme. */
 html[data-theme="molten"] {
     --graphite-900: #120702;
     --graphite-700: #1e0d05;
     --graphite-500: #331507;
     --text: #ffe9dc;
     --text-muted: #b08a70;
-
-    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
     --key-accent-rgb: 255 106 0;
     --key-edge-rgb: 255 60 40;
     --click-rgb: 255 106 0;
@@ -16,7 +13,6 @@ html[data-theme="molten"] {
     --card-accent-rgb: 255 106 0;
     --card-accent2-rgb: 255 60 40;
     --move-rgb: 255 106 0;
-    --gem-rgb: 255 106 0;
 }
 
 :where(html[data-theme="molten"]) {
@@ -63,10 +59,7 @@ html[data-theme="molten"] {
 
     .wheel,
     .roller,
-    .pad {
-        border-radius: 6px;
-    }
-
+    .pad,
     .cover {
         border-radius: 6px;
     }

@@ -35,7 +35,6 @@ export function openRoot(_: IpcMainInvokeEvent, root: string) {
     return shell.openPath(resolveRoot(root));
 }
 
-/** The user's custom fonts: imported files and system names. */
 export function listCustomFonts() {
     return listFonts();
 }
@@ -75,7 +74,7 @@ export function setMedia(_: IpcMainInvokeEvent, state: unknown) {
 }
 
 export function layoutShow(_: IpcMainInvokeEvent, sourceId: string | null, root: string, names: string[], values: OverlayValues) {
-    // or it would be in the screenshot behind the layout too
+    // or the live overlay would be in the screenshot behind the layout too
     overlay.suspend();
     return layout.show(sourceId, null, root, names, values, true);
 }

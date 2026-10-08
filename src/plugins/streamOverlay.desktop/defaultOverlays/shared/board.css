@@ -11,7 +11,7 @@
     --press-in: 55ms;
     --press-out: 190ms;
 
-    /* defaults: the settings in overlay.json override them (colors also come as "r g b" for rgb(... / alpha)) */
+    /* defaults: the settings in overlay.json override them */
     --shadow-rgb: 0 0 0;
     --scale: 1;
     --x: 0px;
@@ -24,8 +24,6 @@ body {
     margin: 0;
     background: transparent;
     overflow: hidden;
-
-    /* --font comes from the "font" setting (its default is this stack) */
     font-family: var(--font, "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif);
 }
 
@@ -37,7 +35,7 @@ body {
     gap: var(--gap);
     padding: 18px 18px 20px;
 
-    /* the window behind the keys fades with the "Board background" setting (absent elsewhere: full) */
+    /* fades with the "Board background" setting (full where it is absent) */
     border: 1px solid color-mix(in srgb, rgb(255 255 255 / 7%) var(--panel-opacity, 100%), transparent);
     border-radius: 16px;
     background:
@@ -54,7 +52,7 @@ body {
     animation: rise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-/* no rectangle at all: the caps keep floating, like well-opacity 0 does for the wells */
+/* no rectangle at all: the caps keep floating */
 html[data-panel-opacity="0"] .board {
     padding: 0;
     border: 0;
@@ -85,7 +83,7 @@ html[data-position="top-right"] .board {
     transform-origin: top right;
 }
 
-/* moved by hand: --x / --y is the top left corner of the board in screen pixels */
+/* --x / --y is the top left corner of the board in screen pixels */
 html[data-position="custom"] .board {
     inset: 0 auto auto 0;
     translate: var(--x) var(--y);

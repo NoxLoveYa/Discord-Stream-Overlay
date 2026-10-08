@@ -18,15 +18,15 @@ import { NumberControl } from "./NumberControl";
 
 function OverlayOption({ overlay, setting, all }: { overlay: string; setting: OverlaySetting; all: OverlaySetting[]; }) {
     const { overlayValues, globalFont } = settings.use(["overlayValues", "globalFont"]);
-    const stored = overlayValues[overlay]?.[setting.id];
+    const storedAll = overlayValues[overlay] ?? {};
+    const stored = storedAll[setting.id];
     // a font shows what it draws with (stored, global or theme default), so a gothic preset shows its blackletter
     const value = setting.type === "font"
-        ? effectiveFontValue(setting, all, overlayValues[overlay] ?? {}, globalFont)
+        ? effectiveFontValue(setting, all, storedAll, globalFont)
         : stored ?? setting.default;
     const set = (v: OverlayValue) => updateValues(values => {
         (values[overlay] ??= {})[setting.id] = v;
     });
-    // back to following the theme (or the default font): the theme picks the family again
     const clear = () => updateValues(values => {
         delete values[overlay]?.[setting.id];
     });
@@ -57,7 +57,7 @@ function OverlayOption({ overlay, setting, all }: { overlay: string; setting: Ov
             );
             break;
         case "select": {
-            const options = (setting.options ?? []).map(o => ({ label: o.label, value: o.value }));
+            const options = setting.options ?? [];
             control = (
                 <div className="vc-so-option-select">
                     <SearchableSelect
@@ -78,7 +78,7 @@ function OverlayOption({ overlay, setting, all }: { overlay: string; setting: Ov
                     value={String(value)}
                     stored={typeof stored === "string" ? stored : undefined}
                     builtin={setting.options ?? []}
-                    follows={stored === undefined ? fontFollows(all, overlayValues[overlay] ?? {}, globalFont) : null}
+                    follows={stored === undefined ? fontFollows(all, storedAll, globalFont) : null}
                     onChange={set}
                     onClear={clear}
                 />
@@ -86,7 +86,7 @@ function OverlayOption({ overlay, setting, all }: { overlay: string; setting: Ov
             break;
     }
 
-    // the font picker manages its own customs, so it takes the whole row: label on top, picker below
+    // the font picker manages its own customs: label on top, picker below
     if (setting.type === "font") {
         return (
             <div className="vc-so-row vc-so-row-stack">

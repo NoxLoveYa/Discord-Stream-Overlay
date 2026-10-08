@@ -1,14 +1,11 @@
 /* Sakura Pastel: deep plum air with sakura-pink light and cream edges, everything softly round.
-   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "sakura".
-   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+   Fixed palette: the accent settings only apply to the Default theme. */
 html[data-theme="sakura"] {
     --graphite-900: #220d1a;
     --graphite-700: #311326;
     --graphite-500: #47203a;
     --text: #ffeef5;
     --text-muted: #c99ab2;
-
-    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
     --key-accent-rgb: 255 158 199;
     --key-edge-rgb: 255 220 232;
     --click-rgb: 255 158 199;
@@ -16,7 +13,6 @@ html[data-theme="sakura"] {
     --card-accent-rgb: 255 158 199;
     --card-accent2-rgb: 255 220 232;
     --move-rgb: 255 158 199;
-    --gem-rgb: 255 158 199;
 }
 
 :where(html[data-theme="sakura"]) {

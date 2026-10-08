@@ -256,7 +256,6 @@
     gap: 8px;
 }
 
-/* the font picker: select, custom chips, and adding more */
 .vc-so-font {
     display: flex;
     flex-direction: column;

@@ -7,7 +7,7 @@
 import "./layout.css";
 
 import { Paragraph } from "@components/Paragraph";
-import { Native, plain, settings, updateValues, withGlobalFont } from "@plugins/streamOverlay.desktop/settings";
+import { Native, plain, saveOverlayChanges, settings, withGlobalFont } from "@plugins/streamOverlay.desktop/settings";
 import type { OverlayInfo } from "@plugins/streamOverlay.desktop/types";
 import { Logger } from "@utils/Logger";
 import { MediaEngineStore, useEffect, useRef, useState } from "@webpack/common";
@@ -44,9 +44,11 @@ function createPainter(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext("webgl", { premultipliedAlpha: true, antialias: false });
     if (!gl) return null;
 
-    const program = gl.createProgram()!;
+    const program = gl.createProgram();
+    if (!program) return null;
     for (const [type, source] of [[gl.VERTEX_SHADER, VERTEX], [gl.FRAGMENT_SHADER, FRAGMENT]] as const) {
-        const shader = gl.createShader(type)!;
+        const shader = gl.createShader(type);
+        if (!shader) return null;
         gl.shaderSource(shader, source);
         gl.compileShader(shader);
         gl.attachShader(program, shader);
@@ -80,7 +82,7 @@ function createPainter(canvas: HTMLCanvasElement) {
 }
 
 export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
-    const { overlayRoot, enabledOverlays, overlayValues } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues", "globalFont"]);
+    const { overlayRoot, enabledOverlays, overlayValues, globalFont } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues", "globalFont"]);
     const canvas = useRef<HTMLCanvasElement>(null);
     const painter = useRef<ReturnType<typeof createPainter>>(null);
     const background = useRef<HTMLImageElement>(null);
@@ -91,7 +93,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const enabled = [...enabledOverlays];
     const draggable = overlays.filter(o => o.draggable && enabled.includes(o.name));
 
-    // the screen behind the overlays is a still, taken once when the tab opens (once it is known which screen it is)
+    // the screen behind the overlays is a still, taken once the first show says which screen it is
     const backgroundUrl = useRef("");
     const backgroundTaken = useRef(false);
     const takeBackground = async () => {
@@ -110,8 +112,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         background.current.src = backgroundUrl.current;
     };
 
-    // also when a drag has just been saved
-    const state = JSON.stringify([overlayRoot, enabled, plain(overlayValues), settings.store.globalFont]);
+    const state = JSON.stringify([overlayRoot, enabled, plain(overlayValues), globalFont]);
     useEffect(() => {
         const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
         Native.layoutShow(sourceId, overlayRoot, enabled, withGlobalFont(plain(overlayValues), enabled)).then(takeBackground);
@@ -120,7 +121,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     useEffect(() => {
         let alive = true;
 
-        // the main process answers when a frame has been drawn, so each one is shown as soon as it exists
+        // the main process answers once a frame is drawn, so each one shows as soon as it exists
         const receive = async () => {
             while (alive) {
                 try {
@@ -138,11 +139,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         // not with every frame: it asks the overlay page, which is slower than the picture
         const collect = async () => {
             const changes = await Native.layoutChanges();
-            if (!alive || !Object.keys(changes).length) return;
-
-            updateValues(values => {
-                for (const [name, saved] of Object.entries(changes)) Object.assign(values[name] ??= {}, saved);
-            });
+            if (alive && Object.keys(changes).length) saveOverlayChanges(changes);
         };
         const changesTimer = setInterval(collect, CHANGES_MS);
 

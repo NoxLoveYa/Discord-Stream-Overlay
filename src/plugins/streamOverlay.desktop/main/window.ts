@@ -87,7 +87,7 @@ export class OverlayWindow {
         return this.display?.display ?? null;
     }
 
-    // takes the on-screen window off the screen (the Layout tab shows it instead) until resume()
+    // the Layout tab shows the overlays instead, until resume()
     suspend() {
         this.suspended = true;
         if (!this.offscreen) this.live()?.hide();
@@ -103,23 +103,20 @@ export class OverlayWindow {
         return this.pushMedia();
     }
 
+    private push(hook: string, state: unknown) {
+        return this.live()?.webContents.executeJavaScript(`window.${hook}?.(${JSON.stringify(state)})`).catch(() => { }) ?? Promise.resolve();
+    }
+
     private pushMedia() {
-        const win = this.live();
-        if (!win) return Promise.resolve();
-
         // the Layout tab has no music of its own to show: a sample gives the overlay something to drag
-        const state = this.media ?? (this.layout ? SAMPLE_MEDIA() : null);
-        return win.webContents.executeJavaScript(`window.__streamOverlayMedia?.(${JSON.stringify(state)})`).catch(() => { });
+        return this.push("__streamOverlayMedia", this.media ?? (this.layout ? SAMPLE_MEDIA() : null));
     }
 
-    /** The live LoL player, for the overlays that asked for it (null outside a game). */
     private pushLol() {
-        const win = this.live();
-        if (!win) return Promise.resolve();
-        return win.webContents.executeJavaScript(`window.__streamOverlayLol?.(${JSON.stringify(this.lol)})`).catch(() => { });
+        return this.push("__streamOverlayLol", this.lol);
     }
 
-    /** Follows the live game while an overlay wants it: nothing polls while none does. */
+    // nothing polls while no overlay wants the live game
     private syncLol(wanted: boolean) {
         if (wanted && !this.unsubLol) {
             this.unsubLol = subscribeLol(state => {
@@ -179,20 +176,29 @@ export class OverlayWindow {
         const fresh = key !== this.loadedKey;
         if (fresh) {
             writeFileSync(hostPath(this.layout), hostHtml(overlays));
-            await win.loadURL(pathToFileURL(hostPath(this.layout)).href);
+            try {
+                await win.loadURL(pathToFileURL(hostPath(this.layout)).href);
+            } catch (e) {
+                // hide() destroyed the window while the page was loading
+                if (win.isDestroyed()) return null;
+                throw e;
+            }
             this.loadedKey = key;
         }
+        if (win.isDestroyed()) return null;
 
         this.syncLol(manifests.some(m => m.lol));
         // before it becomes visible, so the first frame already has the right values
         await this.applySettings();
         await this.pushMedia();
         await this.pushLol();
-        // hide() may have destroyed the window while the page was loading
+        // hide() may have destroyed the window while the settings were applied
         if (win.isDestroyed()) return null;
         if (!offscreen && !this.suspended) win.showInactive();
         this.shown = true;
         if (fresh) await playEnter(win);
+        // and again during the enter animation: the input helper must not restart for a window that is gone
+        if (win.isDestroyed()) return null;
 
         const keys = unionKeys(manifests);
         this.input.sync(keys, manifests.some(m => m.mouse), !offscreen && manifests.some(m => m.interactive.length > 0), fresh);
@@ -268,15 +274,18 @@ export class OverlayWindow {
         });
         win.setAlwaysOnTop(true, "screen-saver");
         win.setIgnoreMouseEvents(true);
-        // the dirty rectangle is only trusted when pixels and window units are the same thing (no display scaling)
-        // a paint can still come after the window was destroyed
         if (this.offscreen) win.webContents.on("paint", (_, dirty, image) => {
+            // a paint can still come after the window was destroyed
             if (win.isDestroyed()) return;
+            // the dirty rectangle is only trusted when pixels and window units are the same thing (no display scaling)
             this.stream.frame(image, image.getSize().width === win.getContentSize()[0] ? dirty : undefined);
         });
         win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
         win.webContents.on("will-navigate", e => e.preventDefault());
         win.on("closed", () => {
+            // destroy() already cleaned up, and a newer window may have taken its place
+            if (this.win !== win) return;
+            this.syncLol(false);
             this.win = null;
             this.loadedKey = "";
             this.exiting = false;
@@ -316,8 +325,7 @@ export class OverlayWindow {
             if (!frame || !manifest.settings.length) return;
 
             const code = settingsScript(manifest.settings, values);
-            // an imported font file lives in the fonts folder, not the overlay's: its @font-face is injected.
-            // The family is the effective one (stored, global or theme default), like --font above.
+            // an imported font file lives in the fonts folder, not the overlay's: its @font-face is injected
             const font = manifest.settings.find(s => s.type === "font");
             const css = font ? fontFaceCssFor(effectiveFontValue(font, manifest.settings, values)) : null;
             return frame.executeJavaScript(code + fontStyleScript(css)).catch(() => { });

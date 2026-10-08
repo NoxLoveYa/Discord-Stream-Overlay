@@ -8,7 +8,7 @@
 (() => {
     const board = document.querySelector(".board");
     const keys = [...document.querySelectorAll("[data-key]")];
-    // where every key was written in index.html, to go back to the full keyboard
+    const byKey = new Map(keys.map(key => [key.dataset.key, key]));
     const home = keys.map(key => ({
         key,
         parent: key.parentElement,
@@ -16,42 +16,41 @@
         span: key.style.getPropertyValue("--span")
     }));
 
-    // Rows of keys, in key widths; pad is empty slots before the key, span its width.
-    // Every key keeps the span of index.html unless the map says otherwise.
+    // rows of keys; pad is empty slots before a key, span its width in key widths (default: the one of index.html)
     const ARRANGEMENTS = {
-        // W over S, then A S D, then the modifiers, then the spacebar as wide as the cluster
         fps: [
             [{ k: "W", pad: 1 }],
             [{ k: "A" }, { k: "S" }, { k: "D" }],
             [{ k: "SHIFT" }, { k: "CTRL" }],
             [{ k: "SPACE", span: 3 }]
         ],
-        // the spells and the summoners on one row, a gap between them, like the bottom of a LoL screen
         moba: [
             [{ k: "Q" }, { k: "W" }, { k: "E" }, { k: "R" }, { k: "D", pad: 1 }, { k: "F" }]
         ]
     };
 
-    const byKey = new Map(keys.map(key => [key.dataset.key, key]));
-
-    // Spell icons for the MOBA arrangement: the champion's QWER (bundled files for Fiora and Akali,
-    // Data Dragon addresses for a live-detected champion) and the summoner of D and F (bundled files).
-    // A missing icon leaves the letter.
-    const CHAMPIONS = {
-        fiora: { Q: "spells/fiora-q.png", W: "spells/fiora-w.png", E: "spells/fiora-e.png", R: "spells/fiora-r.png" },
-        akali: { Q: "spells/akali-q.png", W: "spells/akali-w.png", E: "spells/akali-e.png", R: "spells/akali-r.png" }
-    };
+    // QWER icons ship for these champions; any other live champion comes with Data Dragon urls
+    const BUNDLED_CHAMPIONS = new Set(["fiora", "akali"]);
     const SUMMONERS = new Set([
         "summoner-flash", "summoner-ignite", "summoner-teleport", "summoner-ghost",
         "summoner-exhaust", "summoner-heal", "summoner-barrier", "summoner-smite"
     ]);
-
-    // the live LoL player, from the "streamoverlay:lol" messages (null outside a game)
-    let live = null;
-    // an "auto" setting with no game around falls back to the old defaults
     const FALLBACK_SUMMONER = { D: "summoner-flash", F: "summoner-ignite" };
+
+    const bundledSpells = champion => ["q", "w", "e", "r"].map(spell => `spells/${champion}-${spell}.png`);
+
+    // the settings reach the page as data attributes (data-summoner-d is dataset.summonerD) and as an event
+    const settingsOf = root => ({
+        arrangement: root.dataset.arrangement,
+        champion: root.dataset.champion,
+        summonerD: root.dataset.summonerD,
+        summonerF: root.dataset.summonerF
+    });
+
     // the manual settings, kept so the live state only overrides what is "auto"
-    const picked = { arrangement: undefined, champion: undefined, summonerD: undefined, summonerF: undefined };
+    const picked = settingsOf(document.documentElement);
+    // the live LoL player from the "streamoverlay:lol" messages, null outside a game
+    let live = null;
 
     function setIcon(name, file) {
         const key = byKey.get(name);
@@ -75,8 +74,7 @@
         key.classList.add("has-icon");
     }
 
-    // Icons only in the MOBA arrangement: anywhere else the keys show their letters again.
-    // The summoners follow the arrangement alone (a Letters board still shows them), the spells need a champion.
+    // the summoners follow the arrangement alone (a Letters board still shows them), the spells need a champion
     function applyIcons() {
         const inMoba = picked.arrangement === "moba";
         const spells = inMoba ? qwer() : null;
@@ -85,18 +83,13 @@
         setIcon("F", inMoba ? summonerFile("F") : null);
     }
 
-    // QWER: the picked champion when one is picked, else the live one (bundled when Fiora or Akali,
-    // Data Dragon addresses otherwise), else the letters.
     function qwer() {
-        if (picked.champion !== "auto") {
-            const manual = typeof picked.champion === "string" ? CHAMPIONS[picked.champion] : null;
-            return manual ? [manual.Q, manual.W, manual.E, manual.R] : null;
-        }
+        if (picked.champion !== "auto")
+            return BUNDLED_CHAMPIONS.has(picked.champion) ? bundledSpells(picked.champion) : null;
+
         const id = typeof live?.champion === "string" ? live.champion.toLowerCase() : "";
-        if (id && CHAMPIONS[id]) {
-            const bundled = CHAMPIONS[id];
-            return [bundled.Q, bundled.W, bundled.E, bundled.R];
-        }
+        if (BUNDLED_CHAMPIONS.has(id)) return bundledSpells(id);
+
         const urls = Array.isArray(live?.spells) ? live.spells : [];
         return [0, 1, 2, 3].map(i => typeof urls[i] === "string" && urls[i] ? urls[i] : null);
     }
@@ -114,7 +107,6 @@
         if (!board) return;
         const rows = ARRANGEMENTS[name];
 
-        // the default arrangement (or a page without the setting): everything back where it was
         if (!rows) {
             for (const { key, parent, next, span } of home) {
                 parent.insertBefore(key, next);
@@ -126,7 +118,7 @@
             return;
         }
 
-        for (const row of [...board.children].filter(el => el.classList?.contains("row"))) row.remove();
+        for (const row of board.querySelectorAll(":scope > .row")) row.remove();
 
         const shown = new Set();
         for (const line of rows) {
@@ -137,7 +129,6 @@
                 if (!key) continue;
                 shown.add(k);
                 key.style.marginLeft = pad ? `calc(var(--pitch) * ${pad})` : "";
-                // a span in the map wins, otherwise the key keeps the width of index.html
                 if (span) key.style.setProperty("--span", span);
                 row.appendChild(key);
             }
@@ -158,15 +149,6 @@
         }
     });
 
-    // the settings reach the page as data attributes and as an event (see main/values.ts).
-    // data-summoner-d arrives as dataset.summonerD (dashes become camel case).
-    const settingsOf = root => ({
-        arrangement: root.dataset.arrangement,
-        champion: root.dataset.champion,
-        summonerD: root.dataset.summonerD,
-        summonerF: root.dataset.summonerF
-    });
-
     addEventListener("streamoverlay:settings", ({ detail }) => {
         if (!detail || typeof detail !== "object") return;
         if (typeof detail.arrangement === "string") {
@@ -178,8 +160,7 @@
         if (typeof detail["summoner-f"] === "string") picked.summonerF = detail["summoner-f"];
         applyIcons();
     });
-    Object.assign(picked, settingsOf(document.documentElement));
+
+    if (picked.arrangement) applyArrangement(picked.arrangement);
     applyIcons();
-    const initial = document.documentElement.dataset.arrangement;
-    if (typeof initial === "string" && initial) applyArrangement(initial);
 })();

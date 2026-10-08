@@ -7,29 +7,32 @@
 import { Button } from "@components/Button";
 import { DeleteIcon } from "@components/Icons";
 import { Paragraph } from "@components/Paragraph";
+import { cleanName, MAX_NAME } from "@plugins/streamOverlay.desktop/presets";
 import { Native } from "@plugins/streamOverlay.desktop/settings";
 import type { FontEntry } from "@plugins/streamOverlay.desktop/types";
+import { Logger } from "@utils/Logger";
 import { SearchableSelect, TextInput, useEffect, useState } from "@webpack/common";
 
 import { IconButton } from "./IconButton";
+import { submitOrCancel } from "./keys";
 import { NoticeBar, useNotice } from "./Notice";
+
+const logger = new Logger("StreamOverlay");
 
 interface FontControlProps {
     label: string;
     /** what the overlay draws with (stored, global or theme default) */
     value: string;
-    /** what is stored for it, if anything: only nothing stored follows the theme */
+    /** what is stored for it: only nothing stored follows the theme */
     stored: string | undefined;
-    /** the choices of the manifest (or the built-ins, for the global font) */
     builtin: { label: string; value: string; }[];
-    /** where an unset font follows ("the gothic theme (…)", null when just the default stack) */
+    /** where an unset font follows ("the gothic theme (…)"), null when just the default stack */
     follows: string | null;
     onChange(family: string): void;
-    /** back to following (deletes the stored family) */
+    /** back to following: deletes the stored family */
     onClear(): void;
 }
 
-/** A font picker: the built-ins, the user's customs, and adding more from a file or by system name. */
 export function FontControl({ label, value, stored, builtin, follows, onChange, onClear }: FontControlProps) {
     const [fonts, setFonts] = useState<FontEntry[]>([]);
     const [naming, setNaming] = useState(false);
@@ -40,7 +43,8 @@ export function FontControl({ label, value, stored, builtin, follows, onChange, 
     const refresh = async () => {
         try {
             setFonts(await Native.listCustomFonts());
-        } catch {
+        } catch (e) {
+            logger.error("could not list the custom fonts", e);
             setFonts([]);
         }
     };
@@ -49,49 +53,50 @@ export function FontControl({ label, value, stored, builtin, follows, onChange, 
     // customs the manifest already lists are not shown twice
     const customs = fonts.filter(f => !builtin.some(b => b.value.toLowerCase() === f.family.toLowerCase()));
     const options = [
-        ...builtin.map(o => ({ label: o.label, value: o.value })),
+        ...builtin,
         ...customs.map(f => ({ label: `${f.name} (custom)`, value: f.family }))
     ];
     const known = options.some(o => o.value === value);
 
-    async function importFile() {
+    async function attempt(failure: string, action: () => Promise<void>) {
         if (busy) return;
         setBusy(true);
         try {
-            const entry = await Native.importFontFile();
-            if (entry) {
-                await refresh();
-                onChange(entry.family);
-                say(`Added “${entry.name}”.`);
-            }
-        } catch {
-            say("Could not add that font file.");
+            await action();
+        } catch (e) {
+            logger.error(failure, e);
+            say(failure);
         } finally {
             setBusy(false);
         }
     }
 
-    async function addSystem() {
-        const family = name.replace(/\s+/g, " ").trim();
-        if (!family || busy) return;
-        setBusy(true);
-        try {
-            const entry = await Native.addSystemFont(family);
-            if (entry) {
-                await refresh();
-                setName("");
-                setNaming(false);
-                onChange(entry.family);
-                say(`Added “${entry.name}”.`);
-            } else {
-                say("Use letters, digits, spaces and dashes for the name.");
-            }
-        } catch {
-            say("Could not add that font.");
-        } finally {
-            setBusy(false);
-        }
+    async function adopt(entry: FontEntry) {
+        await refresh();
+        onChange(entry.family);
+        say(`Added “${entry.name}”.`);
     }
+
+    const importFile = () => attempt("Could not add that font file.", async () => {
+        const entry = await Native.importFontFile();
+        if (entry) await adopt(entry);
+    });
+
+    const addSystem = () => {
+        const family = cleanName(name);
+        if (!family) return;
+
+        return attempt("Could not add that font.", async () => {
+            const entry = await Native.addSystemFont(family);
+            if (!entry) {
+                say("Use letters, digits, spaces and dashes for the name.");
+                return;
+            }
+            setName("");
+            setNaming(false);
+            await adopt(entry);
+        });
+    };
 
     async function remove(entry: FontEntry) {
         try {
@@ -101,14 +106,15 @@ export function FontControl({ label, value, stored, builtin, follows, onChange, 
                 if (stored === entry.family) onClear();
                 say(`Removed “${entry.name}”.`);
             }
-        } catch {
+        } catch (e) {
+            logger.error("could not remove the font", e);
             say("Could not remove that font.");
         }
     }
 
     return (
         <div className="vc-so-font">
-            <div style={{ width: "220px" }}>
+            <div className="vc-so-option-select">
                 <SearchableSelect
                     options={options}
                     value={known ? value : undefined}
@@ -143,18 +149,12 @@ export function FontControl({ label, value, stored, builtin, follows, onChange, 
                     <TextInput
                         value={name}
                         onChange={setName}
-                        maxLength={40}
+                        maxLength={MAX_NAME}
                         autoFocus
                         spellCheck={false}
                         placeholder="Segoe UI"
                         aria-label="System font name"
-                        onKeyDown={e => {
-                            if (e.key === "Enter") addSystem();
-                            else if (e.key === "Escape") {
-                                e.stopPropagation();
-                                setNaming(false);
-                            }
-                        }}
+                        onKeyDown={submitOrCancel(addSystem, () => setNaming(false))}
                     />
                     <Button size="small" variant="secondary" disabled={!name.trim() || busy} onClick={addSystem}>Add</Button>
                     <Button size="small" variant="secondary" onClick={() => setNaming(false)}>Cancel</Button>

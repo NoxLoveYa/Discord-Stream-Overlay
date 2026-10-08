@@ -1,4 +1,4 @@
-/* It comes before the widget's style.css, which keeps the shapes of the mouse buttons. */
+/* loaded before the widget's style.css, which keeps the shapes of the mouse buttons */
 :where(html[data-theme="gothic"]) {
     .key {
         border-radius: 6px;
@@ -23,12 +23,12 @@
     }
 
     .mod .cap span {
-        font-size: 10px;
-        font-weight: 700;
+        font-size: calc(10px * var(--text-scale, 1));
+        font-weight: var(--key-font-weight, 700);
         letter-spacing: 0.18em;
     }
 
-    /* blackletter in lower case: its capitals cannot be read at this size (the family itself comes from --font) */
+    /* blackletter capitals cannot be read at this size */
     .key:not(.mod) .cap span {
         font-size: calc(25px * var(--text-scale, 1));
         font-weight: var(--key-font-weight, 700);

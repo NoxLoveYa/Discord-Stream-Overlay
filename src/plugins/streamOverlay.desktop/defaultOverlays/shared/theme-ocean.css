@@ -1,14 +1,11 @@
 /* Ocean Abyss: deep navy water with cyan light and foam edges, generously round.
-   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "ocean".
-   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+   Fixed palette: the accent settings only apply to the Default theme. */
 html[data-theme="ocean"] {
     --graphite-900: #04141f;
     --graphite-700: #06283f;
     --graphite-500: #0b3a57;
     --text: #eaf7ff;
     --text-muted: #7fa8c0;
-
-    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
     --key-accent-rgb: 34 211 238;
     --key-edge-rgb: 190 240 255;
     --click-rgb: 34 211 238;
@@ -16,7 +13,6 @@ html[data-theme="ocean"] {
     --card-accent-rgb: 34 211 238;
     --card-accent2-rgb: 190 240 255;
     --move-rgb: 34 211 238;
-    --gem-rgb: 34 211 238;
 }
 
 :where(html[data-theme="ocean"]) {
@@ -65,10 +61,7 @@ html[data-theme="ocean"] {
 
     .wheel,
     .roller,
-    .pad {
-        border-radius: 12px;
-    }
-
+    .pad,
     .cover {
         border-radius: 12px;
     }

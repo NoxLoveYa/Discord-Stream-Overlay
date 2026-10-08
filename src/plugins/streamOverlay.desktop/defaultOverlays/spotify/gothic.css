@@ -1,4 +1,4 @@
-/* The gems on the corners follow the second accent. It comes after style.css, which has the layout. */
+/* the gems follow the second accent */
 html[data-theme="gothic"] {
     --card-accent-rgb: var(--g-accent-rgb);
     --card-accent2-rgb: var(--g-accent2-rgb);

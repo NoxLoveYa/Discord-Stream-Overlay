@@ -1,4 +1,4 @@
-/* the gems on the corners follow the accent of the modifier keys */
+/* the gems follow the accent of the modifier keys */
 html[data-theme="gothic"] {
     --key-accent-rgb: var(--g-letter-accent-rgb);
     --key-edge-rgb: var(--g-modifier-accent-rgb);
