@@ -59,9 +59,9 @@ export function layoutShow(_: IpcMainInvokeEvent, sourceId: string | null, root:
 }
 
 /** A JPEG of the screen being drawn on. */
-export function layoutBackground(_: IpcMainInvokeEvent, width: number) {
+export function layoutBackground() {
     const display = layout.currentDisplay();
-    return display ? screenshot(display, width) : null;
+    return display ? screenshot(display) : null;
 }
 
 /** The newest picture, or null when it has not changed. */

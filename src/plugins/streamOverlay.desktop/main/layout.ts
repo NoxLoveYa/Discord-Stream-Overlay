@@ -10,13 +10,13 @@ import type { StreamSink } from "./nvenc";
 
 let shooting = false;
 
-/** A JPEG of the display as it is now, or null. */
-export async function screenshot(display: Display, width: number) {
+/** A JPEG of the display as it is now, at its own resolution, or null. */
+export async function screenshot(display: Display) {
     if (shooting) return null;
     shooting = true;
     try {
-        const w = Math.max(1, Math.round(width));
-        const h = Math.max(1, Math.round(w * display.bounds.height / display.bounds.width));
+        const w = Math.max(1, Math.round(display.size.width * display.scaleFactor));
+        const h = Math.max(1, Math.round(display.size.height * display.scaleFactor));
         const sources = await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: w, height: h } });
         return sources.find(s => s.display_id === String(display.id))?.thumbnail.toJPEG(80) ?? null;
     } catch {

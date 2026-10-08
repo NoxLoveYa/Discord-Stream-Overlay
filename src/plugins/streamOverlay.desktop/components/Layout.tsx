@@ -99,7 +99,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         if (backgroundTaken.current) return;
         backgroundTaken.current = true;
 
-        const jpeg = await Native.layoutBackground(EXPANDED_WIDTH);
+        const jpeg = await Native.layoutBackground();
         if (!jpeg || !background.current) {
             backgroundTaken.current = false;
             return;

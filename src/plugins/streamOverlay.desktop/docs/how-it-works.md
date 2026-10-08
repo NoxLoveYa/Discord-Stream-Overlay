@@ -104,7 +104,7 @@ overlay window. The settings page (`components/Layout.tsx`) is in the renderer a
 `Native.layoutFrame` for the newest frame once per animation frame; the BGRA bytes are uploaded to a WebGL texture and
 the channels swapped in a shader, so no per-pixel work runs in JavaScript. What the overlays saved is collected
 separately every 150 ms (`Native.layoutChanges` asks the overlay page, which is slower than a frame). Behind the canvas is a screenshot of the display
-(`desktopCapturer`, taken once when the tab opens), which is what the stream shows without the overlays: the real on-screen
+(`desktopCapturer`, taken once when the tab opens at the display's own resolution), which is what the stream shows without the overlays: the real on-screen
 overlay window is hidden while the tab is open (`suspend()` / `resume()`) so that it is not in the picture twice. While
 the tab is open:
 

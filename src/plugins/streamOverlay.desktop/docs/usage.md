@@ -24,7 +24,7 @@ Hover the picture and use the button at its top right to make it full screen, wh
 the same button goes back). The picture is then rendered larger.
 
 The overlays are rendered at 300 Hz (240 if Discord's Electron refuses that). Behind them is a screenshot of the monitor,
-which is what the stream shows without the overlays, taken once when you open the tab; it is a still, not live video.
+which is what the stream shows without the overlays, taken once when you open the tab at the monitor's own resolution; it is a still, not live video.
 If that monitor is the one Discord is on, the screenshot contains the settings window. While the tab is open the overlays are hidden on the real screen, and come
 back when you leave the tab.
 
