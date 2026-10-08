@@ -1,10 +1,3 @@
-/* Discord's large modal stops at 962px, which holds three cards a row: the plugin's own is wide enough for four */
-[role="dialog"]:has(.vc-so) {
-    width: min(1100px, calc(100vw - 80px));
-    min-width: 0;
-    max-width: none;
-}
-
 .vc-so {
     display: flex;
     flex-direction: column;
@@ -56,17 +49,33 @@
     text-transform: uppercase;
 }
 
-.vc-so-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
+/*
+ * The categories (Frames, Input, Media) share the rows of the page: each is as wide as the cards it has need, and grows to fill
+ * what is left of the row. Inside, the cards fill the category, so no row is half empty. It follows the width of the modal,
+ * not of the window.
+ */
+.vc-so-sections {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 20px 12px;
 }
 
-/* the modal is at its full width from here (1100px plus the 40px margin of each side) */
-@media (width >= 1180px) {
-    .vc-so-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
+.vc-so-sections .vc-so-category {
+    display: flex;
+    flex: 1 1 calc(var(--vc-so-count, 4) * 190px);
+    flex-direction: column;
+    min-width: 0;
+    margin-top: 0;
+}
+
+
+/* the cards of a row are as tall as the tallest of the row, whatever category they are in */
+.vc-so-grid {
+    display: grid;
+    flex: 1;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
 }
 
 .vc-so-card {
@@ -155,6 +164,12 @@
 }
 
 /* the page of one overlay */
+.vc-so-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .vc-so-crumbs {
     display: flex;
     align-items: center;

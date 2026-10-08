@@ -47,11 +47,14 @@ export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBac
 
     return (
         <section className="vc-so">
-            <nav className="vc-so-crumbs" aria-label="Breadcrumb">
-                <button className="vc-so-crumb" onClick={onBack}>Overlays</button>
-                <span aria-hidden="true">›</span>
-                <span aria-current="page">{overlay.title}</span>
-            </nav>
+            <div className="vc-so-nav">
+                <Button variant="secondary" size="small" onClick={onBack} aria-label="Back to the overlays">← Back</Button>
+                <nav className="vc-so-crumbs" aria-label="Breadcrumb">
+                    <button className="vc-so-crumb" onClick={onBack}>Overlays</button>
+                    <span aria-hidden="true">›</span>
+                    <span aria-current="page">{overlay.title}</span>
+                </nav>
+            </div>
 
             <header className="vc-so-detail-head">
                 <div>

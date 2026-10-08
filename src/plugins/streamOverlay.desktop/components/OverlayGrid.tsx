@@ -14,6 +14,7 @@ import { captureGlobal, copyName, isGlobalActive, renamePreset, withoutPreset, w
 import { applyGlobalPreset, Native, plain, setOverlayEnabled, settings, updateStored } from "@plugins/streamOverlay.desktop/settings";
 import type { GlobalPreset, OverlayInfo } from "@plugins/streamOverlay.desktop/types";
 import { useState } from "@webpack/common";
+import type { CSSProperties } from "react";
 
 import { AppBindings } from "./AppBindings";
 import { Layout } from "./Layout";
@@ -61,8 +62,9 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
                             <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
                                 Turn an overlay on or off with its switch, or open it to change its settings.
                             </Paragraph>
-                            {overlays.length > 0 ? sections.map(({ category, items }) => (
-                                <div key={category} className="vc-so-category">
+                            {overlays.length > 0 ? <div className="vc-so-sections">{sections.map(({ category, items }) => (
+                                // the width of a category, in cards: the categories share the rows when the window is wide
+                                <div key={category} className="vc-so-category" style={{ "--vc-so-count": Math.min(items.length, 4) } as CSSProperties}>
                                     {/* no headings when everything is in the same place (or has no category at all) */}
                                     {sections.length > 1 && <Heading tag="h3" className="vc-so-group">{category || "Other"}</Heading>}
                                     <div className="vc-so-grid">
@@ -77,7 +79,7 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
                                         ))}
                                     </div>
                                 </div>
-                            )) : (
+                            ))}</div> : (
                                 <Card>
                                     <Paragraph>No overlays found in this folder. Each subfolder with an index.html is one overlay.</Paragraph>
                                 </Card>

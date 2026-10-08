@@ -1,14 +1,7 @@
 .vc-so-app-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 12px;
-}
-
-/* four to a row, like the overlays: the modal is at its full width from here */
-@media (width >= 1180px) {
-    .vc-so-app-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
 }
 
 .vc-so-app {
