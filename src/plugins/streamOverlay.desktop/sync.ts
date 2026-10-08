@@ -65,9 +65,20 @@ async function checkHook() {
     lastHealth = Date.now();
 
     const waited = Date.now() - streamState.offscreenSince;
-    const reason = judgeHook(await Native.streamHealth(), waited);
+    const status = await Native.streamHealth();
+
+    // Discord only encodes a stream while somebody watches it: with nobody the hook has nothing to see, which is no reason to give up
+    const encoding = status?.encodes === 0 && waited >= GRACE_MS ? await Native.streamEncoding().catch(() => null) : null;
+    const reason = judgeHook(status, waited, encoding);
     if (!reason) {
-        if (waited > GRACE_MS) await logEncoder();
+        const idle = encoding === false;
+        if (idle !== streamState.idle) {
+            streamState.idle = idle;
+            Native.note(idle
+                ? "stream only is waiting: Discord encodes nothing yet (nobody is watching the stream), so there is nothing to draw on"
+                : "the stream is being encoded");
+        }
+        if (waited > GRACE_MS && status && status.encodes > 0) await logEncoder();
         return;
     }
 
@@ -126,6 +137,7 @@ async function doSync() {
         streamState.offscreenSince = 0;
         streamState.failed = "";
         streamState.encoderLogged = false;
+        streamState.idle = false;
         return Native.hide();
     }
 

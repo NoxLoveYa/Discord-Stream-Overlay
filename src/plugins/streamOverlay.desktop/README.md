@@ -144,8 +144,8 @@ settings (`appBindings`, `appRevert`).
 
 ### Stream only
 
-The setting "Only draw the overlays on the stream" keeps the overlays off your own screen. Windows, NVIDIA encoder only.
-Discord encodes the shared screen with NVENC inside its renderer process, so a small native addon (`nvenc/`, built with
+The setting "Only draw the overlays on the stream" keeps the overlays off your own screen. Windows, with NVENC or Windows' software H.264 encoder.
+Discord encodes the shared screen with NVENC (or, when no graphics card can, with Windows' software encoder) inside its renderer process, so a small native addon (`nvenc/`, built with
 CMake by `scripts/build/nvenc.mjs`, installed into `%APPDATA%\discord\StreamOverlay\nvenc`) hooks the encoder (MinHook) and, just before each frame is
 encoded, blends the overlay over it. The overlays are rendered by an offscreen window (`main/window.ts`) whose pixels
 travel to the renderer (`main/nvenc.ts`); a preload script loads the addon there and also draws the overlay over the
@@ -195,7 +195,7 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `main/manifest.ts`, `main/values.ts` | reading and validating `overlay.json`, applying values to a page |
 | `main/host.ts` | the page that holds every overlay as an iframe and bridges them to the main process |
 | `main/display.ts`, `main/animations.ts` | finding the shared display, the enter / exit animations |
-| `main/nvenc.ts`, `nvenc/` | stream only: the preload script, frame transport and preview overlay; the native NVENC hook |
+| `main/nvenc.ts`, `nvenc/` | stream only: the preload script, frame transport and preview overlay; the native hook (NVENC and Windows' software encoder; `yuvblend.h` blends into frames in memory, `test/` has its tests) |
 | `main/layout.ts`, `components/Layout.tsx` | the Layout tab: a second offscreen overlay window whose frames the settings page asks for (answered as they are drawn) and whose mouse it feeds |
 | `spotify.ts`, `main/media.ts` | the track playing in Spotify: taken from Discord's player state events in the renderer, validated in the main process (`cleanMedia`) and pushed to the overlays that set `"media": true` |
 | `main/focus.ts` | the program in focus: a small PowerShell helper (own process, only while somebody asks) and the object `native.ts` keeps it in |

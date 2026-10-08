@@ -1,5 +1,6 @@
-// Hooks Discord's NVENC encoder. While drawing is on, every frame is blended with the bitmap given to setOverlay() just
-// before it is encoded, so the overlay is in the stream and not on the screen. Failures go to %TEMP%\streamoverlay-nvenc.log.
+// Hooks Discord's encoders: NVENC, and Windows' software H.264 encoder (Media Foundation), which Discord falls back to. While
+// drawing is on, every frame is blended with the bitmap given to setOverlay() just before it is encoded, so the overlay is in
+// the stream and not on the screen. Failures go to %TEMP%\streamoverlay-nvenc.log.
 // Loaded into Discord's renderer process by the preload script of main/nvenc.ts.
 
 #include <windows.h>
@@ -7,6 +8,9 @@
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <dxgi.h>
+#include <mfapi.h>
+#include <mfobjects.h>
+#include <mftransform.h>
 #include <wrl/client.h>
 
 #include <algorithm>
@@ -24,6 +28,7 @@
 #include <ffnvcodec/nvEncodeAPI.h>
 
 #include "MinHook.h"
+#include "yuvblend.h"
 
 namespace {
 
@@ -31,7 +36,9 @@ using Microsoft::WRL::ComPtr;
 
 std::mutex g_mutex;
 bool g_on = false;
-bool g_installed = false;
+bool g_installed = false;      // the hooks of either encoder are created
+bool g_nvInstalled = false;
+bool g_mfInstalled = false;
 std::atomic<bool> g_draw{false};
 std::atomic<uint64_t> g_unknown{0};  // frames whose texture was never seen being registered
 std::atomic<uint64_t> g_encodes{0};  // frames NVENC was given while drawing was on
@@ -212,7 +219,7 @@ std::string adaptersJson() {
 std::string modulesJson() {
     static const char* const keys[] = {
         "nvenc", "nvcuda", "nvcuvid", "cuda", "nvapi", "amf", "atidx", "amdxc", "aticfx", "atiumd", "igfx", "igd1", "igdumd", "mfx", "vpl",
-        "openh264", "x264", "x265", "vpx", "aom", "dav1d", "avcodec", "ffmpeg", "mfplat", "mfreadwrite", "webrtc", "discord_video", "discord_voice", "encoder"
+        "openh264", "x264", "x265", "vpx", "aom", "dav1d", "avcodec", "ffmpeg", "mfplat", "mfreadwrite", "mfh264", "webrtc", "discord_video", "discord_voice", "encoder"
     };
 
     HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32, GetCurrentProcessId());
@@ -275,6 +282,14 @@ bool g_pendingDirty = false;
 bool g_pendingFull = true;
 bool g_boxSet = false;
 uint32_t g_boxL = 0, g_boxT = 0, g_boxR = 0, g_boxB = 0;
+
+// what the software encoder path (yuvblend.h) has not taken from g_pending yet; the cache is guarded by g_yuvMutex and these
+// by g_mutex, which is taken after it
+yuvblend::Cache g_yuv;
+std::mutex g_yuvMutex;
+bool g_yuvFull = true;
+bool g_yuvBoxSet = false;
+uint32_t g_yuvL = 0, g_yuvT = 0, g_yuvR = 0, g_yuvB = 0;
 
 struct Opened {
     ComPtr<ID3D11Texture2D> tex;
@@ -505,6 +520,10 @@ PNVENCDESTROYENCODER oDestroy;
 // what is logged of the first registrations, to see how the stream is fed
 std::atomic<int> g_registerLogged{0};
 
+std::atomic<uint64_t> g_mfFrames{0}, g_mfDrawn{0};  // frames the software encoder was given while drawing was on, and the ones drawn on
+std::string g_mfFormat;                               // the last format it was given (under g_mutex)
+std::string g_mfProblem;                              // why the last frame could not be drawn on (under g_mutex)
+
 // ONE LINE every 10 s while drawing: what went through the hook, per session
 void logStats() {
     static std::atomic<ULONGLONG> last{0};
@@ -522,8 +541,8 @@ void logStats() {
             sessions += text;
         }
     }
-    logf("stats: encodes=%llu drawn=%llu unknown=%llu%s", static_cast<unsigned long long>(g_encodes.load()), static_cast<unsigned long long>(g_drawn.load()),
-        static_cast<unsigned long long>(g_unknown.load()), sessions.c_str());
+    logf("stats: encodes=%llu drawn=%llu unknown=%llu%s | software encoder frames=%llu drawn=%llu", static_cast<unsigned long long>(g_encodes.load()), static_cast<unsigned long long>(g_drawn.load()),
+        static_cast<unsigned long long>(g_unknown.load()), sessions.c_str(), static_cast<unsigned long long>(g_mfFrames.load()), static_cast<unsigned long long>(g_mfDrawn.load()));
 }
 
 NVENCSTATUS NVENCAPI hkOpen(NV_ENC_OPEN_ENCODE_SESSION_EX_PARAMS* p, void** encoder) {
@@ -651,6 +670,283 @@ NVENCSTATUS NVENCAPI hkEncode(void* encoder, NV_ENC_PIC_PARAMS* p) {
     return oEncode(encoder, p);
 }
 
+// ---- Windows' software H.264 encoder (Media Foundation) ----------------------------------------------------------------
+// When no graphics card can encode the screen (a laptop whose screen is on the integrated card, say) Discord encodes with the
+// H.264 encoder that comes with Windows, and gives it its frames in system memory. They are copied, the overlay is blended
+// into the copy (yuvblend.h) and the copy is what the encoder gets: the frame Discord has stays as it was, which matters when
+// it is given to the encoder again (a screen that does not change) or shown.
+
+const CLSID kH264EncoderMft = { 0x6ca50344, 0x051a, 0x4ded, { 0x97, 0x79, 0xa4, 0x33, 0x05, 0x16, 0x5e, 0x35 } };
+
+using PProcessInput = HRESULT(STDMETHODCALLTYPE*)(IMFTransform*, DWORD, IMFSample*, DWORD);
+using PCreateSample = HRESULT(WINAPI*)(IMFSample**);
+using PCreate2DBuffer = HRESULT(WINAPI*)(DWORD, DWORD, DWORD, BOOL, IMFMediaBuffer**);
+
+PProcessInput oProcessInput;
+PCreateSample pCreateSample;                // looked up in mfplat.dll: Windows N editions have none, and the addon must still load
+PCreate2DBuffer pCreate2DBuffer;
+
+// said once for every change: what the frames are, or why they cannot be drawn on
+void mfNote(const std::string& format) {
+    std::lock_guard lock(g_mutex);
+    if (format == g_mfFormat) return;
+    g_mfFormat = format;
+    logf("software encoder frames: %s", format.c_str());
+}
+
+void mfProblem(const std::string& problem) {
+    std::lock_guard lock(g_mutex);
+    g_lastError = problem;
+    if (problem == g_mfProblem) return;
+    g_mfProblem = problem;
+    logf("software encoder: cannot draw on the frames: %s", problem.c_str());
+}
+
+std::string fourcc(const GUID& subtype) {
+    char text[40];
+    const char* c = reinterpret_cast<const char*>(&subtype.Data1);
+    if (isprint(static_cast<unsigned char>(c[0])) && isprint(static_cast<unsigned char>(c[1])) && isprint(static_cast<unsigned char>(c[2])) && isprint(static_cast<unsigned char>(c[3])))
+        snprintf(text, sizeof text, "%c%c%c%c", c[0], c[1], c[2], c[3]);
+    else
+        snprintf(text, sizeof text, "{%08lx-...}", static_cast<unsigned long>(subtype.Data1));
+    return text;
+}
+
+// 1: `result` is the frame to give to the encoder instead, 0: give it the frame as it is (nothing to draw), -1: it cannot be drawn on
+int mfBlend(IMFTransform* self, IMFSample* sample, IMFSample** result) {
+    *result = nullptr;
+    if (!pCreateSample || !pCreate2DBuffer) return -1;
+
+    ComPtr<IMFMediaType> type;
+    if (FAILED(self->GetInputCurrentType(0, &type))) return 0;
+
+    GUID subtype = {};
+    UINT32 w = 0, h = 0;
+    if (FAILED(type->GetGUID(MF_MT_SUBTYPE, &subtype)) || FAILED(MFGetAttributeSize(type.Get(), MF_MT_FRAME_SIZE, &w, &h)) || !w || !h) return 0;
+
+    yuvblend::Layout layout;
+    if (subtype == MFVideoFormat_NV12) layout = yuvblend::Layout::NV12;
+    else if (subtype == MFVideoFormat_IYUV || subtype == MFVideoFormat_I420) layout = yuvblend::Layout::I420;
+    else if (subtype == MFVideoFormat_YV12) layout = yuvblend::Layout::YV12;
+    else {
+        mfProblem("the encoder is given " + fourcc(subtype) + " frames, which the overlay cannot be drawn on (only NV12, I420, YV12)");
+        return -1;
+    }
+
+    // what the picture is made of
+    const UINT32 matrix = MFGetAttributeUINT32(type.Get(), MF_MT_YUV_MATRIX, 0);
+    yuvblend::Frame frame;
+    frame.width = w;
+    frame.height = h;
+    frame.bt709 = matrix == MFVideoTransferMatrix_BT709 || (matrix != MFVideoTransferMatrix_BT601 && h >= 720);
+    frame.fullRange = MFGetAttributeUINT32(type.Get(), MF_MT_VIDEO_NOMINAL_RANGE, 0) == MFNominalRange_0_255;
+
+    std::lock_guard cacheLock(g_yuvMutex);
+    {
+        std::lock_guard lock(g_mutex);
+        if (!g_pendingW || g_pending.size() < static_cast<size_t>(g_pendingW) * g_pendingH * 4) {
+            g_yuv.clear();
+            g_yuvFull = true;
+            g_yuvBoxSet = false;
+            return 0;
+        }
+        if (g_yuvFull || !g_yuv.matches(frame, g_pendingW, g_pendingH))
+            g_yuv.rebuild(g_pending.data(), g_pendingW, g_pendingH, frame);
+        else if (g_yuvBoxSet)
+            g_yuv.update(g_pending.data(), g_yuvL, g_yuvT, g_yuvR, g_yuvB);
+        g_yuvFull = false;
+        g_yuvBoxSet = false;
+    }
+    if (g_yuv.empty()) return 0;
+
+    ComPtr<IMFMediaBuffer> buffer;
+    DWORD count = 0;
+    sample->GetBufferCount(&count);
+    if (count == 1) {
+        if (FAILED(sample->GetBufferByIndex(0, &buffer))) return 0;
+    } else if (FAILED(sample->ConvertToContiguousBuffer(&buffer))) {
+        return 0;
+    }
+
+    ComPtr<IMFDXGIBuffer> texture;
+    if (SUCCEEDED(buffer.As(&texture))) {
+        mfProblem("the frames are Direct3D textures, not memory");
+        return -1;
+    }
+
+    // the first line, the pitch and the length of the frame, from the richest interface the buffer has
+    BYTE* scan0 = nullptr;
+    BYTE* start = nullptr;
+    LONG pitch = 0;
+    DWORD length = 0;
+    int how = 0;
+    const char* via = "";
+    ComPtr<IMF2DBuffer2> buffer2;
+    ComPtr<IMF2DBuffer> buffer1;
+    if (SUCCEEDED(buffer.As(&buffer2)) && SUCCEEDED(buffer2->Lock2DSize(MF2DBuffer_LockFlags_Read, &scan0, &pitch, &start, &length))) {
+        how = 1;
+        via = "Lock2DSize";
+    } else if (SUCCEEDED(buffer.As(&buffer1)) && SUCCEEDED(buffer1->Lock2D(&scan0, &pitch))) {
+        how = 2;
+        via = "Lock2D";
+        start = scan0;
+        buffer->GetCurrentLength(&length);
+    } else {
+        BYTE* raw = nullptr;
+        DWORD current = 0;
+        if (FAILED(buffer->Lock(&raw, nullptr, &current))) return 0;
+        how = 3;
+        via = "Lock";
+        scan0 = start = raw;
+        length = current;
+        pitch = static_cast<LONG>(MFGetAttributeUINT32(type.Get(), MF_MT_DEFAULT_STRIDE, w));
+    }
+    auto unlock = [&] {
+        if (how == 1) buffer2->Unlock2D();
+        else if (how == 2) buffer1->Unlock2D();
+        else buffer->Unlock();
+    };
+
+    // the lines the luma plane is laid out with (the chroma follows it): the height, or the height rounded up
+    const size_t p = pitch > 0 ? static_cast<size_t>(pitch) : 0;
+    uint32_t rows = 0;
+    if (p >= w) {
+        for (uint32_t candidate : { h, (h + 1) & ~1u, (h + 15) & ~15u }) {
+            if (p * candidate * 3 / 2 == length) {
+                rows = candidate;
+                break;
+            }
+        }
+        if (!rows && p * h * 3 / 2 <= length) rows = h;
+    }
+    const size_t offset = scan0 >= start ? static_cast<size_t>(scan0 - start) : SIZE_MAX;
+    if (!rows || offset > length || offset + p * rows * 3 / 2 > length) {
+        unlock();
+        mfProblem("the layout of the frames is not one that is known: pitch " + std::to_string(pitch) + ", length " + std::to_string(length) + ", " + std::to_string(w) + "x" + std::to_string(h));
+        return -1;
+    }
+
+    char format[200];
+    snprintf(format, sizeof format, "%s %ux%u, pitch %ld, length %lu, luma lines %u, %s %s, read with %s", fourcc(subtype).c_str(), w, h, static_cast<long>(pitch),
+        static_cast<unsigned long>(length), rows, frame.bt709 ? "BT.709" : "BT.601", frame.fullRange ? "full range" : "limited range", via);
+    mfNote(format);
+
+    // a copy of the frame, in a buffer made for this format (its lines have the pitch it likes, which is not that of the frame
+    // Discord has), with the overlay in it
+    ComPtr<IMFMediaBuffer> copy;
+    ComPtr<IMF2DBuffer> copy2;
+    ComPtr<IMF2DBuffer2> copy2Size;
+    BYTE* dst = nullptr;
+    BYTE* dstStart = nullptr;
+    LONG dstPitch = 0;
+    DWORD dstLength = 0;
+    bool dstSized = false;
+    if (FAILED(pCreate2DBuffer(w, h, subtype.Data1, FALSE, &copy)) || FAILED(copy.As(&copy2))) {
+        unlock();
+        return 0;
+    }
+    // the length of what is allocated (the lines are padded), which is not the length of the picture
+    if (SUCCEEDED(copy.As(&copy2Size)) && SUCCEEDED(copy2Size->Lock2DSize(MF2DBuffer_LockFlags_Write, &dst, &dstPitch, &dstStart, &dstLength))) {
+        dstSized = true;
+    } else if (FAILED(copy2->Lock2D(&dst, &dstPitch))) {
+        unlock();
+        return 0;
+    }
+    auto unlockCopy = [&] {
+        if (dstSized) copy2Size->Unlock2D();
+        else copy2->Unlock2D();
+    };
+    const size_t dp = dstPitch > 0 ? static_cast<size_t>(dstPitch) : 0;
+    uint32_t dstRows = 0;
+    if (dp >= w) {
+        if (dstSized) {
+            for (uint32_t candidate : { h, (h + 1) & ~1u, (h + 15) & ~15u }) {
+                if (dp * candidate * 3 / 2 == dstLength) {
+                    dstRows = candidate;
+                    break;
+                }
+            }
+            if (!dstRows && dp * h * 3 / 2 <= dstLength) dstRows = h;
+        } else {
+            dstRows = h;
+        }
+    }
+    if (!dstRows) {
+        unlockCopy();
+        unlock();
+        mfProblem("the layout of the copy of a frame is not one that is known: pitch " + std::to_string(dstPitch) + ", length " + std::to_string(dstLength));
+        return -1;
+    }
+
+    // plane by plane: the lines, without what the pitch pads them with
+    const uint32_t cw = (w + 1) / 2, ch = (h + 1) / 2;
+    for (uint32_t y = 0; y < h; y++) memcpy(dst + y * dp, scan0 + y * p, w);
+    const BYTE* srcChroma = scan0 + p * rows;
+    BYTE* dstChroma = dst + dp * dstRows;
+    if (layout == yuvblend::Layout::NV12) {
+        for (uint32_t y = 0; y < ch; y++) memcpy(dstChroma + y * dp, srcChroma + y * p, static_cast<size_t>(cw) * 2);
+    } else {
+        for (uint32_t plane = 0; plane < 2; plane++) {
+            const BYTE* from = srcChroma + (p / 2) * (rows / 2) * plane;
+            BYTE* to = dstChroma + (dp / 2) * (dstRows / 2) * plane;
+            for (uint32_t y = 0; y < ch; y++) memcpy(to + y * (dp / 2), from + y * (p / 2), cw);
+        }
+    }
+    unlock();
+
+    g_yuv.blend(layout, dst, dp, dstRows);
+    unlockCopy();
+    DWORD contiguous = 0;
+    copy2->GetContiguousLength(&contiguous);
+    copy->SetCurrentLength(contiguous);
+
+    ComPtr<IMFSample> out;
+    if (FAILED(pCreateSample(&out)) || FAILED(out->AddBuffer(copy.Get()))) return 0;
+    sample->CopyAllItems(out.Get());
+    LONGLONG time = 0, duration = 0;
+    DWORD flags = 0;
+    if (SUCCEEDED(sample->GetSampleTime(&time))) out->SetSampleTime(time);
+    if (SUCCEEDED(sample->GetSampleDuration(&duration))) out->SetSampleDuration(duration);
+    if (SUCCEEDED(sample->GetSampleFlags(&flags))) out->SetSampleFlags(flags);
+
+    *result = out.Detach();
+    return 1;
+}
+
+// (a plain pointer: the caller of __try may not build a std::string)
+void mfFailed(const char* why) { mfProblem(why); }
+
+// no C++ objects needing unwinding in here, so __try is allowed
+int safeMfBlend(IMFTransform* self, IMFSample* sample, IMFSample** result) {
+    int how = 0;
+    __try {
+        how = mfBlend(self, sample, result);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+        *result = nullptr;
+        mfFailed("exception while drawing");
+        how = -1;
+    }
+    return how;
+}
+
+HRESULT STDMETHODCALLTYPE hkProcessInput(IMFTransform* self, DWORD stream, IMFSample* sample, DWORD flags) {
+    if (sample && g_draw) {
+        ++g_encodes;
+        ++g_mfFrames;
+        IMFSample* drawn = nullptr;
+        if (safeMfBlend(self, sample, &drawn) == 1 && drawn) {
+            ++g_drawn;
+            ++g_mfDrawn;
+            const HRESULT hr = oProcessInput(self, stream, drawn, flags);
+            drawn->Release();
+            logStats();
+            return hr;
+        }
+        logStats();
+    }
+    return oProcessInput(self, stream, sample, flags);
+}
+
 template <class F>
 bool hook(const char* name, F target, F detour, F* original) {
     if (!target) {
@@ -665,48 +961,94 @@ bool hook(const char* name, F target, F detour, F* original) {
     return true;
 }
 
+// the hooks of NVENC; "" when they are created, or why not
+std::string installNvenc() {
+    HMODULE nv = GetModuleHandleW(L"nvencodeapi64.dll");
+    if (!nv) nv = LoadLibraryW(L"nvencodeapi64.dll");
+    if (!nv) return "nvencodeapi64.dll is not available (no NVIDIA driver?)";
+
+    wchar_t path[MAX_PATH] = {};
+    GetModuleFileNameW(nv, path, MAX_PATH);
+    logf("NVENC library: %s", narrow(path).c_str());
+
+    auto create = reinterpret_cast<NVENCSTATUS(NVENCAPI*)(NV_ENCODE_API_FUNCTION_LIST*)>(GetProcAddress(nv, "NvEncodeAPICreateInstance"));
+    if (!create) return "NvEncodeAPICreateInstance not found";
+
+    NV_ENCODE_API_FUNCTION_LIST list = { NV_ENCODE_API_FUNCTION_LIST_VER };
+    NVENCSTATUS st = create(&list);
+    if (st != NV_ENC_SUCCESS) return "NvEncodeAPICreateInstance failed: " + std::to_string(st);
+
+    bool all = hook("RegisterResource", list.nvEncRegisterResource, hkRegister, &oRegister);
+    all &= hook("UnregisterResource", list.nvEncUnregisterResource, hkUnregister, &oUnregister);
+    all &= hook("MapInputResource", list.nvEncMapInputResource, hkMap, &oMap);
+    all &= hook("UnmapInputResource", list.nvEncUnmapInputResource, hkUnmap, &oUnmap);
+    all &= hook("EncodePicture", list.nvEncEncodePicture, hkEncode, &oEncode);
+    if (!all) return "could not hook the encoder";
+
+    // for the log only
+    hook("OpenEncodeSessionEx", list.nvEncOpenEncodeSessionEx, hkOpen, &oOpen);
+    hook("InitializeEncoder", list.nvEncInitializeEncoder, hkInit, &oInit);
+    hook("DestroyEncoder", list.nvEncDestroyEncoder, hkDestroy, &oDestroy);
+    g_nvInstalled = true;
+    return "";
+}
+
+// the hook of Windows' software H.264 encoder; "" when it is created, or why not. Every encoder of the kind is the same code, so
+// one made here only to read where its ProcessInput is (the 25th entry of IMFTransform) is enough to hook them all.
+std::string installMediaFoundation() {
+    HMODULE mfplat = LoadLibraryW(L"mfplat.dll");
+    if (!mfplat) return "Media Foundation is not available (mfplat.dll)";
+    pCreateSample = reinterpret_cast<PCreateSample>(GetProcAddress(mfplat, "MFCreateSample"));
+    pCreate2DBuffer = reinterpret_cast<PCreate2DBuffer>(GetProcAddress(mfplat, "MFCreate2DMediaBuffer"));
+    if (!pCreateSample || !pCreate2DBuffer) return "Media Foundation has no MFCreateSample or MFCreate2DMediaBuffer";
+
+    ComPtr<IMFTransform> mft;
+    HRESULT hr = CoCreateInstance(kH264EncoderMft, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&mft));
+    if (hr == CO_E_NOTINITIALIZED) {
+        CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+        hr = CoCreateInstance(kH264EncoderMft, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&mft));
+    }
+    if (FAILED(hr)) {
+        char text[120];
+        snprintf(text, sizeof text, "the H.264 encoder of Windows could not be created: 0x%08lx", static_cast<unsigned long>(hr));
+        return text;
+    }
+
+    constexpr size_t kProcessInput = 24;  // IUnknown 3, then IMFTransform: GetStreamLimits is 3
+    auto target = reinterpret_cast<PProcessInput>((*reinterpret_cast<void***>(mft.Get()))[kProcessInput]);
+
+    // the hook must not outlive the code it is in
+    HMODULE pinned = nullptr;
+    GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN, reinterpret_cast<LPCWSTR>(target), &pinned);
+
+    if (!hook("MFT ProcessInput", target, static_cast<PProcessInput>(hkProcessInput), &oProcessInput)) return "could not hook the H.264 encoder of Windows";
+    g_mfInstalled = true;
+    return "";
+}
+
 std::string start() {
     if (g_on) return "already on";
 
-    HMODULE nv = GetModuleHandleW(L"nvencodeapi64.dll");
-    if (!nv) nv = LoadLibraryW(L"nvencodeapi64.dll");
-    if (!nv) {
-        logf("nvencodeapi64.dll is not available (no NVIDIA driver?). Graphics cards: %s", adaptersJson().c_str());
-        return "nvencodeapi64.dll is not available (no NVIDIA driver?)";
+    logf("starting the hook");
+    logf("graphics cards: %s", adaptersJson().c_str());
+    logf("video modules in this process: %s", modulesJson().c_str());
+
+    MH_STATUS init = MH_Initialize();
+    if (init != MH_OK && init != MH_ERROR_ALREADY_INITIALIZED) return std::string("MinHook: ") + MH_StatusToString(init);
+
+    // either encoder is enough: a machine without NVENC is the one that needs the software one
+    std::string nvError, mfError;
+    if (!g_nvInstalled) {
+        nvError = installNvenc();
+        if (!nvError.empty()) logf("NVENC: %s", nvError.c_str());
     }
-
-    {
-        wchar_t path[MAX_PATH] = {};
-        GetModuleFileNameW(nv, path, MAX_PATH);
-        logf("starting the hook. NVENC library: %s", narrow(path).c_str());
-        logf("graphics cards: %s", adaptersJson().c_str());
-        logf("video modules in this process: %s", modulesJson().c_str());
+    if (!g_mfInstalled) {
+        mfError = installMediaFoundation();
+        if (!mfError.empty()) logf("software encoder: %s", mfError.c_str());
     }
-
-    if (!g_installed) {
-        auto create = reinterpret_cast<NVENCSTATUS(NVENCAPI*)(NV_ENCODE_API_FUNCTION_LIST*)>(GetProcAddress(nv, "NvEncodeAPICreateInstance"));
-        if (!create) return "NvEncodeAPICreateInstance not found";
-
-        NV_ENCODE_API_FUNCTION_LIST list = { NV_ENCODE_API_FUNCTION_LIST_VER };
-        NVENCSTATUS st = create(&list);
-        if (st != NV_ENC_SUCCESS) return "NvEncodeAPICreateInstance failed: " + std::to_string(st);
-
-        MH_STATUS init = MH_Initialize();
-        if (init != MH_OK && init != MH_ERROR_ALREADY_INITIALIZED) return std::string("MinHook: ") + MH_StatusToString(init);
-
-        bool all = hook("RegisterResource", list.nvEncRegisterResource, hkRegister, &oRegister);
-        all &= hook("UnregisterResource", list.nvEncUnregisterResource, hkUnregister, &oUnregister);
-        all &= hook("MapInputResource", list.nvEncMapInputResource, hkMap, &oMap);
-        all &= hook("UnmapInputResource", list.nvEncUnmapInputResource, hkUnmap, &oUnmap);
-        all &= hook("EncodePicture", list.nvEncEncodePicture, hkEncode, &oEncode);
-        if (!all) return "could not hook the encoder";
-
-        // for the log only
-        hook("OpenEncodeSessionEx", list.nvEncOpenEncodeSessionEx, hkOpen, &oOpen);
-        hook("InitializeEncoder", list.nvEncInitializeEncoder, hkInit, &oInit);
-        hook("DestroyEncoder", list.nvEncDestroyEncoder, hkDestroy, &oDestroy);
-        g_installed = true;
-    }
+    g_installed = g_nvInstalled || g_mfInstalled;
+    if (!g_installed) return nvError.empty() ? mfError : nvError;
+    logf("hooked: NVENC %s, software encoder %s", g_nvInstalled ? "yes" : "no", g_mfInstalled ? "yes" : "no");
 
     MH_STATUS en = MH_EnableHook(MH_ALL_HOOKS);
     if (en != MH_OK) return std::string("enable failed: ") + MH_StatusToString(en);
@@ -722,8 +1064,11 @@ std::string draw(bool on) {
         g_encodes = 0;
         g_drawn = 0;
         g_unknown = 0;
+        g_mfFrames = 0;
+        g_mfDrawn = 0;
         std::lock_guard lock(g_mutex);
         g_lastError.clear();
+        g_mfProblem.clear();
     }
     g_draw = on;
     return on ? (g_on ? "drawing on" : "the hooks are off: start them first") : "drawing off";
@@ -749,13 +1094,16 @@ std::string diagnose() {
         ",\"on\":" + (g_on ? "true" : "false") + ",\"draw\":" + (g_draw ? "true" : "false") + "},\"counters\":{\"encodes\":" + std::to_string(g_encodes.load()) +
         ",\"drawn\":" + std::to_string(g_drawn.load()) + ",\"unknown\":" + std::to_string(g_unknown.load()) + "}";
 
-    std::string sessions;
-    std::string error;
+    std::string sessions, error, format, problem;
     {
         std::lock_guard lock(g_mutex);
         sessions = sessionsJson();
         error = g_lastError;
+        format = g_mfFormat;
+        problem = g_mfProblem;
     }
+    out += ",\"mf\":{\"hooked\":" + std::string(g_mfInstalled ? "true" : "false") + ",\"frames\":" + std::to_string(g_mfFrames.load()) + ",\"drawn\":" + std::to_string(g_mfDrawn.load()) +
+        ",\"format\":\"" + jsonEscape(format) + "\",\"problem\":\"" + jsonEscape(problem) + "\"}";
     out += ",\"lastError\":\"" + jsonEscape(error) + "\",\"adapters\":" + adaptersJson() + ",\"modules\":" + modulesJson() + ",\"sessions\":" + sessions + "}";
     return out;
 }
@@ -772,6 +1120,8 @@ void setOverlay(const uint8_t* data, size_t size, uint32_t width, uint32_t heigh
     g_pendingFull = true;
     g_boxSet = false;
     g_pendingDirty = true;
+    g_yuvFull = true;
+    g_yuvBoxSet = false;
 }
 
 // A rectangle of a picture of the size the last whole one had. False when it does not fit that picture: a whole one has
@@ -794,6 +1144,14 @@ bool updateOverlay(const uint8_t* data, size_t size, uint32_t x, uint32_t y, uin
         g_boxR = (std::max)(g_boxR, x + w); g_boxB = (std::max)(g_boxB, y + h);
     }
     g_pendingDirty = true;
+
+    if (!g_yuvBoxSet) {
+        g_yuvL = x; g_yuvT = y; g_yuvR = x + w; g_yuvB = y + h;
+        g_yuvBoxSet = true;
+    } else {
+        g_yuvL = (std::min)(g_yuvL, x); g_yuvT = (std::min)(g_yuvT, y);
+        g_yuvR = (std::max)(g_yuvR, x + w); g_yuvB = (std::max)(g_yuvB, y + h);
+    }
     return true;
 }
 

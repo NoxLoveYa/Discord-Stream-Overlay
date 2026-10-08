@@ -6,7 +6,7 @@
 
 import { BrowserWindow, type IpcMainInvokeEvent, shell } from "electron";
 
-import { buildReport, currentEncoder } from "./main/diagnostics";
+import { buildReport, currentEncoder, streamEncoding as discordEncoding } from "./main/diagnostics";
 import { FocusWatcher } from "./main/focus";
 import { listOverlays as listOverlayFolder, pickFolder as pickOverlayFolder, resolveRoot } from "./main/folder";
 import { LayoutSink, screenshot } from "./main/layout";
@@ -104,6 +104,11 @@ export function getFocus() {
 /** The encoder Discord uses for the stream right now, from its own log (null when it does not say yet). */
 export function streamEncoder() {
     return currentEncoder();
+}
+
+/** Whether Discord encodes the stream at all right now (it does not while nobody watches it); null when its log does not say. */
+export function streamEncoding() {
+    return discordEncoding();
 }
 
 /** Everything that helps to see why "stream only" works or not on this machine, as text. `extra` is what the page adds. */

@@ -36,6 +36,7 @@ function run(command, args) {
 
 const sourceHash = () => createHash("sha1")
     .update(readFileSync(join(SOURCE, "hook.cc")))
+    .update(readFileSync(join(SOURCE, "yuvblend.h")))
     .update(readFileSync(join(SOURCE, "CMakeLists.txt")))
     .digest("hex");
 

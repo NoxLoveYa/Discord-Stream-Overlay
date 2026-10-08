@@ -14,5 +14,7 @@ export const streamState = {
     /** whether the encoder hook is in */
     hooked: false,
     /** the encoder of this stream has been written to the log */
-    encoderLogged: false
+    encoderLogged: false,
+    /** Discord is not encoding the stream (nobody watches it), so there is nothing for the hook to see yet */
+    idle: false
 };

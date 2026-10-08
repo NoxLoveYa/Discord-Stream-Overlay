@@ -38,8 +38,13 @@ export function Diagnostics() {
             <Paragraph size="sm" defaultColor={false} className="vc-so-muted">
                 {encoder === undefined
                     ? "Looking at Discord's log..."
-                    : `${explainEncoder(encoder)}.${encoder && !encoder.supported ? " The overlays go on your screen instead while it is in use." : ""}`}
+                    : `${explainEncoder(encoder)}.${encoder?.backend && !encoder.supported ? " The overlays go on your screen instead while it is in use." : ""}`}
             </Paragraph>
+            {streamState.idle && (
+                <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
+                    Stream only is waiting: Discord encodes nothing while nobody is watching your stream, so there is nothing to draw on yet.
+                </Paragraph>
+            )}
             {streamState.failed && (
                 <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
                     Stream only was given up for the stream that is running: {streamState.failed}.

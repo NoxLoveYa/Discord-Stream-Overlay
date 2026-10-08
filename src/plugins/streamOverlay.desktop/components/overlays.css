@@ -1,3 +1,10 @@
+/* Discord's large modal stops at 962px, which holds three cards a row: the plugin's own is wide enough for four */
+[role="dialog"]:has(.vc-so) {
+    width: min(1100px, calc(100vw - 80px));
+    min-width: 0;
+    max-width: none;
+}
+
 .vc-so {
     display: flex;
     flex-direction: column;
@@ -53,6 +60,13 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 12px;
+}
+
+/* the modal is at its full width from here (1100px plus the 40px margin of each side) */
+@media (width >= 1180px) {
+    .vc-so-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
 }
 
 .vc-so-card {

@@ -5,8 +5,8 @@
  */
 
 // Whether "stream only" really puts the overlay in the stream. The overlay is taken off the screen as soon as the hook is
-// in, so if the stream is not encoded by NVENC (a laptop whose screen is on the integrated GPU, an AMD or Intel encoder,
-// a software one) nobody would see it at all. No React and no store, so it can be tested alone.
+// in, so if the stream is not encoded by an encoder the hook draws into (NVENC, or Windows' own software H.264 encoder: not a
+// laptop whose screen is on the integrated GPU with an AMD or Intel hardware encoder) nobody would see it at all. No React and no store, so it can be tested alone.
 
 /** What the native hook reports (see status() in nvenc/hook.cc), summed over the pages that have it. */
 export interface HookStatus {
@@ -56,9 +56,10 @@ export function combineStatus(list: (HookStatus | null)[]): HookStatus | null {
 
 /**
  * Why the overlay is not in the stream, or null when it is (or it is too early to tell). `waited` is how long the overlay
- * has been off the screen.
+ * has been off the screen. `encoding` is whether Discord says it encodes the stream at all (null: it does not say): with
+ * nobody watching it encodes nothing, which gives the hook nothing to see and is no reason to give up.
  */
-export function judgeHook(status: HookStatus | null, waited: number): string | null {
+export function judgeHook(status: HookStatus | null, waited: number, encoding: boolean | null = null): string | null {
     if (waited < GRACE_MS) {
         // it switches itself off when a frame cannot be drawn: no need to wait for that
         return status && !status.draw ? `drawing was switched off${status.error ? `: ${status.error}` : ""}` : null;
@@ -66,7 +67,10 @@ export function judgeHook(status: HookStatus | null, waited: number): string | n
 
     if (!status) return "the encoder hook did not answer";
     if (!status.draw) return `drawing was switched off${status.error ? `: ${status.error}` : ""}`;
-    if (status.encodes === 0) return "the stream is not encoded by NVENC (another encoder, or the screen is on another graphics card)";
+    if (status.encodes === 0) {
+        if (encoding === false) return null;
+        return "the stream is not encoded by NVENC or by Windows' software encoder (another encoder, or the screen is on another graphics card)";
+    }
     if (status.drawn === 0) {
         if (status.error) return status.error;
         return status.unknown > 0 ? "the stream began before the hook was in" : "no frame could be drawn on";

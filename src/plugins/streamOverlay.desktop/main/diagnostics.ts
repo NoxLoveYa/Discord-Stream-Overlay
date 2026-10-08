@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { type EncoderInfo, latestEncoder } from "@plugins/streamOverlay.desktop/encoders";
+import { type EncoderInfo, isEncoding, latestActivity, latestEncoder } from "@plugins/streamOverlay.desktop/encoders";
 import { digestVoiceLog, formatHook, hints, type HookReport, parseHook } from "@plugins/streamOverlay.desktop/report";
 import { app, screen } from "electron";
 import { arch, release, version } from "os";
@@ -16,13 +16,18 @@ const VOICE_LOG = "discord-webrtc_0";
 const WHOLE_BELOW = 6 * 1024 * 1024;
 const HEAD_BYTES = 300 * 1024;
 const TAIL_BYTES = 5 * 1024 * 1024;
+// the stats line comes every 10 s and the log grows about 5 KB/s while streaming
+const ACTIVITY_BYTES = 256 * 1024;
+const ACTIVITY_STALE_MS = 30_000;
 
 /**
  * The lines of Discord's voice log of this run, which say which encoders it found, which it tried and what it encodes the
  * stream with. A long log is read from its start (the probe) and its end (the stream).
  */
+const voiceLogFile = () => join(app.getPath("userData"), "logs", VOICE_LOG);
+
 function voiceLogLines() {
-    const file = join(app.getPath("userData"), "logs", VOICE_LOG);
+    const file = voiceLogFile();
     const size = safeSize(file);
     if (!size) return [];
 
@@ -32,6 +37,16 @@ function voiceLogLines() {
 
 /** The encoder Discord uses for the stream right now, from its voice log; null when it does not say. */
 export const currentEncoder = (): EncoderInfo | null => latestEncoder(voiceLogLines());
+
+/**
+ * Whether Discord encodes the stream right now, from the stats line it writes every 10 s; null when it does not say (no
+ * such line, or an old one). Nothing is encoded while nobody watches the stream.
+ */
+export function streamEncoding(): boolean | null {
+    const activity = latestActivity(readTail(voiceLogFile(), ACTIVITY_BYTES).split(/\r?\n/));
+    if (!activity || Date.now() - activity.at > ACTIVITY_STALE_MS) return null;
+    return isEncoding(activity);
+}
 
 async function graphicsLines() {
     try {

@@ -159,6 +159,26 @@ Nothing is read at startup: the card stays on "Nothing playing" until the first 
   preview canvases are removed.
 - Switching the setting while a share runs rebuilds the window in the other mode.
 
+### The software encoder (`nvenc/hook.cc`, `nvenc/yuvblend.h`)
+
+When no graphics card can encode the screen, Discord uses the H.264 encoder that comes with Windows (Media Foundation,
+`mfh264enc.dll`) and hands it frames in system memory (NV12, or I420 / YV12). `installMediaFoundation()` creates one such
+encoder only to read where `IMFTransform::ProcessInput` is (entry 24 of the table) and hooks that function with MinHook, which
+covers every encoder of the kind (and pins the DLL so the hook cannot outlive it). Either encoder is enough for `start()`: a
+machine without NVENC is the one that needs this.
+
+For each frame given to it while drawing is on, `mfBlend()` reads the format from the encoder's input type (the layout, the size,
+the colour matrix: BT.709 from 720 lines up unless the type says otherwise, and whether the range is full), makes a copy of the frame
+in a 2D media buffer made for the format (its lines have their own pitch) and blends the overlay into the copy, which is what the
+encoder gets. The frame Discord has is never changed: it may be given to the encoder again (a screen that does not change) or shown.
+
+`yuvblend.h` does the blending, and has no Windows in it so that `test/yuvblend_test.cc` can test it alone. The overlay (B8G8R8A8,
+premultiplied) is converted once to what a frame is made of at the frame's size (a luma and an alpha per pixel, a chroma and an
+alpha per 2x2 pixels) and kept; a rectangle of the overlay that changed converts only what it touches, and a frame only visits the
+rows and columns the overlay covers, so a frame costs a few tenths of a millisecond. The frame is stretched over the overlay the way
+the GPU path stretches the overlay over the texture. `test/mftest.cc` is a node addon that feeds frames to the real encoder, so that
+the hook can be tried without Discord: load both in node, draw, decode the stream with ffmpeg and look at the pixels.
+
 ### Logs and diagnostics
 
 The hook writes `%TEMP%\streamoverlay-nvenc.log` from inside Discord's renderer (thread-safe, rotated at 1 MB). Besides the five
@@ -176,11 +196,17 @@ which encoder the stream uses from that log, and whether it is one the overlay c
 With "stream only" the overlay is taken off the screen as soon as the hook is in, so the hook has to be seen working. The
 addon counts the frames NVENC was given since drawing went on and the ones it drew on (`status()`, returned by
 `Native.streamHealth` as the sum over the pages that have it). While the overlay is off the screen `sync.ts` looks every
-2 s and `judgeHook` (`health.ts`) decides: drawing switched itself off (any time); nothing encoded in 10 s (the stream is
-not NVENC: a laptop whose screen is on the integrated GPU, AMD, Intel, software); frames but none drawn (the stream began
-before the hook, or a texture that cannot be drawn on). On a verdict the next sync shows the overlays on the screen
-instead, with a notice (which names the encoder, from Discord's log), and the stream is left alone; the next stream is tried again, and so is turning the setting off
-and on.
+2 s and `judgeHook` (`health.ts`) decides:
+
+- drawing switched itself off (any time): a verdict;
+- nothing encoded in 10 s: a verdict that the stream is not NVENC or Windows' software encoder (a laptop whose screen is on the integrated GPU, AMD, Intel,
+  software), *unless Discord itself encodes nothing either*. Discord only encodes a stream while somebody watches it, and its
+  voice log says so (`frames encoded: 0, encoded frame rate: 0`, read by `streamEncoding()` in `main/diagnostics.ts`); then there
+  is nothing to draw on yet, so the plugin waits and writes "stream only is waiting" in its log;
+- frames but none drawn: a verdict (the stream began before the hook, or a texture that cannot be drawn on).
+
+On a verdict the next sync shows the overlays on the screen instead, with a notice (which names the encoder, from Discord's
+log), and the stream is left alone; the next stream is tried again, and so is turning the setting off and on.
 
 ## Why it is built this way
 
@@ -196,7 +222,11 @@ and on.
 
 - It depends on Discord's internals (NVENC with shared B8G8R8A8 textures, the voice module living in the renderer). An
   update can change them.
-- NVIDIA only. A software, AMD or Intel encoder, or a capture route that does not use these textures, is not drawn on.
+- NVENC and Windows' software encoder only. AMD's and Intel's hardware encoders, a hardware Media Foundation encoder, or a capture
+  route that does not use these textures or these memory frames, are not drawn on.
+- The software path assumes the frames are in system memory and that the encoder is the one that comes with Windows; if a
+  Discord update changes either, the hook sees no frames (the plugin puts the overlays back on the screen) or says why it
+  cannot draw in the log.
 - The preview match is a heuristic (see above).
 - Frames travel over IPC as raw bitmaps (about 14 MB at 2560 × 1440), the main cost of the feature.
 - Hooking a process's media pipeline can upset anti-cheat software and may not be welcome to Discord.

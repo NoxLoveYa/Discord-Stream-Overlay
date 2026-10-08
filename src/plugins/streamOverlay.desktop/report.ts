@@ -45,6 +45,8 @@ export interface HookReport {
     adapters: Adapter[];
     modules: string[];
     sessions: SessionInfo[];
+    /** Windows' software H.264 encoder (the one Discord falls back to) */
+    mf: { hooked: boolean; frames: number; drawn: number; format: string; problem: string; };
 }
 
 const list = <T>(value: unknown): T[] => Array.isArray(value) ? value as T[] : [];
@@ -70,7 +72,8 @@ export function parseHook(raw: string): HookReport | null {
             sessions: list<any>(o.sessions).map(s => ({
                 encoder: text(s?.encoder), device: text(s?.device), api: num(s?.api), codec: text(s?.codec), width: num(s?.width), height: num(s?.height),
                 fpsNum: num(s?.fpsNum), fpsDen: num(s?.fpsDen), encodes: num(s?.encodes), drawn: num(s?.drawn), unknown: num(s?.unknown), adapter: text(s?.adapter)
-            }))
+            })),
+            mf: { hooked: o.mf?.hooked === true, frames: num(o.mf?.frames), drawn: num(o.mf?.drawn), format: text(o.mf?.format), problem: text(o.mf?.problem) }
         };
     } catch {
         return null;
@@ -94,6 +97,8 @@ export function formatHook(h: HookReport): string[] {
     for (const s of h.sessions)
         lines.push(`    ${s.encoder} | opened on ${s.device}${s.adapter ? ` (${s.adapter})` : ""} | ${s.codec} ${s.width}x${s.height} at ${s.fpsNum}/${s.fpsDen} | encodes ${s.encodes}, drawn ${s.drawn}, unknown ${s.unknown}`);
     if (!h.sessions.length) lines.push("    (none)");
+
+    lines.push(`  Windows' software encoder: hooked=${h.mf.hooked}; frames it was given ${h.mf.frames}, drawn on ${h.mf.drawn}${h.mf.format ? `; frames are ${h.mf.format}` : ""}${h.mf.problem ? `; could not draw: ${h.mf.problem}` : ""}`);
     return lines;
 }
 
@@ -123,7 +128,8 @@ export function hints(hooks: HookReport[], encoder: EncoderInfo | null): string[
         if (has(modules, "amfrt")) out.push("amfrt64.dll (AMD's encoder library) is loaded in Discord: it can encode with an AMD card.");
         if (has(modules, "nvcuda")) out.push("nvcuda.dll (CUDA) is loaded in Discord: NVENC may be fed through CUDA.");
         if (has(modules, "libmfx") || has(modules, "libvpl") || has(modules, "igfx")) out.push("Intel's media libraries are loaded in Discord: it can encode with an Intel card.");
-        if (["openh264", "x264", "x265", "vpx", "aom", "dav1d", "avcodec", "ffmpeg"].some(m => has(modules, m))) out.push("A software codec library is loaded in Discord (OpenH264, x264, libvpx, libaom or FFmpeg): the stream may be encoded by the processor.");
+        if (["openh264", "x264", "x265", "vpx", "aom", "dav1d"].some(m => has(modules, m))) out.push("A software codec library is loaded in Discord (OpenH264, x264, libvpx, libaom or dav1d): the stream may be encoded by the processor.");
+        if (has(modules, "mfh264enc")) out.push("mfh264enc.dll (Windows' own H.264 encoder) is loaded in Discord: the stream is encoded in software.");
     }
 
     for (const h of hooks) {
@@ -131,7 +137,10 @@ export function hints(hooks: HookReport[], encoder: EncoderInfo | null): string[
             out.push(`Process ${h.pid}: the encoder hook is not installed ("stream only" is off, or it has not attached yet).`);
             continue;
         }
-        if (!h.sessions.length) out.push(`Process ${h.pid}: no NVENC session has been opened since the hook was installed: the stream does not use NVENC, or it started before the hook (restart the stream).`);
+        if (h.mf.frames > 0 && h.mf.drawn > 0) out.push(`Process ${h.pid}: Windows' software H.264 encoder was given ${h.mf.frames} frames (${h.mf.format}) and the overlay was drawn into ${h.mf.drawn} of them.`);
+        else if (h.mf.frames > 0) out.push(`Process ${h.pid}: Windows' software H.264 encoder was given ${h.mf.frames} frames (${h.mf.format || "format unknown"}) and the overlay was drawn into none${h.mf.problem ? `: ${h.mf.problem}` : " (is there an overlay to draw?)"}.`);
+
+        if (!h.sessions.length && h.mf.frames === 0) out.push(`Process ${h.pid}: no NVENC session has been opened since the hook was installed: nobody is watching the stream (Discord encodes nothing then), it does not use NVENC, or it started before the hook (restart the stream).`);
 
         for (const s of h.sessions) {
             if (s.device === "cuda") out.push(`NVENC session ${s.encoder} is opened on CUDA (${s.codec} ${s.width}x${s.height}): its frames are CUDA memory, which "stream only" cannot draw into yet.`);

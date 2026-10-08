@@ -69,8 +69,9 @@ progress, animated bars, hide when nothing is playing, scale and position.
 Draws the overlays on the stream and its preview but not on your screen.
 
 ### Requirements
-- Windows and an **NVIDIA GPU**. Discord must be using NVENC for Go Live (the default on NVIDIA); a software or
-  AMD/Intel encoder is not covered.
+- Windows, and Discord encoding the stream with **NVENC** (an NVIDIA GPU, the default on NVIDIA) or with **Windows' own
+  software H.264 encoder** (what Discord falls back to when no graphics card can encode the screen, as on many laptops). An
+  AMD or Intel hardware encoder is not covered.
 - A screen share of a monitor.
 - The native addon (below), which `pnpm install` and `pnpm build` take care of.
 
@@ -114,11 +115,16 @@ Viewers now see the overlay; your monitor does not. In Discord, your own stream 
 
 ### Limits
 - Overlays cannot be dragged on screen while it is on; use the Layout tab.
-- NVIDIA / NVENC only, monitor shares only. If the hook cannot attach, the overlays stay on your screen.
-- The stream has to go through NVENC for the screen it shares. On a laptop with two graphics cards the screen is usually on the
-  integrated one (an NVIDIA card with "no screen connected" in its settings is the sign), so Discord cannot hand those frames to
-  NVENC and uses another encoder (AMD's, Intel's, or software). The overlay would then be in neither place, so the plugin
+- NVENC and Windows' software H.264 encoder only, monitor shares only. If the hook cannot attach, the overlays stay on your
+  screen.
+- The stream has to go through one of those two for the screen it shares. On a laptop with two graphics cards the screen is
+  usually on the integrated one (an NVIDIA card with "no screen connected" in its settings is the sign), so Discord cannot hand
+  those frames to NVENC: it then uses the encoder of the integrated card if it can, and Windows' software one if it cannot. The
+  software one is covered; the integrated card's (AMD's, Intel's) is not, and the overlay would be in neither place, so the plugin
   checks (see "Does it reach the stream?" below) and puts the overlays back on your screen for that stream, with a notice.
+- With the software encoder the overlay costs some processor time on top of the encoding (a few tenths of a millisecond a frame
+  for an overlay of the usual size), and the colours of its thin edges and text are a little softer than with NVENC: video in
+  system memory keeps only a quarter of the colour detail.
 - The overlay is rendered at 30 fps and sent frame by frame to Discord's renderer; expect some extra CPU use.
 - The preview overlay only goes on your own stream: a video in somebody else's tile of the call view is left alone, so
   the streams you watch do not get it. It goes on a video with the shape of the shared screen, so your own camera (same
@@ -162,6 +168,7 @@ Both are rotated (kept as `.old` once they pass 512 KB and 1 MB).
 |---|---|
 | Overlay stays on your screen with "stream only" on | the addon is missing (`%APPDATA%\discord\StreamOverlay\nvenc\streamoverlay_nvenc.node`: `pnpm build` prints why it could not be built), or the page was not reloaded since Discord started (Ctrl + R) |
 | A notice says "Stream only does not work with this stream" | the plugin saw that nothing reached the stream and put the overlays on your screen: the reason is in the notice (the stream is not encoded by NVENC; it began before the hook; drawing was switched off). The next stream is tried again |
+| "Stream only" is on but nobody sees the overlay in the stream | Discord only encodes a stream while somebody is watching it, so until a viewer joins there is nothing to draw on. The plugin waits (the overlay stays off your screen, the plugin log says "stream only is waiting") and draws as soon as the first frame is encoded. Your own preview of the stream carries the overlay either way |
 | Nothing on screen and nothing on the stream | the share started before the hook: stop and start the share again |
 | Viewers see nothing, still nothing after restarting the share | read `%TEMP%\streamoverlay-nvenc.log`: it states why drawing was switched off (not an NVIDIA encoder, texture not shared, GPU timeout, ...) |
 | Overlay on the stream but not in your preview | the preview video was not recognised: it must be a non-http(s) `<video>` with the aspect ratio of the shared screen |
