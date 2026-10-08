@@ -4,6 +4,7 @@
     "keys": ["LMB", "RMB", "MMB"],
     "mouse": true,
     "interactive": ["ALT", "CAPS"],
+    "draggable": true,
     "settings": [
         { "id": "click-accent", "type": "color", "label": "Buttons accent", "default": "#8b5cf6" },
         { "id": "motion-accent", "type": "color", "label": "Movement and wheel accent", "default": "#22d3ee" },

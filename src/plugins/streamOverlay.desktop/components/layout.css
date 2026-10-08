@@ -1,0 +1,17 @@
+/* the picture sits on a checkerboard so the transparent parts of the overlays can be told from the screen */
+.vc-so-stage {
+    border: 1px solid var(--border-subtle, rgb(255 255 255 / 12%));
+    border-radius: 8px;
+    overflow: hidden;
+    background:
+        repeating-conic-gradient(rgb(255 255 255 / 5%) 0% 25%, transparent 0% 50%) 0 0 / 24px 24px,
+        #0b0d12;
+}
+
+.vc-so-stage-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    touch-action: none;
+    cursor: crosshair;
+}

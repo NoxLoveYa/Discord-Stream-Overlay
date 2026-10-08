@@ -14,6 +14,7 @@ import type { GlobalPreset, OverlayInfo } from "@plugins/streamOverlay.desktop/t
 import { useState } from "@webpack/common";
 
 import { AppBindings } from "./AppBindings";
+import { Layout } from "./Layout";
 import { OverlayCard } from "./OverlayCard";
 import { PresetManager } from "./PresetManager";
 import { GlobalPresetSummary } from "./PresetSummary";
@@ -21,6 +22,7 @@ import { Tabs } from "./Tabs";
 
 const TABS = [
     { id: "overlays", label: "Overlays" },
+    { id: "layout", label: "Layout" },
     { id: "presets", label: "Presets" },
     { id: "apps", label: "Apps" }
 ] as const;
@@ -98,6 +100,8 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
                         </ExpandableSection>
                     </>
                 )}
+
+                {tab === "layout" && <Layout overlays={overlays} />}
 
                 {tab === "presets" && (
                     <PresetManager

@@ -3,6 +3,7 @@
     "description": "The keys you press, lit up as you press them. Hold Alt + Caps to move or resize it.",
     "keys": ["TAB", "Q", "W", "E", "R", "T", "CAPS", "A", "S", "D", "F", "G", "SHIFT", "Z", "X", "C", "V", "B", "CTRL", "SPACE"],
     "interactive": ["ALT", "CAPS"],
+    "draggable": true,
     "settings": [
         { "id": "letter-accent", "type": "color", "label": "Letter keys accent", "default": "#8b5cf6" },
         { "id": "modifier-accent", "type": "color", "label": "Modifier keys accent", "default": "#22d3ee" },

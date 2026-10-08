@@ -85,6 +85,8 @@ export function readManifest(indexFile: string): Manifest {
         keys,
         mouse: raw?.mouse === true,
         interactive,
+        // it has to have a move combo to be armed; overlays written before the tag existed count as draggable too
+        draggable: interactive.length > 0 && raw?.draggable !== false,
         settings: settings.slice(0, MAX_SETTINGS)
     };
 }

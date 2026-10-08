@@ -34,6 +34,8 @@ export interface Manifest {
     mouse: boolean;
     /** while all of these are held, the overlay window takes the mouse */
     interactive: string[];
+    /** can be moved and resized with the `interactive` keys, so the Layout tab lets you drag it */
+    draggable: boolean;
     settings: OverlaySetting[];
 }
 
@@ -42,6 +44,7 @@ export interface OverlayInfo {
     name: string;
     title: string;
     description: string;
+    draggable: boolean;
     settings: OverlaySetting[];
 }
 

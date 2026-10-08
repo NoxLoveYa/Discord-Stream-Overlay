@@ -8,6 +8,7 @@ import { BrowserWindow, type IpcMainInvokeEvent, shell } from "electron";
 
 import { FocusWatcher } from "./main/focus";
 import { listOverlays as listOverlayFolder, pickFolder as pickOverlayFolder, resolveRoot } from "./main/folder";
+import { LayoutSink } from "./main/layout";
 import { Nvenc } from "./main/nvenc";
 import { OverlayWindow } from "./main/window";
 import type { OverlayValues } from "./types";
@@ -16,6 +17,8 @@ import type { OverlayValues } from "./types";
 
 const nvenc = new Nvenc();
 const overlay = new OverlayWindow(nvenc);
+const layoutSink = new LayoutSink();
+const layout = new OverlayWindow(layoutSink, true);
 const focus = new FocusWatcher();
 
 export function listOverlays(_: IpcMainInvokeEvent, root: string) {
@@ -45,6 +48,25 @@ export function reload() {
 
 export function takeChanges() {
     return overlay.takeChanges();
+}
+
+// The Layout tab: the enabled overlays rendered offscreen, shown on the settings page where the draggable ones can be moved.
+
+export function layoutShow(_: IpcMainInvokeEvent, sourceId: string | null, root: string, names: string[], values: OverlayValues) {
+    return layout.show(sourceId, null, root, names, values, true);
+}
+
+/** The newest picture (null when unchanged) at the given width, and what the overlays saved since the last call. */
+export async function layoutFrame(_: IpcMainInvokeEvent, width: number) {
+    return { frame: layoutSink.take(width), changes: await layout.takeChanges() };
+}
+
+export function layoutPointer(_: IpcMainInvokeEvent, kind: "move" | "down" | "up", x: number, y: number) {
+    layout.pointer(kind, x, y);
+}
+
+export function layoutHide() {
+    return layout.hide(false);
 }
 
 /** Starts or stops following which program is in focus. Nothing runs while nobody asked for it. */

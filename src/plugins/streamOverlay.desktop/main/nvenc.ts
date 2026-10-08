@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import { app, BrowserWindow, ipcMain, type Session, type WebContents } from "electron";
+import { app, BrowserWindow, ipcMain, type NativeImage, type Session, type WebContents } from "electron";
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
@@ -22,7 +22,8 @@ const dir = () => join(app.getPath("userData"), "StreamOverlay", "nvenc");
 export interface StreamSink {
     /** Hooks the encoder and starts drawing into it. False when that is not possible (the overlay then stays on screen). */
     start(): Promise<boolean>;
-    frame(bitmap: Buffer, width: number, height: number): void;
+    /** A new frame of the overlay (premultiplied BGRA). */
+    frame(image: NativeImage): void;
     stop(): void;
 }
 
@@ -179,7 +180,7 @@ export class Nvenc implements StreamSink {
     private readonly registered = new WeakSet<Session>();
     private nextId = 1;
     private started = false;
-    private latest: { bitmap: Buffer; width: number; height: number; } | null = null;
+    private latest: NativeImage | null = null;
     private timer: ReturnType<typeof setTimeout> | null = null;
     private lastSent = 0;
 
@@ -220,10 +221,10 @@ export class Nvenc implements StreamSink {
         return this.started;
     }
 
-    frame(bitmap: Buffer, width: number, height: number) {
+    frame(image: NativeImage) {
         if (!this.started) return;
 
-        this.latest = { bitmap, width, height };
+        this.latest = image;
         if (this.timer) return;
         this.timer = setTimeout(this.flush, Math.max(0, FRAME_GAP_MS - (Date.now() - this.lastSent)));
     }
@@ -244,8 +245,11 @@ export class Nvenc implements StreamSink {
         this.latest = null;
         if (!frame || !this.started) return;
 
+        // copied out only now: frames that were replaced in the meantime cost nothing
+        const { width, height } = frame.getSize();
+        const bitmap = frame.toBitmap();
         this.lastSent = Date.now();
-        for (const target of this.targets) target.send(FRAME, frame.bitmap, frame.width, frame.height);
+        for (const target of this.targets) target.send(FRAME, bitmap, width, height);
     };
 
     private askAll(command: string) {

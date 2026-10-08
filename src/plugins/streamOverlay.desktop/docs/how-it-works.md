@@ -93,6 +93,23 @@ a transparent canvas positioned over the video:
 - a video matches when it is not an http(s) file (those are the media in chat, embeds and the lightbox), is not inside
   the chat message list, has the aspect ratio of the overlay and is visible and large enough.
 
+### The Layout tab
+
+A second `OverlayWindow` (created with `layout = true`, fed to a `LayoutSink` instead of the encoder) renders the enabled
+overlays offscreen at the size of the shared display. The settings page (`components/Layout.tsx`) is in the renderer and
+cannot be pushed to, so it polls `Native.layoutFrame` every ~66 ms for the newest frame (scaled to 1280 px and drawn on a
+canvas) and for anything the overlays saved. While the tab is open:
+
+- the draggable overlays (`draggable` in `overlay.json`) are told that their move keys are held, so they are always armed;
+  `OverlayInput` merges those keys into the real key state;
+- the pointer over the canvas goes to `OverlayWindow.pointer` as fractions of the picture. That scales them to the page,
+  tells the page where the cursor is (so it lets the mouse through to the overlay under it) and injects the matching
+  event with `webContents.sendInputEvent`, so the overlay's own `move.js` drags and resizes as usual;
+- what the overlay saves comes back with the next poll and is written to the plugin settings, which re-renders the
+  window and updates the stream through the normal sync.
+
+Closing the tab destroys the window.
+
 ### Lifecycle
 
 - `startSync` (plugin start): if "stream only" is on, `Native.prepareStream` registers the preload script on Discord's

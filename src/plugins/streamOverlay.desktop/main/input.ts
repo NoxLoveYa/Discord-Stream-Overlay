@@ -23,7 +23,9 @@ export class OverlayInput {
 
     constructor(
         private readonly getWindow: () => BrowserWindow | null,
-        private readonly getCombos: () => string[][]
+        private readonly getCombos: () => string[][],
+        /** keys that count as held whatever the keyboard says */
+        private readonly heldAlways: () => string[] = () => []
     ) { }
 
     sync(keys: string[], mouse: boolean, relayPointer: boolean, freshPage: boolean) {
@@ -60,7 +62,8 @@ export class OverlayInput {
     }
 
     private readonly handlers: InputHandlers = {
-        keys: down => {
+        keys: pressed => {
+            const down = [...new Set([...pressed, ...this.heldAlways()])];
             this.setMouseCaptured(this.getCombos().some(combo => combo.length > 0 && combo.every(k => down.includes(k))));
             this.getWindow()?.webContents.executeJavaScript(`window.__streamOverlayKeys?.(${JSON.stringify(down)})`).catch(() => { });
         },

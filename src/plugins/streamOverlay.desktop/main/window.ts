@@ -46,9 +46,31 @@ export class OverlayWindow {
     private hideToken = 0;
     /** the page has been played backwards and must be reloaded before it is shown again */
     private exiting = false;
-    private readonly input = new OverlayInput(() => this.live(), () => this.entries.map(e => e.manifest.interactive));
+    private readonly input = new OverlayInput(() => this.live(), () => this.entries.map(e => e.manifest.interactive), () => this.armed());
 
-    constructor(private readonly stream: StreamSink) { }
+    /** `layout`: the window of the Layout tab, where the draggable overlays are always ready to be moved */
+    constructor(private readonly stream: StreamSink, private readonly layout = false) { }
+
+    /** Mouse from the Layout tab, as fractions of the picture: the offscreen page has no real mouse. */
+    pointer(kind: "move" | "down" | "up", fx: number, fy: number) {
+        const win = this.live();
+        if (!win || !this.offscreen) return;
+
+        const { width, height } = win.getContentBounds();
+        const x = Math.round(Math.min(1, Math.max(0, fx)) * width);
+        const y = Math.round(Math.min(1, Math.max(0, fy)) * height);
+        const { webContents } = win;
+
+        // the page only lets the mouse through to an overlay once it has seen the cursor over it
+        webContents.executeJavaScript(`window.__streamOverlayPointer?.(${x}, ${y})`).catch(() => { });
+        webContents.sendInputEvent(kind === "move"
+            ? { type: "mouseMove", x, y }
+            : { type: kind === "down" ? "mouseDown" : "mouseUp", x, y, button: "left", clickCount: 1 });
+    }
+
+    private armed() {
+        return this.layout ? this.entries.flatMap(e => e.manifest.draggable ? e.manifest.interactive : []) : [];
+    }
 
     async show(sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false) {
         this.hideToken++;
@@ -101,6 +123,7 @@ export class OverlayWindow {
         // an offscreen overlay cannot be dragged, so there is no cursor to relay
         const keys = unionKeys(manifests);
         this.input.sync(keys, manifests.some(m => m.mouse), !offscreen && manifests.some(m => m.interactive.length > 0), fresh);
+        if (this.layout) await win.webContents.executeJavaScript(`window.__streamOverlayKeys?.(${JSON.stringify(this.armed())})`).catch(() => { });
 
         return { match, displayId: display.id, bounds: display.bounds, overlays: found.length, keys: keys.length, streamOnly: offscreen };
     }
@@ -174,10 +197,7 @@ export class OverlayWindow {
         win.setIgnoreMouseEvents(true);
         if (this.offscreen) {
             win.webContents.setFrameRate(OFFSCREEN_FPS);
-            win.webContents.on("paint", (_, __, image) => {
-                const { width, height } = image.getSize();
-                this.stream.frame(image.toBitmap(), width, height);
-            });
+            win.webContents.on("paint", (_, __, image) => this.stream.frame(image));
         }
         win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
         win.webContents.on("will-navigate", e => e.preventDefault());

@@ -36,6 +36,7 @@ The defaults in `defaultOverlays/` (`red-border`, `keyboard`, `mouse`) are copie
     "keys": ["W", "SHIFT"],
     "mouse": true,
     "interactive": ["ALT", "CAPS"],
+    "draggable": true,
     "settings": [
         { "id": "accent", "type": "color", "label": "Accent", "default": "#8b5cf6" },
         { "id": "width", "type": "number", "label": "Width", "min": 1, "max": 32, "step": 1, "unit": "px", "default": 4 },
@@ -60,6 +61,8 @@ The defaults in `defaultOverlays/` (`red-border`, `keyboard`, `mouse`) are copie
 - `mouse`: the page receives how far the mouse moved and the wheel turned (never where the cursor is, or what is under
   it). Read from raw input, so it also works in games that lock the cursor.
 - `interactive`: while all these keys are held the window takes the mouse instead of passing clicks through.
+- `draggable`: the overlay moves itself with those keys (`move.js`), so the Layout tab of the settings lets you drag it.
+  Defaults to true when `interactive` is set; `"draggable": false` keeps an overlay out of it.
 
 Everything in `overlay.json` is validated (`main/manifest.ts`, `main/values.ts`): invalid entries are dropped, invalid
 values fall back to the default.
@@ -84,8 +87,9 @@ Sent by the page:
 
 ### The settings page
 
-The page has three tabs: **Overlays** (a card per overlay, whose switch turns it on or off and which opens the overlay's
-own page; and the folder tools), **Presets** (the global presets) and **Apps** (presets by app). The page of an overlay
+The page has four tabs: **Overlays** (a card per overlay, whose switch turns it on or off and which opens the overlay's
+own page; and the folder tools), **Layout** (the overlays as they are drawn over the screen, where the draggable ones can
+be moved and resized), **Presets** (the global presets) and **Apps** (presets by app). The page of an overlay
 has two tabs, **Settings** and **Presets**. A preset of an overlay keeps all its settings, including where it was
 dragged to and its size. The global presets keep which overlays are on and the settings of all of them (an overlay added
 after a global preset was saved is left as it is when that preset is applied). Presets are stored in the plugin settings
@@ -123,7 +127,7 @@ travel to the renderer (`main/nvenc.ts`); a preload script loads the addon there
 - The hook only knows which texture a frame is by watching Discord set the encoder up, so it is installed when the plugin
   starts: a stream that was already running has to be restarted. If the hook cannot be reached the overlays stay on screen.
 - Discord has to be restarted (and the page reloaded once) after the preload script is registered for the first time.
-- The overlays cannot be dragged while it is on: switch it off to move the keyboard or mouse overlay.
+- The overlays cannot be dragged on screen while it is on: move them in the **Layout** tab of the settings.
 - The preview overlay goes on any video with the shape of the shared screen that is not a file loaded over http(s) (so
   not the media in chats) and assumes the picture is letterboxed; someone else's stream of the same shape gets it too.
 - A Discord update can change the voice module and break the hook; failures are written to
@@ -157,4 +161,5 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `main/host.ts` | the page that holds every overlay as an iframe and bridges them to the main process |
 | `main/display.ts`, `main/animations.ts` | finding the shared display, the enter / exit animations |
 | `main/nvenc.ts`, `nvenc/` | stream only: the preload script, frame transport and preview overlay; the native NVENC hook |
+| `main/layout.ts`, `components/Layout.tsx` | the Layout tab: a second offscreen overlay window whose frames the settings page polls and whose mouse it feeds |
 | `main/focus.ts` | the program in focus: a small PowerShell helper (own process, only while somebody asks) and the object `native.ts` keeps it in |
