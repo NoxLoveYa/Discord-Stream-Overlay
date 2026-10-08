@@ -16,6 +16,7 @@ import type { GlobalPreset, OverlayInfo } from "@plugins/streamOverlay.desktop/t
 import { useState } from "@webpack/common";
 
 import { AppBindings } from "./AppBindings";
+import { Diagnostics } from "./Diagnostics";
 import { Layout } from "./Layout";
 import { OverlayCard } from "./OverlayCard";
 import { PresetManager } from "./PresetManager";
@@ -104,6 +105,10 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
                             )}
                         >
                             <Paragraph weight="semibold">Overlays folder</Paragraph>
+                        </ExpandableSection>
+
+                        <ExpandableSection renderContent={() => <Diagnostics />}>
+                            <Paragraph weight="semibold">Diagnostics</Paragraph>
                         </ExpandableSection>
                     </>
                 )}

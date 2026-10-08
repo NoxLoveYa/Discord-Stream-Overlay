@@ -9,6 +9,8 @@ import { app, BrowserWindow, ipcMain, type NativeImage, type Rectangle, type Ses
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 
+import { note } from "./log";
+
 const HELLO = "StreamOverlay:nvenc:hello";
 const COMMAND = "StreamOverlay:nvenc:command";
 const RESULT = "StreamOverlay:nvenc:result";
@@ -303,8 +305,15 @@ export class Nvenc implements StreamSink {
 
     constructor() {
         ipcMain.on(HELLO, event => {
-            this.targets.add(event.sender);
-            event.sender.once("destroyed", () => this.targets.delete(event.sender));
+            // a page that was reloaded says hello again: only the first time is a new listener needed
+            if (!this.targets.has(event.sender)) {
+                this.targets.add(event.sender);
+                event.sender.once("destroyed", () => this.targets.delete(event.sender));
+            }
+            note(`a page loaded the hook script (${this.targets.size} page(s) have it, drawing is ${this.started ? "on" : "off"})`);
+
+            // the new page does not know that drawing is on (the addon, which stays loaded, does): tell it, or it drops every frame
+            if (this.started) void this.ask(event.sender, "drawOn");
             this.resync();
         });
         // a renderer that got a rectangle without having the picture, or an addon that lost it
@@ -334,9 +343,14 @@ export class Nvenc implements StreamSink {
         if (!this.targets.size) return false;
 
         const started = await this.askAll("start");
-        if (!started.some(text => text.startsWith("on") || text.startsWith("already on"))) return false;
+        if (!started.some(text => text.startsWith("on") || text.startsWith("already on"))) {
+            note(`the encoder hook could not be started: ${started.join(" | ")}`);
+            return false;
+        }
 
-        this.started = (await this.askAll("drawOn")).some(text => text.startsWith("drawing on"));
+        const drawing = await this.askAll("drawOn");
+        this.started = drawing.some(text => text.startsWith("drawing on"));
+        note(`the encoder hook is in (${started.join(" | ")}); drawing: ${drawing.join(" | ")}`);
         return this.started;
     }
 
@@ -356,6 +370,7 @@ export class Nvenc implements StreamSink {
     stop() {
         if (!this.started) return;
 
+        note("drawing stopped");
         this.started = false;
         this.image = null;
         this.dirty = null;
@@ -400,6 +415,15 @@ export class Nvenc implements StreamSink {
         }
     };
 
+    /** What every page that has the native hook says about this machine and the streams (diagnose() of the addon), as JSON text. */
+    diagnose() {
+        return this.targets.size ? this.askAll("diagnose") : Promise.resolve([] as string[]);
+    }
+
+    describe() {
+        return { drawing: this.started, pages: this.targets.size, picture: this.size || "none yet" };
+    }
+
     /** What the hook has done since drawing went on, from the pages that have it; null when none answered. */
     async health() {
         if (!this.started) return null;
@@ -415,6 +439,7 @@ export class Nvenc implements StreamSink {
         return new Promise<string>(resolve => {
             const timer = setTimeout(() => {
                 this.pending.delete(id);
+                note(`no answer to "${command}" within ${ASK_TIMEOUT_MS / 1000} s`);
                 resolve("no answer");
             }, ASK_TIMEOUT_MS);
             this.pending.set(id, text => {

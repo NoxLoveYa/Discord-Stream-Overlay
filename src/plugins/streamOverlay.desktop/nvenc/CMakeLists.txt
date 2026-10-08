@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_library(streamoverlay_nvenc SHARED hook.cc)
 target_include_directories(streamoverlay_nvenc PRIVATE ${nvcodec_SOURCE_DIR}/include)
-target_link_libraries(streamoverlay_nvenc PRIVATE minhook d3d11 d3dcompiler)
+target_link_libraries(streamoverlay_nvenc PRIVATE minhook d3d11 d3dcompiler dxgi)
 set_target_properties(streamoverlay_nvenc PROPERTIES PREFIX "" SUFFIX ".node")
 
 # Installing the result is up to scripts/build/nvenc.mjs, which also installs the tools this needs

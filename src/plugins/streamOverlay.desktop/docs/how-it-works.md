@@ -159,6 +159,18 @@ Nothing is read at startup: the card stays on "Nothing playing" until the first 
   preview canvases are removed.
 - Switching the setting while a share runs rebuilds the window in the other mode.
 
+### Logs and diagnostics
+
+The hook writes `%TEMP%\streamoverlay-nvenc.log` from inside Discord's renderer (thread-safe, rotated at 1 MB). Besides the five
+hooks it needs it hooks `NvEncOpenEncodeSessionEx`, `NvEncInitializeEncoder` and `NvEncDestroyEncoder`, only to log: which API
+a session is opened on (Direct3D, CUDA, OpenGL), on which graphics card, which codec (H264, HEVC, AV1), the size and frame rate.
+Registered resources are logged with their type, format, size and card (the first 16), a texture that cannot be opened on the
+overlay's device is logged with its Windows error code, and while drawing is on a stats line is written every 10 s. `diagnose()`
+returns all this as JSON (the cards with how many screens each has, the loaded video libraries, the sessions) and works without
+the hooks being on. The main process keeps its own log (`main/log.ts`) of what it decides, and `main/diagnostics.ts` puts
+everything in one report (`report.ts` words the hook's JSON and the hints, and condenses Discord's voice log; `encoders.ts` tells
+which encoder the stream uses from that log, and whether it is one the overlay can be drawn into).
+
 ### Does it reach the stream?
 
 With "stream only" the overlay is taken off the screen as soon as the hook is in, so the hook has to be seen working. The
@@ -167,7 +179,7 @@ addon counts the frames NVENC was given since drawing went on and the ones it dr
 2 s and `judgeHook` (`health.ts`) decides: drawing switched itself off (any time); nothing encoded in 10 s (the stream is
 not NVENC: a laptop whose screen is on the integrated GPU, AMD, Intel, software); frames but none drawn (the stream began
 before the hook, or a texture that cannot be drawn on). On a verdict the next sync shows the overlays on the screen
-instead, with a notice, and the stream is left alone; the next stream is tried again, and so is turning the setting off
+instead, with a notice (which names the encoder, from Discord's log), and the stream is left alone; the next stream is tried again, and so is turning the setting off
 and on.
 
 ## Why it is built this way

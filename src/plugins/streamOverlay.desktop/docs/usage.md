@@ -129,6 +129,33 @@ Viewers now see the overlay; your monitor does not. In Discord, your own stream 
 - It reaches into Discord's media pipeline, which is further than Vencord's usual patches. Discord could treat it as
   tampering and anti-cheat software may dislike it. Use it at your own risk.
 
+### Diagnostics
+
+When "stream only" does not work on a machine, the settings page can collect what is needed to see why: **Overlays** tab,
+**Diagnostics**. It says which encoder Discord uses for the stream right now (from Discord's own voice log) and whether "stream
+only" can draw into it, and **Copy diagnostics** puts a report on the clipboard:
+
+- *What this points to*: the facts put in words (for instance "Hybrid graphics: the screens are on AMD Radeon, and the NVIDIA
+  card has none").
+- the graphics cards, and **how many screens are attached to each** (a laptop whose screen is on the integrated card has an
+  NVIDIA card with none, and Discord then cannot feed the screen to NVENC), Electron's own view of the GPUs and the displays;
+- the video libraries loaded in Discord (`amfrt64.dll` is AMD's encoder, `nvcuda.dll` CUDA, and so on);
+- what the native hook saw: every NVENC session (opened on Direct3D, CUDA or OpenGL, on which card, which codec and size,
+  frames encoded and drawn on) and the first textures that were registered;
+- the part of Discord's voice log about encoding: which encoders it found at startup, the codecs the stream tried in order,
+  how its `MultiEncoder` built the encoder (it lists the encoders it can use and tries them), and what the stream was encoded
+  with;
+- the last lines of the two logs below.
+
+Start a stream with an overlay on, wait about 15 seconds, then copy it. The logs it ends with are also on disk:
+
+| Log | Where | What |
+|---|---|---|
+| plugin | `%APPDATA%\discord\StreamOverlay\streamoverlay.log` (`discordcanary` for Canary) | what the plugin decided and why: the display it chose, whether the hook is in, the encoder of each stream, why "stream only" was given up |
+| native hook | `%TEMP%\streamoverlay-nvenc.log` | the machine (graphics cards, video modules), every encoder session and texture, a stats line every 10 s, and the error codes when a texture cannot be drawn on |
+
+Both are rotated (kept as `.old` once they pass 512 KB and 1 MB).
+
 ### Troubleshooting
 
 | Symptom | Likely cause |

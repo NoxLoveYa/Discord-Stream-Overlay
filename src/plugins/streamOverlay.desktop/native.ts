@@ -6,9 +6,11 @@
 
 import { BrowserWindow, type IpcMainInvokeEvent, shell } from "electron";
 
+import { buildReport, currentEncoder } from "./main/diagnostics";
 import { FocusWatcher } from "./main/focus";
 import { listOverlays as listOverlayFolder, pickFolder as pickOverlayFolder, resolveRoot } from "./main/folder";
 import { LayoutSink, screenshot } from "./main/layout";
+import { note as writeNote } from "./main/log";
 import { cleanMedia } from "./main/media";
 import { Nvenc } from "./main/nvenc";
 import { OverlayWindow } from "./main/window";
@@ -97,6 +99,26 @@ export function watchFocus(_: IpcMainInvokeEvent, on: boolean) {
 
 export function getFocus() {
     return focus.read();
+}
+
+/** The encoder Discord uses for the stream right now, from its own log (null when it does not say yet). */
+export function streamEncoder() {
+    return currentEncoder();
+}
+
+/** Everything that helps to see why "stream only" works or not on this machine, as text. `extra` is what the page adds. */
+export async function diagnostics(_: IpcMainInvokeEvent, extra: string) {
+    return buildReport({
+        extra: typeof extra === "string" ? extra.slice(0, 4000) : "",
+        hook: await nvenc.diagnose(),
+        nvenc: nvenc.describe(),
+        overlay: overlay.describe()
+    });
+}
+
+/** A line in the plugin's log, from the settings page. */
+export function note(_: IpcMainInvokeEvent, message: string) {
+    if (typeof message === "string") writeNote(`page: ${message.slice(0, 500)}`);
 }
 
 /** Whether the overlay really reaches the stream: what the hook has done since drawing went on, or null. */

@@ -10,9 +10,11 @@ import { Logger } from "@utils/Logger";
 import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore, UserStore } from "@webpack/common";
 
 import { startAppPresets, stopAppPresets } from "./appPresets";
-import { judgeHook } from "./health";
+import { explainEncoder } from "./encoders";
+import { GRACE_MS, judgeHook } from "./health";
 import { Native, settings, updateValues } from "./settings";
 import { startSpotify, stopSpotify } from "./spotify";
+import { streamState } from "./streamState";
 
 const logger = new Logger("StreamOverlay");
 
@@ -25,7 +27,6 @@ const SELF_ATTRIBUTE = "data-vc-stream-overlay-self";
 
 let running = false;
 let visible = false;
-let hooked = false;
 let syncTimer: ReturnType<typeof setInterval> | undefined;
 let collectTimer: ReturnType<typeof setInterval> | undefined;
 let lastKey = "";
@@ -33,8 +34,6 @@ let lastState = "";
 let sourceName: string | null = null;
 // Stream only takes the overlay off the screen, so it has to be seen reaching the stream: when this stream is not encoded
 // by NVENC it would be in neither place. Then the overlays go back on the screen, for this stream.
-let offscreenSince = 0;
-let streamOnlyFailed = "";
 let lastHealth = 0;
 let lastStreamOnly = false;
 // one sync at a time, so quick successive changes (dragging a color picker) cannot be applied out of order
@@ -50,20 +49,38 @@ function publishSelf() {
     if (id) document.documentElement.setAttribute(SELF_ATTRIBUTE, id);
 }
 
+/** The encoder of this stream, written to the log once (it takes Discord a few seconds to have one). */
+async function logEncoder() {
+    if (streamState.encoderLogged) return;
+    streamState.encoderLogged = true;
+
+    const encoder = await Native.streamEncoder().catch(() => null);
+    logger.info("the stream is encoded with", encoder?.label ?? "(Discord's log does not say)");
+    Native.note(explainEncoder(encoder));
+}
+
 /** Looks at whether the overlay reaches the stream; if not, the next sync puts it on the screen. */
 async function checkHook() {
-    if (!offscreenSince || streamOnlyFailed || Date.now() - lastHealth < HEALTH_INTERVAL_MS) return;
+    if (!streamState.offscreenSince || streamState.failed || Date.now() - lastHealth < HEALTH_INTERVAL_MS) return;
     lastHealth = Date.now();
 
-    const reason = judgeHook(await Native.streamHealth(), Date.now() - offscreenSince);
-    if (!reason) return;
+    const waited = Date.now() - streamState.offscreenSince;
+    const reason = judgeHook(await Native.streamHealth(), waited);
+    if (!reason) {
+        if (waited > GRACE_MS) await logEncoder();
+        return;
+    }
 
-    streamOnlyFailed = reason;
+    // Discord's own log says which encoder it is, which is more useful to the user than "NVENC saw nothing"
+    const encoder = await Native.streamEncoder().catch(() => null);
+    streamState.failed = reason;
     lastKey = "";
-    logger.warn("stream only does not work with this stream, the overlays go back on the screen", reason);
+    logger.warn("stream only does not work with this stream, the overlays go back on the screen", reason, encoder?.label);
+    Native.note(`stream only given up: ${reason}. ${explainEncoder(encoder)}`);
     showNotification({
         title: "StreamOverlay",
-        body: `"Stream only" does not work with this stream (${reason}), so the overlays are on your screen instead.`,
+        body: `"Stream only" does not work with this stream (${reason}), so the overlays are on your screen instead. ${explainEncoder(encoder)}. ` +
+            "\"Copy diagnostics\" in the settings (Overlays tab) collects what is needed to look into it.",
         noPersist: true
     });
 }
@@ -81,15 +98,15 @@ async function doSync() {
     // turning the setting off and on again tries again
     if (settings.store.streamOnly !== lastStreamOnly) {
         lastStreamOnly = settings.store.streamOnly;
-        streamOnlyFailed = "";
+        streamState.failed = "";
     }
     await checkHook();
-    const streamOnly = settings.store.streamOnly && !streamOnlyFailed;
+    const streamOnly = settings.store.streamOnly && !streamState.failed;
 
     // before any stream: the hook has to see the encoder being set up
-    if (streamOnly && !hooked) {
-        hooked = await Native.prepareStream();
-        if (hooked) logger.info("encoder hook installed, streams started from now on can carry the overlay");
+    if (streamOnly && !streamState.hooked) {
+        streamState.hooked = await Native.prepareStream();
+        if (streamState.hooked) logger.info("encoder hook installed, streams started from now on can carry the overlay");
     }
 
     // the store hands out proxies, which cannot cross IPC
@@ -106,17 +123,21 @@ async function doSync() {
         logger.info("hiding overlay", { sourceId });
         visible = false;
         // the next stream is tried again
-        offscreenSince = 0;
-        streamOnlyFailed = "";
+        streamState.offscreenSince = 0;
+        streamState.failed = "";
+        streamState.encoderLogged = false;
         return Native.hide();
     }
 
     const result = await Native.show(sourceId, sourceName, overlayRoot, overlays, values, streamOnly);
     visible = result != null;
-    offscreenSince = streamOnly && result?.streamOnly ? offscreenSince || Date.now() : 0;
+    streamState.offscreenSince = streamOnly && result?.streamOnly ? streamState.offscreenSince || Date.now() : 0;
     // the encoder hook is not reachable yet (Discord was not reloaded since the plugin registered its script): try again
     if (streamOnly && result && !result.streamOnly) lastKey = "";
-    if (state !== lastState) logger.info("showing overlay", { sourceId, sourceName, ...result });
+    if (state !== lastState) {
+        logger.info("showing overlay", { sourceId, sourceName, ...result });
+        Native.note(`showing: source ${sourceId}, "stream only" ${streamOnly ? "on" : settings.store.streamOnly ? "on but given up for this stream" : "off"}, overlays ${overlays.join(", ")}`);
+    }
     lastState = state;
 }
 
@@ -148,7 +169,7 @@ export function startSync() {
 export function stopSync() {
     running = false;
     visible = false;
-    hooked = false;
+    streamState.hooked = false;
     clearInterval(syncTimer);
     clearInterval(collectTimer);
     stopAppPresets();
