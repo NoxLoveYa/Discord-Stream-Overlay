@@ -22,14 +22,12 @@ const dir = () => join(app.getPath("userData"), "StreamOverlay", "nvenc");
 export interface StreamSink {
     /** Hooks the encoder and starts drawing into it. False when that is not possible (the overlay then stays on screen). */
     start(): Promise<boolean>;
-    /** A new frame of the overlay (premultiplied BGRA). */
     frame(image: NativeImage): void;
     stop(): void;
 }
 
-// Discord's voice module (and with it NVENC) lives in the renderer process, not in the main one. The addon has to be
-// loaded there, and the only code that runs there with Node is a preload script. The same script draws the overlay over
-// the preview of the stream: that is a <video> fed by the native module, which the encoder hook never touches.
+// NVENC lives in Discord's renderer process, where only a preload script has Node: it loads the addon there. It also
+// draws the overlay over the stream preview, a <video> fed natively that the encoder hook never touches.
 const preload = (addon: string) => `
 const { ipcRenderer } = require("electron");
 
@@ -42,7 +40,7 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         return addon = module.exports;
     };
 
-    // the latest overlay, converted to a small RGBA canvas; one canvas per preview sits over its <video>
+    // the latest overlay as a small RGBA canvas; one canvas per preview sits over its <video>
     const source = document.createElement("canvas");
     const shown = new Map();
     let ratio = 0;
@@ -50,6 +48,8 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
     let active = false;
     let latest = null;
     let stale = false;
+    let out = new Uint32Array(0);
+    let image = null;
 
     const convert = (bitmap, width, height) => {
         if (bitmap.byteOffset & 3) bitmap = Uint8Array.from(bitmap);
@@ -57,7 +57,12 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         const w = Math.floor(width / step);
         const h = Math.floor(height / step);
         const src = new Uint32Array(bitmap.buffer, bitmap.byteOffset, width * height);
-        const out = new Uint32Array(w * h);
+        if (!image || image.width !== w || image.height !== h) {
+            out = new Uint32Array(w * h);
+            image = new ImageData(new Uint8ClampedArray(out.buffer), w, h);
+            source.width = w;
+            source.height = h;
+        }
         let i = 0;
         for (let y = 0; y < h; y++) {
             const row = y * step * width;
@@ -71,16 +76,15 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
                     const g = Math.min(255, ((v >>> 8) & 0xff) * 255 / a | 0);
                     const b = Math.min(255, (v & 0xff) * 255 / a | 0);
                     out[i] = (a << 24 | b << 16 | g << 8 | r) >>> 0;
+                } else {
+                    out[i] = 0;
                 }
             }
         }
-        source.width = w;
-        source.height = h;
-        source.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(out.buffer), w, h), 0, 0);
+        source.getContext("2d").putImageData(image, 0, 0);
     };
 
-    // the previews: videos that show something shaped like the shared screen. The stream is fed natively, while every
-    // media in a message, embed or lightbox is a file loaded over http(s)
+    // videos shaped like the shared screen; the stream is fed natively, media in chats are files loaded over http(s)
     const previews = () => [...document.querySelectorAll("video")].filter(v => {
         if (/^https?:/i.test(v.currentSrc || v.src) || v.closest('[data-list-id="chat-messages"]')) return false;
         if (!v.videoWidth || Math.abs(v.videoWidth / v.videoHeight - ratio) > 0.02) return false;
@@ -114,7 +118,7 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
                 canvas.dirty = true;
             }
 
-            // the picture inside the element is letterboxed
+            // letterboxed inside the element
             const r = video.getBoundingClientRect();
             let w = r.width, h = r.height;
             if (w / h > ratio) w = h * ratio; else h = w / ratio;
@@ -126,9 +130,13 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
 
             if (canvas.dirty) {
                 canvas.dirty = false;
-                canvas.width = source.width;
-                canvas.height = source.height;
-                canvas.getContext("2d").drawImage(source, 0, 0);
+                if (canvas.width !== source.width || canvas.height !== source.height) {
+                    canvas.width = source.width;
+                    canvas.height = source.height;
+                }
+                const context = canvas.getContext("2d");
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.drawImage(source, 0, 0);
             }
         }
         raf = requestAnimationFrame(place);
@@ -162,7 +170,7 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         if (!active) return;
         try { load().setOverlay(bitmap, width, height); } catch { }
 
-        // converted later, and only if a preview is on screen
+        // converted only if a preview is on screen
         latest = { bitmap, width, height };
         ratio = width / height;
         stale = true;
@@ -194,12 +202,11 @@ export class Nvenc implements StreamSink {
             this.pending.delete(id);
         });
 
-        // the preload only applies to pages loaded after it is registered: a page open at the time needs a reload (Ctrl+R)
+        // a page that is already open only gets the preload after a reload
         app.on("session-created", session => this.register(session));
         for (const win of BrowserWindow.getAllWindows()) this.register(win.webContents.session);
     }
 
-    /** The session of the window asking is Discord's own. */
     register(session: Session) {
         if (this.registered.has(session)) return;
 
@@ -245,7 +252,6 @@ export class Nvenc implements StreamSink {
         this.latest = null;
         if (!frame || !this.started) return;
 
-        // copied out only now: frames that were replaced in the meantime cost nothing
         const { width, height } = frame.getSize();
         const bitmap = frame.toBitmap();
         this.lastSent = Date.now();

@@ -10,7 +10,7 @@ import type { StreamSink } from "./nvenc";
 
 let shooting = false;
 
-/** A JPEG of what is on the display right now (what the stream shows, without the overlays), or null. */
+/** A JPEG of the display as it is now, or null. */
 export async function screenshot(display: Display, width: number) {
     if (shooting) return null;
     shooting = true;
@@ -26,7 +26,7 @@ export async function screenshot(display: Display, width: number) {
     }
 }
 
-/** Keeps the latest frame of the Layout tab's offscreen window until the settings page comes to look at it. */
+/** Keeps the latest frame of the Layout tab's window until the settings page asks for it. */
 export class LayoutSink implements StreamSink {
     private image: NativeImage | null = null;
     private version = 0;
@@ -45,7 +45,7 @@ export class LayoutSink implements StreamSink {
         this.image = null;
     }
 
-    /** The frame scaled down to `width`, or null when nothing changed since the last one. */
+    /** The frame scaled to `width`, or null when nothing changed since the last call. */
     take(width: number) {
         if (!this.image || this.version === this.taken) return null;
         this.taken = this.version;

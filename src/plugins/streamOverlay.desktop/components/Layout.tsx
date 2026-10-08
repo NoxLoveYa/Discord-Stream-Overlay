@@ -16,35 +16,43 @@ const BACKGROUND_MS = 750;
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
+// reused while the size stays the same: this runs once per frame
+let pixels = new Uint32Array(0);
+let image: ImageData | null = null;
+
 /** The overlay arrives as premultiplied BGRA; a canvas wants RGBA that is not premultiplied. */
 function paint(canvas: HTMLCanvasElement, bitmap: Uint8Array, width: number, height: number) {
     const bytes = bitmap.byteOffset & 3 ? bitmap.slice() : bitmap;
     const src = new Uint32Array(bytes.buffer, bytes.byteOffset, width * height);
-    const out = new Uint32Array(width * height);
 
-    for (let i = 0; i < out.length; i++) {
+    if (!image || image.width !== width || image.height !== height) {
+        pixels = new Uint32Array(width * height);
+        image = new ImageData(new Uint8ClampedArray(pixels.buffer), width, height);
+    }
+    if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+    }
+
+    for (let i = 0; i < pixels.length; i++) {
         const v = src[i];
         const a = v >>> 24;
         if (a === 255) {
-            out[i] = (v & 0xff00ff00) | ((v & 0xff) << 16) | ((v >>> 16) & 0xff);
+            pixels[i] = (v & 0xff00ff00) | ((v & 0xff) << 16) | ((v >>> 16) & 0xff);
         } else if (a) {
             const r = Math.min(255, (((v >>> 16) & 0xff) * 255 / a) | 0);
             const g = Math.min(255, (((v >>> 8) & 0xff) * 255 / a) | 0);
             const b = Math.min(255, ((v & 0xff) * 255 / a) | 0);
-            out[i] = ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
+            pixels[i] = ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
+        } else {
+            pixels[i] = 0;
         }
     }
 
-    canvas.width = width;
-    canvas.height = height;
-    canvas.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(out.buffer), width, height), 0, 0);
+    canvas.getContext("2d")!.putImageData(image, 0, 0);
 }
 
-/**
- * The enabled overlays as they are drawn over the screen being shared (or the main screen), rendered by an offscreen
- * window in the main process. The mouse over the picture is handed to that window, which lets the draggable overlays be
- * moved and resized the way Alt + Caps does on screen; where they end up is saved in the settings.
- */
+/** The enabled overlays as drawn over the shared screen (or the main one), rendered offscreen; the mouse is handed to that window. */
 export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const { overlayRoot, enabledOverlays, overlayValues } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues"]);
     const canvas = useRef<HTMLCanvasElement>(null);
@@ -55,7 +63,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const enabled = [...enabledOverlays];
     const draggable = overlays.filter(o => o.draggable && enabled.includes(o.name));
 
-    // render what is on, again whenever it changes (also when a drag has just been saved)
+    // also when a drag has just been saved
     const state = JSON.stringify([overlayRoot, enabled, plain(overlayValues)]);
     useEffect(() => {
         const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
@@ -68,7 +76,6 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         let backgroundTimer: ReturnType<typeof setTimeout> | undefined;
         let backgroundUrl = "";
 
-        // one request per frame of this window, and the window renders at the refresh rate of the monitor it draws on
         const tick = async () => {
             try {
                 const { frame, changes } = await Native.layoutFrame(PICTURE_WIDTH);
@@ -85,7 +92,6 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
             }
         };
 
-        // what the stream shows behind the overlays: a screenshot of the monitor, refreshed a few times a second
         const refreshBackground = async () => {
             try {
                 const jpeg = await Native.layoutBackground(PICTURE_WIDTH);

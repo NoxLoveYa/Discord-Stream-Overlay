@@ -53,9 +53,8 @@ std::unordered_map<void*, void*> g_registered;  // registered handle -> Discord'
 std::unordered_map<void*, void*> g_mapped;      // mapped handle -> registered handle
 
 // ---- blending the overlay into the frame ----------------------------------------------------------------------------
-// Discord's textures belong to its own device, which other threads use. We open them on a device of our own through the
-// shared handle, draw the overlay over them there (premultiplied alpha), and wait for the GPU to be done before NVENC
-// reads the frame.
+// Discord's textures belong to its own device: they are opened on one of ours through the shared handle, drawn on
+// there (premultiplied alpha), and the GPU is waited for before NVENC reads the frame.
 
 ComPtr<ID3D11Device> g_dev;
 ComPtr<ID3D11DeviceContext> g_ctx;
@@ -68,7 +67,7 @@ ComPtr<ID3D11Texture2D> g_overlayTex;
 ComPtr<ID3D11ShaderResourceView> g_overlaySrv;
 uint32_t g_overlayW = 0, g_overlayH = 0;
 
-// the latest overlay bitmap (B8G8R8A8, premultiplied), handed in from JS and uploaded by the encoding thread
+// the latest overlay (B8G8R8A8, premultiplied), copied in from JS and uploaded by the encoding thread
 std::vector<uint8_t> g_pending;
 uint32_t g_pendingW = 0, g_pendingH = 0;
 bool g_pendingDirty = false;
@@ -345,7 +344,6 @@ std::string start() {
         auto create = reinterpret_cast<NVENCSTATUS(NVENCAPI*)(NV_ENCODE_API_FUNCTION_LIST*)>(GetProcAddress(nv, "NvEncodeAPICreateInstance"));
         if (!create) return "NvEncodeAPICreateInstance not found";
 
-        // our own copy of the function table: the entries point at the same functions Discord calls
         NV_ENCODE_API_FUNCTION_LIST list = { NV_ENCODE_API_FUNCTION_LIST_VER };
         NVENCSTATUS st = create(&list);
         if (st != NV_ENC_SUCCESS) return "NvEncodeAPICreateInstance failed: " + std::to_string(st);

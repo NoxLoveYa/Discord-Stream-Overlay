@@ -29,7 +29,7 @@ interface Entry {
     values: Record<string, OverlayValue>;
 }
 
-const hostPath = () => join(app.getPath("temp"), "vencord-streamoverlay-host.html");
+const hostPath = (layout: boolean) => join(app.getPath("temp"), `vencord-streamoverlay-host${layout ? "-layout" : ""}.html`);
 
 /**
  * The transparent, click-through window drawn over the shared screen, and everything that depends on what it shows. In
@@ -53,7 +53,7 @@ export class OverlayWindow {
     /** `layout`: the window of the Layout tab, where the draggable overlays are always ready to be moved */
     constructor(private readonly stream: StreamSink, private readonly layout = false) { }
 
-    /** Mouse from the Layout tab, as fractions of the picture: the offscreen page has no real mouse. */
+    /** Mouse from the Layout tab, as fractions of the picture (an offscreen page has no real mouse). */
     pointer(kind: "move" | "down" | "up", fx: number, fy: number) {
         const win = this.live();
         if (!win || !this.offscreen) return;
@@ -70,7 +70,6 @@ export class OverlayWindow {
             : { type: kind === "down" ? "mouseDown" : "mouseUp", x, y, button: "left", clickCount: 1 });
     }
 
-    /** The display being drawn on, once shown. */
     currentDisplay() {
         return this.display?.display ?? null;
     }
@@ -112,7 +111,6 @@ export class OverlayWindow {
         const { display, match } = await this.displayFor(sourceId, sourceName);
         const win = this.window();
         win.setBounds(display.bounds);
-        // the Layout tab follows the monitor; the stream only needs what the stream runs at
         if (offscreen) win.webContents.setFrameRate(this.layout ? Math.min(MAX_FRAME_RATE, Math.max(1, display.displayFrequency || 60)) : OFFSCREEN_FPS);
 
         if (this.exiting) {
@@ -129,8 +127,8 @@ export class OverlayWindow {
         const key = JSON.stringify(overlays);
         const fresh = key !== this.loadedKey;
         if (fresh) {
-            writeFileSync(hostPath(), hostHtml(overlays));
-            await win.loadURL(pathToFileURL(hostPath()).href);
+            writeFileSync(hostPath(this.layout), hostHtml(overlays));
+            await win.loadURL(pathToFileURL(hostPath(this.layout)).href);
             this.loadedKey = key;
         }
 
@@ -140,7 +138,6 @@ export class OverlayWindow {
         this.shown = true;
         if (fresh) await playEnter(win);
 
-        // an offscreen overlay cannot be dragged, so there is no cursor to relay
         const keys = unionKeys(manifests);
         this.input.sync(keys, manifests.some(m => m.mouse), !offscreen && manifests.some(m => m.interactive.length > 0), fresh);
         if (this.layout) await win.webContents.executeJavaScript(`window.__streamOverlayKeys?.(${JSON.stringify(this.armed())})`).catch(() => { });

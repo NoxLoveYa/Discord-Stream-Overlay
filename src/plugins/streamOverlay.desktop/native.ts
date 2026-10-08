@@ -50,21 +50,21 @@ export function takeChanges() {
     return overlay.takeChanges();
 }
 
-// The Layout tab: the enabled overlays rendered offscreen, shown on the settings page where the draggable ones can be moved.
+// The Layout tab: the overlays rendered offscreen and shown on the settings page, where the draggable ones can be moved.
 
 export function layoutShow(_: IpcMainInvokeEvent, sourceId: string | null, root: string, names: string[], values: OverlayValues) {
-    // the real overlay would be in the background picture as well
+    // or it would be in the screenshot behind the layout too
     overlay.suspend();
     return layout.show(sourceId, null, root, names, values, true);
 }
 
-/** What is on the screen being drawn on right now, as a JPEG (null when it cannot be had). */
+/** A JPEG of the screen being drawn on. */
 export function layoutBackground(_: IpcMainInvokeEvent, width: number) {
     const display = layout.currentDisplay();
     return display ? screenshot(display, width) : null;
 }
 
-/** The newest picture (null when unchanged) at the given width, and what the overlays saved since the last call. */
+/** The newest picture (null when unchanged) and what the overlays saved since the last call. */
 export async function layoutFrame(_: IpcMainInvokeEvent, width: number) {
     return { frame: layoutSink.take(width), changes: await layout.takeChanges() };
 }
