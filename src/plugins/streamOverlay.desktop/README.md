@@ -155,8 +155,10 @@ travel to the renderer (`main/nvenc.ts`); a preload script loads the addon there
   starts: a stream that was already running has to be restarted. If the hook cannot be reached the overlays stay on screen.
 - Discord has to be restarted (and the page reloaded once) after the preload script is registered for the first time.
 - The overlays cannot be dragged on screen while it is on: move them in the **Layout** tab of the settings.
-- The preview overlay goes on any video with the shape of the shared screen that is not a file loaded over http(s) (so
-  not the media in chats) and assumes the picture is letterboxed; someone else's stream of the same shape gets it too.
+- The preview overlay goes on a video with the shape of the shared screen that is not a file loaded over http(s) (so not
+  the media in chats) and whose tile in the call view is yours: a tile (`data-selenium-video-tile`) of somebody else is left
+  alone, so the streams you watch do not get it. A video outside a tile, or in a tile without an id, still gets it, and it
+  assumes the picture is letterboxed. Your own camera in a tile of yours has the shape of the screen too and can get it.
 - A Discord update can change the voice module and break the hook; failures are written to
   `%TEMP%\streamoverlay-nvenc.log`.
 

@@ -102,7 +102,12 @@ a transparent canvas positioned over the video:
 - one canvas per matching video is placed over the picture (accounting for letterboxing) and follows it on every
   animation frame;
 - a video matches when it is not an http(s) file (those are the media in chat, embeds and the lightbox), is not inside
-  the chat message list, has the aspect ratio of the overlay and is visible and large enough.
+  the chat message list, has the aspect ratio of the overlay and is visible and large enough, and does not belong to
+  somebody else. The plugin puts the id of the user of this Discord in an attribute of the page (`sync.ts`, read by the
+  preload, which shares the DOM but not the JavaScript of the page), and the call view puts the owner of every video in
+  the `data-selenium-video-tile` of its tile: a tile with another owner (a user id, or a stream key, which ends with the
+  id of the one who streams) is skipped. What says nothing (no tile, no id, no id of ours yet) is kept, so the preview of
+  your own stream is never lost to a guess;
 
 ### The Layout tab
 

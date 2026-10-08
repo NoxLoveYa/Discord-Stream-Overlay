@@ -7,7 +7,7 @@
 import { showNotification } from "@api/Notifications";
 import { SettingsStore } from "@api/Settings";
 import { Logger } from "@utils/Logger";
-import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore } from "@webpack/common";
+import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore, UserStore } from "@webpack/common";
 
 import { startAppPresets, stopAppPresets } from "./appPresets";
 import { judgeHook } from "./health";
@@ -20,6 +20,8 @@ const SETTINGS_PATH = "plugins.StreamOverlay";
 const SYNC_INTERVAL_MS = 1000;
 const COLLECT_INTERVAL_MS = 400;
 const HEALTH_INTERVAL_MS = 2000;
+// the attribute the preload of main/nvenc.ts reads, to leave the overlay off the streams of other people
+const SELF_ATTRIBUTE = "data-vc-stream-overlay-self";
 
 let running = false;
 let visible = false;
@@ -42,6 +44,12 @@ const onStreamStart = (e: { sourceName?: string; }) => {
     sourceName = e.sourceName ?? null;
 };
 
+/** Tells the preview overlay whose Discord this is, so that it only goes on your own stream (not on the ones you watch). */
+function publishSelf() {
+    const id = UserStore.getCurrentUser()?.id;
+    if (id) document.documentElement.setAttribute(SELF_ATTRIBUTE, id);
+}
+
 /** Looks at whether the overlay reaches the stream; if not, the next sync puts it on the screen. */
 async function checkHook() {
     if (!offscreenSince || streamOnlyFailed || Date.now() - lastHealth < HEALTH_INTERVAL_MS) return;
@@ -63,6 +71,8 @@ async function checkHook() {
 /** Shows, updates or hides the overlay window to match the stream and the settings. */
 async function doSync() {
     if (!running) return;
+
+    publishSelf();
 
     const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
     const active = ApplicationStreamingStore.getCurrentUserActiveStream();
@@ -143,6 +153,7 @@ export function stopSync() {
     clearInterval(collectTimer);
     stopAppPresets();
     stopSpotify();
+    document.documentElement.removeAttribute(SELF_ATTRIBUTE);
     FluxDispatcher.unsubscribe("STREAM_START", onStreamStart);
     SettingsStore.removePrefixChangeListener(SETTINGS_PATH, sync);
     lastKey = "";

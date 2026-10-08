@@ -131,13 +131,45 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         };
     };
 
+    // who the plugin says is using this Discord (it is in the page, which the preload shares with it)
+    const self = () => document.documentElement.getAttribute("data-vc-stream-overlay-self") || "";
+
+    // The call view puts every video in a tile that says whose it is (a user id; for a stream it may be the stream key,
+    // which ends with the id of the one who streams). Somebody else's tile is somebody else's stream or camera. A video
+    // outside a tile, or a tile without an id, says nothing: it stays, so the preview of your own stream is never lost.
+    const ownedByOthers = v => {
+        const me = self();
+        const owner = v.closest("[data-selenium-video-tile]")?.getAttribute("data-selenium-video-tile");
+        return !!me && !!owner && owner !== me && !owner.endsWith(":" + me);
+    };
+
+    // a console note when the videos that get the overlay change, to see what was picked and what was left alone
+    let noted = "";
+    const note = (kept, skipped) => {
+        const text = kept + " / " + skipped;
+        if (text === noted) return;
+        noted = text;
+        console.info("[StreamOverlay] the preview overlay is on " + kept + " video(s) and was left off " + skipped + " of somebody else's");
+    };
+
     // videos shaped like the shared screen; the stream is fed natively, media in chats are files loaded over http(s)
-    const previews = () => [...document.querySelectorAll("video")].filter(v => {
-        if (/^https?:/i.test(v.currentSrc || v.src) || v.closest('[data-list-id="chat-messages"]')) return false;
-        if (!v.videoWidth || Math.abs(v.videoWidth / v.videoHeight - ratio) > 0.02) return false;
-        const r = v.getBoundingClientRect();
-        return r.width > 120 && r.height > 60 && getComputedStyle(v).visibility !== "hidden";
-    });
+    const previews = () => {
+        let skipped = 0;
+        const kept = [...document.querySelectorAll("video")].filter(v => {
+            if (/^https?:/i.test(v.currentSrc || v.src) || v.closest('[data-list-id="chat-messages"]')) return false;
+            if (!v.videoWidth || Math.abs(v.videoWidth / v.videoHeight - ratio) > 0.02) return false;
+            if (ownedByOthers(v)) {
+                skipped++;
+                return false;
+            }
+            return true;
+        }).filter(v => {
+            const r = v.getBoundingClientRect();
+            return r.width > 120 && r.height > 60 && getComputedStyle(v).visibility !== "hidden";
+        });
+        note(kept.length, skipped);
+        return kept;
+    };
 
     const place = () => {
         raf = 0;

@@ -120,8 +120,10 @@ Viewers now see the overlay; your monitor does not. In Discord, your own stream 
   NVENC and uses another encoder (AMD's, Intel's, or software). The overlay would then be in neither place, so the plugin
   checks (see "Does it reach the stream?" below) and puts the overlays back on your screen for that stream, with a notice.
 - The overlay is rendered at 30 fps and sent frame by frame to Discord's renderer; expect some extra CPU use.
-- The preview overlay goes on any non-http(s) video with the shape of the shared screen, so someone else's stream of
-  the same shape could get it too, and it assumes the picture is letterboxed.
+- The preview overlay only goes on your own stream: a video in somebody else's tile of the call view is left alone, so
+  the streams you watch do not get it. It goes on a video with the shape of the shared screen, so your own camera (same
+  shape, in a tile of yours) can get it too, and it assumes the picture is letterboxed. The console says how many videos
+  it is on and how many it skipped ("[StreamOverlay] the preview overlay is on..."), which helps when it picks wrong.
 - A Discord update can change the voice module and break the hook. If viewers stop seeing the overlay after an update,
   see below.
 - It reaches into Discord's media pipeline, which is further than Vencord's usual patches. Discord could treat it as
