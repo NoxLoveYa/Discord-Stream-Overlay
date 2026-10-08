@@ -6,19 +6,29 @@
 
 import { Paragraph } from "@components/Paragraph";
 import { Switch } from "@components/Switch";
+import { effectiveFontValue, fontFollows } from "@plugins/streamOverlay.desktop/main/values";
 import { settings, updateValues } from "@plugins/streamOverlay.desktop/settings";
 import type { OverlaySetting, OverlayValue } from "@plugins/streamOverlay.desktop/types";
 import { SearchableSelect } from "@webpack/common";
 import type { ReactNode } from "react";
 
 import { ColorControl } from "./ColorControl";
+import { FontControl } from "./FontControl";
 import { NumberControl } from "./NumberControl";
 
-function OverlayOption({ overlay, setting }: { overlay: string; setting: OverlaySetting; }) {
-    const { overlayValues } = settings.use(["overlayValues"]);
-    const value = overlayValues[overlay]?.[setting.id] ?? setting.default;
+function OverlayOption({ overlay, setting, all }: { overlay: string; setting: OverlaySetting; all: OverlaySetting[]; }) {
+    const { overlayValues, globalFont } = settings.use(["overlayValues", "globalFont"]);
+    const stored = overlayValues[overlay]?.[setting.id];
+    // a font shows what it draws with (stored, global or theme default), so a gothic preset shows its blackletter
+    const value = setting.type === "font"
+        ? effectiveFontValue(setting, all, overlayValues[overlay] ?? {}, globalFont)
+        : stored ?? setting.default;
     const set = (v: OverlayValue) => updateValues(values => {
         (values[overlay] ??= {})[setting.id] = v;
+    });
+    // back to following the theme (or the default font): the theme picks the family again
+    const clear = () => updateValues(values => {
+        delete values[overlay]?.[setting.id];
     });
 
     let control: ReactNode;
@@ -61,6 +71,32 @@ function OverlayOption({ overlay, setting }: { overlay: string; setting: Overlay
             );
             break;
         }
+        case "font":
+            control = (
+                <FontControl
+                    label={setting.label}
+                    value={String(value)}
+                    stored={typeof stored === "string" ? stored : undefined}
+                    builtin={setting.options ?? []}
+                    follows={stored === undefined ? fontFollows(all, overlayValues[overlay] ?? {}, globalFont) : null}
+                    onChange={set}
+                    onClear={clear}
+                />
+            );
+            break;
+    }
+
+    // the font picker manages its own customs, so it takes the whole row: label on top, picker below
+    if (setting.type === "font") {
+        return (
+            <div className="vc-so-row vc-so-row-stack">
+                <Paragraph>{setting.label}</Paragraph>
+                <Paragraph size="sm" defaultColor={false} className="vc-so-muted">
+                    Saved per preset: bind a game to a global preset on the Apps tab to give it its own font.
+                </Paragraph>
+                {control}
+            </div>
+        );
     }
 
     return (
@@ -71,10 +107,10 @@ function OverlayOption({ overlay, setting }: { overlay: string; setting: Overlay
     );
 }
 
-export function OverlayOptionList({ overlay, options }: { overlay: string; options: OverlaySetting[]; }) {
+export function OverlayOptionList({ overlay, options, all }: { overlay: string; options: OverlaySetting[]; all: OverlaySetting[]; }) {
     return (
         <div>
-            {options.map(setting => <OverlayOption key={setting.id} overlay={overlay} setting={setting} />)}
+            {options.map(setting => <OverlayOption key={setting.id} overlay={overlay} setting={setting} all={all} />)}
         </div>
     );
 }

@@ -22,7 +22,7 @@ import { Tabs } from "./Tabs";
 const PRESETS = "presets";
 
 export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBack(): void; }) {
-    const { enabledOverlays, overlayValues, overlayPresets } = settings.use(["enabledOverlays", "overlayValues", "overlayPresets"]);
+    const { enabledOverlays, overlayValues, overlayPresets, globalFont } = settings.use(["enabledOverlays", "overlayValues", "overlayPresets", "globalFont"]);
     const [tab, setTab] = useState("");
 
     const { name } = overlay;
@@ -76,7 +76,7 @@ export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBac
                                 {tabs.length > 2 ? `Reset ${open.label.toLowerCase()}` : "Reset to defaults"}
                             </Button>
                         </div>
-                        <OverlayOptionList overlay={name} options={open.settings} />
+                        <OverlayOptionList overlay={name} options={open.settings} all={overlay.settings} />
                     </div>
                 ) : (
                     <Paragraph size="sm" defaultColor={false} className="vc-so-muted">This overlay has no settings.</Paragraph>
@@ -87,7 +87,7 @@ export function OverlayDetail({ overlay, onBack }: { overlay: OverlayInfo; onBac
                         hint="A preset keeps all the settings of this overlay, including where you moved it and how big you made it."
                         emptyText="No presets for this overlay yet. Set it up the way you like, then save it here to come back to it later."
                         presets={presets}
-                        isActive={preset => sameSettings(overlay.settings, preset.values, current)}
+                        isActive={preset => sameSettings(overlay.settings, preset.values, current, globalFont)}
                         summarize={preset => <OverlayPresetSummary overlay={overlay} preset={preset} />}
                         save={to => setPresets(withPreset(presets, { name: to, values: { ...current } }))}
                         rename={(preset, to) => setPresets(renamePreset(presets, preset.name, to))}

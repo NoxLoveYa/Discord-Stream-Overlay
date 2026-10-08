@@ -23,18 +23,16 @@
     }
 
     .mod .cap span {
-        font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
         font-size: 10px;
         font-weight: 700;
         letter-spacing: 0.18em;
     }
 
-    /* blackletter in lower case: its capitals cannot be read at this size */
+    /* blackletter in lower case: its capitals cannot be read at this size (the family itself comes from --font) */
     .key:not(.mod) .cap span {
-        font-family: ObnoxiousGothic, "Old English Text MT", Georgia, serif;
-        font-size: 25px;
-        font-weight: 700;
-        letter-spacing: 0;
+        font-size: calc(25px * var(--text-scale, 1));
+        font-weight: var(--key-font-weight, 700);
+        letter-spacing: var(--key-letter-spacing, 0);
         text-transform: lowercase;
     }
 }

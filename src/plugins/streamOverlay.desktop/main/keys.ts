@@ -11,7 +11,7 @@ export const VIRTUAL_KEYS = new Map<string, number>([
     ...[..."ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"].map(c => [c, c.charCodeAt(0)] as const),
     ["SHIFT", 0x10], ["CTRL", 0x11], ["ALT", 0x12], ["CAPS", 0x14], ["SPACE", 0x20], ["TAB", 0x09], ["ENTER", 0x0d], ["ESC", 0x1b],
     ["LEFT", 0x25], ["UP", 0x26], ["RIGHT", 0x27], ["DOWN", 0x28],
-    ["LMB", 0x01], ["RMB", 0x02], ["MMB", 0x04],
+    ["LMB", 0x01], ["RMB", 0x02], ["MMB", 0x04], ["M4", 0x05], ["M5", 0x06],
     ["F24", 0x87]
 ]);
 

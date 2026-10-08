@@ -8,6 +8,7 @@ import { BrowserWindow, type IpcMainInvokeEvent, shell } from "electron";
 
 import { FocusWatcher } from "./main/focus";
 import { listOverlays as listOverlayFolder, pickFolder as pickOverlayFolder, resolveRoot } from "./main/folder";
+import { addFontFamily, importFont, listFonts, removeFont } from "./main/fonts";
 import { LayoutSink, screenshot } from "./main/layout";
 import { cleanMedia } from "./main/media";
 import { Nvenc } from "./main/nvenc";
@@ -32,6 +33,23 @@ export function pickFolder(event: IpcMainInvokeEvent, current: string) {
 
 export function openRoot(_: IpcMainInvokeEvent, root: string) {
     return shell.openPath(resolveRoot(root));
+}
+
+/** The user's custom fonts: imported files and system names. */
+export function listCustomFonts() {
+    return listFonts();
+}
+
+export function importFontFile(event: IpcMainInvokeEvent) {
+    return importFont(event);
+}
+
+export function addSystemFont(_: IpcMainInvokeEvent, name: string) {
+    return addFontFamily(name);
+}
+
+export function removeCustomFont(_: IpcMainInvokeEvent, name: string) {
+    return removeFont(name);
 }
 
 export function show(event: IpcMainInvokeEvent, sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false) {

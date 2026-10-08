@@ -5,7 +5,72 @@
     "keys": ["TAB", "Q", "W", "E", "R", "T", "CAPS", "A", "S", "D", "F", "G", "SHIFT", "Z", "X", "C", "V", "B", "CTRL", "SPACE"],
     "interactive": ["ALT", "CAPS"],
     "draggable": true,
+    "lol": true,
     "settings": [
+        {
+            "id": "arrangement",
+            "type": "select",
+            "label": "Key arrangement",
+            "group": "Keys",
+            "default": "default",
+            "options": [
+                { "label": "Default (full keyboard)", "value": "default" },
+                { "label": "FPS (WASD + Shift, Ctrl, Space)", "value": "fps" },
+                { "label": "MOBA (QWER + D, F)", "value": "moba" }
+            ]
+        },
+        {
+            "id": "champion",
+            "type": "select",
+            "label": "MOBA champion",
+            "group": "Keys",
+            "when": { "arrangement": "moba" },
+            "default": "auto",
+            "options": [
+                { "label": "Auto (in game)", "value": "auto" },
+                { "label": "Letters (QWER)", "value": "generic" },
+                { "label": "Fiora", "value": "fiora" },
+                { "label": "Akali", "value": "akali" }
+            ]
+        },
+        {
+            "id": "summoner-d",
+            "type": "select",
+            "label": "D summoner spell",
+            "group": "Keys",
+            "when": { "arrangement": "moba" },
+            "default": "auto",
+            "options": [
+                { "label": "Auto (in game)", "value": "auto" },
+                { "label": "Flash", "value": "summoner-flash" },
+                { "label": "Ignite", "value": "summoner-ignite" },
+                { "label": "Teleport", "value": "summoner-teleport" },
+                { "label": "Ghost", "value": "summoner-ghost" },
+                { "label": "Exhaust", "value": "summoner-exhaust" },
+                { "label": "Heal", "value": "summoner-heal" },
+                { "label": "Barrier", "value": "summoner-barrier" },
+                { "label": "Smite", "value": "summoner-smite" }
+            ]
+        },
+        {
+            "id": "summoner-f",
+            "type": "select",
+            "label": "F summoner spell",
+            "group": "Keys",
+            "when": { "arrangement": "moba" },
+            "default": "auto",
+            "options": [
+                { "label": "Auto (in game)", "value": "auto" },
+                { "label": "Flash", "value": "summoner-flash" },
+                { "label": "Ignite", "value": "summoner-ignite" },
+                { "label": "Teleport", "value": "summoner-teleport" },
+                { "label": "Ghost", "value": "summoner-ghost" },
+                { "label": "Exhaust", "value": "summoner-exhaust" },
+                { "label": "Heal", "value": "summoner-heal" },
+                { "label": "Barrier", "value": "summoner-barrier" },
+                { "label": "Smite", "value": "summoner-smite" }
+            ]
+        },
         {
             "id": "theme",
             "type": "select",
@@ -14,9 +79,63 @@
             "default": "default",
             "options": [
                 { "label": "Default", "value": "default" },
-                { "label": "Gothic", "value": "gothic" }
+                { "label": "Gothic", "value": "gothic" },
+                { "label": "Neon Nights", "value": "neon" },
+                { "label": "Porcelain Light", "value": "porcelain" },
+                { "label": "Retro Terminal", "value": "terminal" },
+                { "label": "Sakura Pastel", "value": "sakura" },
+                { "label": "Molten Lava", "value": "molten" },
+                { "label": "Royal Gold", "value": "royal" },
+                { "label": "Ocean Abyss", "value": "ocean" }
             ]
         },
+        {
+            "id": "font",
+            "type": "font",
+            "label": "Font",
+            "group": "Look",
+            "default": "default",
+            "options": [
+                { "label": "Default", "value": "default" },
+                { "label": "Gothic blackletter", "value": "ObnoxiousGothic" },
+                { "label": "Consolas", "value": "Consolas" },
+                { "label": "Georgia", "value": "Georgia" },
+                { "label": "Palatino Linotype", "value": "Palatino Linotype" }
+            ]
+        },
+        {
+            "id": "font-weight",
+            "type": "select",
+            "label": "Font weight",
+            "group": "Look",
+            "when": { "theme": "default" },
+            "default": "600",
+            "options": [
+                { "label": "Regular", "value": "400" },
+                { "label": "Medium", "value": "500" },
+                { "label": "Semibold", "value": "600" },
+                { "label": "Bold", "value": "700" }
+            ]
+        },
+        {
+            "id": "g-font-weight",
+            "type": "select",
+            "label": "Font weight",
+            "group": "Look",
+            "when": { "theme": "gothic" },
+            "default": "700",
+            "options": [
+                { "label": "Regular", "value": "400" },
+                { "label": "Medium", "value": "500" },
+                { "label": "Semibold", "value": "600" },
+                { "label": "Bold", "value": "700" }
+            ]
+        },
+        { "id": "letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "when": { "theme": "default" }, "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0.04 },
+        { "id": "g-letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "when": { "theme": "gothic" }, "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0 },
+        { "id": "text-scale", "type": "number", "label": "Text size", "group": "Look", "min": 0.7, "max": 1.6, "step": 0.05, "default": 1 },
+        { "id": "well-opacity", "type": "number", "label": "Key background", "group": "Look", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 100 },
+        { "id": "panel-opacity", "type": "number", "label": "Board background", "group": "Look", "min": 0, "max": 100, "step": 5, "unit": "%", "default": 100 },
         { "id": "letter-accent", "type": "color", "label": "Letter keys accent", "group": "Look", "when": { "theme": "default" }, "default": "#8b5cf6" },
         { "id": "g-letter-accent", "type": "color", "label": "Letter keys accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#e4def0" },
         { "id": "modifier-accent", "type": "color", "label": "Modifier keys accent", "group": "Look", "when": { "theme": "default" }, "default": "#22d3ee" },

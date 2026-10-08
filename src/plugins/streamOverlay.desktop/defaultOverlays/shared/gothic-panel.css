@@ -14,14 +14,14 @@ html[data-theme="gothic"] {
 
 :where(html[data-theme="gothic"]) {
     .board {
-        border: 1.6px solid rgb(var(--silver-rgb) / 26%);
+        border: 1.6px solid color-mix(in srgb, rgb(var(--silver-rgb) / 26%) var(--panel-opacity, 100%), transparent);
         border-radius: 6px;
-        background: linear-gradient(180deg, rgb(10 6 13 / 97%), rgb(2 1 3 / 97%));
+        background: linear-gradient(180deg, color-mix(in srgb, rgb(10 6 13 / 97%) var(--panel-opacity, 100%), transparent), color-mix(in srgb, rgb(2 1 3 / 97%) var(--panel-opacity, 100%), transparent));
         box-shadow:
-            0 24px 40px -16px rgb(var(--shadow-rgb) / 70%),
-            0 2px 6px rgb(var(--shadow-rgb) / 60%),
-            0 0 14px rgb(var(--gem-rgb) / 8%),
-            inset 0 0 0 1px rgb(0 0 0 / 70%);
+            0 24px 40px -16px color-mix(in srgb, rgb(var(--shadow-rgb) / 70%) var(--panel-opacity, 100%), transparent),
+            0 2px 6px color-mix(in srgb, rgb(var(--shadow-rgb) / 60%) var(--panel-opacity, 100%), transparent),
+            0 0 14px color-mix(in srgb, rgb(var(--gem-rgb) / 8%) var(--panel-opacity, 100%), transparent),
+            inset 0 0 0 1px color-mix(in srgb, rgb(0 0 0 / 70%) var(--panel-opacity, 100%), transparent);
     }
 
     .board::before {
@@ -29,7 +29,7 @@ html[data-theme="gothic"] {
         position: absolute;
         inset: 4px;
         z-index: 0;
-        border: 1px solid rgb(var(--silver-rgb) / 12%);
+        border: 1px solid color-mix(in srgb, rgb(var(--silver-rgb) / 12%) var(--panel-opacity, 100%), transparent);
         border-radius: 3px;
         pointer-events: none;
     }
@@ -41,7 +41,7 @@ html[data-theme="gothic"] {
         position: absolute;
         inset: -6px;
         z-index: 0;
-        background: rgb(var(--gem-rgb));
+        background: color-mix(in srgb, rgb(var(--gem-rgb)) var(--panel-opacity, 100%), transparent);
         mask:
             var(--gem) left top / 11px 11px no-repeat,
             var(--gem) right top / 11px 11px no-repeat,
@@ -67,7 +67,6 @@ html[data-theme="gothic"] {
         border: 1px solid rgb(var(--silver-rgb) / 18%);
         border-radius: 5px;
         background: rgb(8 4 12 / 95%);
-        font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
         font-size: 12px;
     }
 

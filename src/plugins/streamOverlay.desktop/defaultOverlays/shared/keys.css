@@ -1,5 +1,15 @@
 /* --accent is the light under the key, --edge the hairline on the cap; the overlay's style.css defines --key-accent-rgb and
-   --key-edge-rgb (.mod swaps them). */
+   --key-edge-rgb (.mod swaps them). Typography follows the overlay's settings of the active theme. */
+:root {
+    --key-font-weight: var(--font-weight);
+    --key-letter-spacing: var(--letter-spacing);
+}
+
+html[data-theme="gothic"] {
+    --key-font-weight: var(--g-font-weight);
+    --key-letter-spacing: var(--g-letter-spacing);
+}
+
 .key {
     --accent: var(--key-accent-rgb);
     --edge: var(--key-edge-rgb);
@@ -9,7 +19,16 @@
     height: var(--key);
     border-radius: 9px;
     background: var(--graphite-900);
+
+    /* the keyboard's "well-opacity" setting fades the well (0 removes the rectangle); every theme redefines
+       --graphite-900, so this follows without touching them, and the mouse has no such setting (always full) */
+    background: color-mix(in srgb, var(--graphite-900) var(--well-opacity, 100%), transparent);
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 4%);
+}
+
+/* the hairline would outlive a removed well, so it goes with it */
+html[data-well-opacity="0"] .key {
+    box-shadow: none;
 }
 
 .mod {
@@ -88,14 +107,15 @@
     position: relative;
     z-index: 1;
     color: var(--text);
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
+    font-size: calc(15px * var(--text-scale, 1));
+    font-weight: var(--key-font-weight, 600);
+    letter-spacing: var(--key-letter-spacing, 0.04em);
 }
 
 .mod .cap span {
     color: var(--text-muted);
-    font-size: 10px;
+    font-size: calc(10px * var(--text-scale, 1));
+    font-weight: var(--key-font-weight, 600);
     letter-spacing: 0.16em;
 }
 
@@ -114,4 +134,29 @@
 
 .is-down .cap span {
     color: #fff;
+}
+
+/* hidden by a game arrangement (the keyboard's "arrangement" setting): only its keys show */
+[data-key].is-hidden {
+    display: none;
+}
+
+/* a spell icon (MOBA champions and summoners): the letter hides while the icon loads */
+.cap img.spell {
+    display: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.key.has-icon .cap img.spell[src] {
+    display: block;
+}
+
+.key.has-icon .cap span {
+    display: none;
 }

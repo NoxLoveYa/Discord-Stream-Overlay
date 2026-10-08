@@ -13,7 +13,7 @@ export type OverlayValues = Record<string, Record<string, OverlayValue>>;
 
 export interface OverlaySetting {
     id: string;
-    type: "color" | "number" | "boolean" | "select";
+    type: "color" | "number" | "boolean" | "select" | "font";
     label: string;
     default: OverlayValue;
     /** not shown in the settings window, the overlay sets it itself (a dragged position) */
@@ -40,6 +40,8 @@ export interface Manifest {
     mouse: boolean;
     /** the overlay receives the track that is playing in Spotify */
     media: boolean;
+    /** the overlay receives the local League of Legends player's champion and summoner spells while in game */
+    lol: boolean;
     /** while all of these are held, the overlay window takes the mouse */
     interactive: string[];
     /** can be moved and resized with the `interactive` keys, so the Layout tab lets you drag it */
@@ -69,6 +71,27 @@ export interface MediaState {
     position: number;
     playing: boolean;
     at: number;
+}
+
+
+/** The local League of Legends player while a game is live, or null outside one. */
+export interface LolState {
+    /** Data Dragon champion id ("Fiora") */
+    champion: string;
+    /** the QWER ability icon addresses, "" when unknown */
+    spells: string[];
+    /** "summoner-flash" style ids, "" when unknown */
+    summonerD: string;
+    summonerF: string;
+}
+
+/** A font the user added: a file imported into the fonts folder, or a system font by name (`file` is null). */
+export interface FontEntry {
+    /** shown in the font picker */
+    name: string;
+    /** the CSS family, like "ObnoxiousGothic" or "Consolas" */
+    family: string;
+    file: string | null;
 }
 
 /** Only the values that differ from the defaults are kept */

@@ -5,6 +5,7 @@
  */
 
 import { isShown } from "./groups";
+import { effectiveFontValue } from "./main/values";
 import type { GlobalPreset, OverlayInfo, OverlayPresets, OverlaySetting, OverlayValue, OverlayValues } from "./types";
 
 export const MAX_NAME = 40;
@@ -53,15 +54,19 @@ export function withPreset<T extends Named>(list: T[], preset: T): T[] {
 
 export const withoutPreset = <T extends Named>(list: T[], name: string) => list.filter(p => !sameName(p.name, name));
 
-// a value that is not saved is its default
-export const sameSettings = (settings: OverlaySetting[], a: Stored, b: Stored) =>
-    settings.every(s => (a?.[s.id] ?? s.default) === (b?.[s.id] ?? s.default));
+// a value that is not saved is its default; a font follows the theme when nothing is saved, so fonts compare as effective
+export const sameSettings = (settings: OverlaySetting[], a: Stored, b: Stored, globalFont: unknown = "default") =>
+    settings.every(s => s.type === "font"
+        ? effectiveFontValue(s, settings, a ?? {}, globalFont) === effectiveFontValue(s, settings, b ?? {}, globalFont)
+        : (a?.[s.id] ?? s.default) === (b?.[s.id] ?? s.default));
 
 export const colorsOf = (settings: OverlaySetting[], stored: Stored) =>
     settings.filter(s => s.type === "color" && isShown(s, settings, stored)).map(s => String(stored?.[s.id] ?? s.default));
 
-export const changedCount = (settings: OverlaySetting[], stored: Stored) =>
-    settings.filter(s => stored?.[s.id] !== undefined && stored[s.id] !== s.default).length;
+export const changedCount = (settings: OverlaySetting[], stored: Stored, globalFont: unknown = "default") =>
+    settings.filter(s => s.type === "font"
+        ? effectiveFontValue(s, settings, stored ?? {}, globalFont) !== effectiveFontValue(s, settings, {}, globalFont)
+        : stored?.[s.id] !== undefined && stored[s.id] !== s.default).length;
 
 export function captureGlobal(name: string, overlays: OverlayInfo[], enabled: string[], values: OverlayValues): GlobalPreset {
     return {
@@ -80,10 +85,10 @@ export function applyGlobal(preset: GlobalPreset, enabled: string[], values: Ove
     };
 }
 
-export function isGlobalActive(preset: GlobalPreset, overlays: OverlayInfo[], enabled: string[], values: OverlayValues) {
+export function isGlobalActive(preset: GlobalPreset, overlays: OverlayInfo[], enabled: string[], values: OverlayValues, globalFont: unknown = "default") {
     const known = overlays.filter(o => has(preset.values, o.name));
     return known.length > 0 && known.every(o =>
         preset.enabled.includes(o.name) === enabled.includes(o.name)
-        && sameSettings(o.settings, preset.values[o.name], values[o.name])
+        && sameSettings(o.settings, preset.values[o.name], values[o.name], globalFont)
     );
 }

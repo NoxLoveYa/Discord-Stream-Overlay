@@ -2,7 +2,7 @@
     "title": "Mouse",
     "category": "Input",
     "description": "The mouse buttons, wheel and movement, in a default or a gothic look. Hold Alt + Caps to move or resize it.",
-    "keys": ["LMB", "RMB", "MMB"],
+    "keys": ["LMB", "RMB", "MMB", "M4", "M5"],
     "mouse": true,
     "interactive": ["ALT", "CAPS"],
     "draggable": true,
@@ -15,9 +15,61 @@
             "default": "default",
             "options": [
                 { "label": "Default", "value": "default" },
-                { "label": "Gothic", "value": "gothic" }
+                { "label": "Gothic", "value": "gothic" },
+                { "label": "Neon Nights", "value": "neon" },
+                { "label": "Porcelain Light", "value": "porcelain" },
+                { "label": "Retro Terminal", "value": "terminal" },
+                { "label": "Sakura Pastel", "value": "sakura" },
+                { "label": "Molten Lava", "value": "molten" },
+                { "label": "Royal Gold", "value": "royal" },
+                { "label": "Ocean Abyss", "value": "ocean" }
             ]
         },
+        {
+            "id": "font",
+            "type": "font",
+            "label": "Font",
+            "group": "Look",
+            "default": "default",
+            "options": [
+                { "label": "Default", "value": "default" },
+                { "label": "Gothic blackletter", "value": "ObnoxiousGothic" },
+                { "label": "Consolas", "value": "Consolas" },
+                { "label": "Georgia", "value": "Georgia" },
+                { "label": "Palatino Linotype", "value": "Palatino Linotype" }
+            ]
+        },
+        {
+            "id": "font-weight",
+            "type": "select",
+            "label": "Font weight",
+            "group": "Look",
+            "when": { "theme": "default" },
+            "default": "600",
+            "options": [
+                { "label": "Regular", "value": "400" },
+                { "label": "Medium", "value": "500" },
+                { "label": "Semibold", "value": "600" },
+                { "label": "Bold", "value": "700" }
+            ]
+        },
+        {
+            "id": "g-font-weight",
+            "type": "select",
+            "label": "Font weight",
+            "group": "Look",
+            "when": { "theme": "gothic" },
+            "default": "700",
+            "options": [
+                { "label": "Regular", "value": "400" },
+                { "label": "Medium", "value": "500" },
+                { "label": "Semibold", "value": "600" },
+                { "label": "Bold", "value": "700" }
+            ]
+        },
+        { "id": "letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "when": { "theme": "default" }, "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0.04 },
+        { "id": "g-letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "when": { "theme": "gothic" }, "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0 },
+        { "id": "text-scale", "type": "number", "label": "Text size", "group": "Look", "min": 0.7, "max": 1.6, "step": 0.05, "default": 1 },
         { "id": "click-accent", "type": "color", "label": "Buttons accent", "group": "Look", "when": { "theme": "default" }, "default": "#8b5cf6" },
         { "id": "g-click-accent", "type": "color", "label": "Buttons accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#e4def0" },
         { "id": "motion-accent", "type": "color", "label": "Movement and wheel accent", "group": "Look", "when": { "theme": "default" }, "default": "#22d3ee" },

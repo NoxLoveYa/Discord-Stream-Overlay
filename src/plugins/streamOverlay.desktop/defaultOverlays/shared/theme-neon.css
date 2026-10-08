@@ -1,0 +1,78 @@
+/* Neon Nights: a cyberpunk cabinet in near-black blue, pink neon letters and a cyan edge.
+   Fixed palette (the accent settings stay on the Default theme). Only applies while the "theme" setting is "neon".
+   The rules are inside :where(), which counts for nothing; the variables have to beat :root, so they are not. */
+html[data-theme="neon"] {
+    --graphite-900: #070a16;
+    --graphite-700: #0d1326;
+    --graphite-500: #162040;
+    --text: #f2f6ff;
+    --text-muted: #8b98b8;
+
+    /* keyboard, mouse and Spotify card draw with these, whatever their accents say */
+    --key-accent-rgb: 255 45 149;
+    --key-edge-rgb: 34 211 238;
+    --click-rgb: 255 45 149;
+    --motion-rgb: 34 211 238;
+    --card-accent-rgb: 255 45 149;
+    --card-accent2-rgb: 34 211 238;
+    --move-rgb: 34 211 238;
+    --gem-rgb: 255 45 149;
+}
+
+:where(html[data-theme="neon"]) {
+    .board {
+        border: 1.5px solid color-mix(in srgb, rgb(255 45 149 / 38%) var(--panel-opacity, 100%), transparent);
+        border-radius: 8px;
+        background: linear-gradient(180deg, color-mix(in srgb, rgb(10 15 32 / 96%) var(--panel-opacity, 100%), transparent), color-mix(in srgb, rgb(4 6 15 / 96%) var(--panel-opacity, 100%), transparent));
+        box-shadow:
+            0 24px 48px -14px color-mix(in srgb, rgb(0 0 0 / 85%) var(--panel-opacity, 100%), transparent),
+            0 0 22px color-mix(in srgb, rgb(255 45 149 / 16%) var(--panel-opacity, 100%), transparent),
+            inset 0 0 22px color-mix(in srgb, rgb(34 211 238 / 6%) var(--panel-opacity, 100%), transparent),
+            inset 0 1px 0 color-mix(in srgb, rgb(140 200 255 / 14%) var(--panel-opacity, 100%), transparent);
+    }
+
+    /* faint scanlines over the panel */
+    .board::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        border-radius: inherit;
+        background: repeating-linear-gradient(180deg, color-mix(in srgb, rgb(255 255 255 / 2.2%) var(--panel-opacity, 100%), transparent) 0 1px, color-mix(in srgb, rgb(255 255 255 / 0%) var(--panel-opacity, 100%), transparent) 1px 3px);
+        pointer-events: none;
+    }
+
+    .key {
+        border-radius: 5px;
+    }
+
+    .cap {
+        border-radius: 5px 5px 4px 4px;
+    }
+
+    .key:not(.mod) .cap span {
+        text-shadow: 0 0 12px rgb(var(--accent) / 80%);
+    }
+
+    .btn-m4,
+    .btn-m4 .cap,
+    .btn-m5,
+    .btn-m5 .cap {
+        border-radius: 5px;
+    }
+
+    .btn-right,
+    .btn-right .cap {
+        border-radius: 5px 20px 5px 5px;
+    }
+
+    .wheel,
+    .roller,
+    .pad {
+        border-radius: 7px;
+    }
+
+    .cover {
+        border-radius: 7px;
+    }
+}

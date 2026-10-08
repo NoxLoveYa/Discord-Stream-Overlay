@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import type { Manifest, MediaState, OverlayValue, OverlayValues } from "@plugins/streamOverlay.desktop/types";
+import type { LolState, Manifest, MediaState, OverlayValue, OverlayValues } from "@plugins/streamOverlay.desktop/types";
 import { app, BrowserWindow, type Display } from "electron";
 import { writeFileSync } from "fs";
 import { join } from "path";
@@ -13,12 +13,14 @@ import { pathToFileURL } from "url";
 import { playEnter, playExit } from "./animations";
 import { pickDisplay } from "./display";
 import { findOverlays } from "./folder";
+import { fontFaceCssFor, fontStyleScript } from "./fonts";
 import { hostHtml } from "./host";
 import { OverlayInput } from "./input";
+import { subscribeLol } from "./lol";
 import { readManifest, unionKeys } from "./manifest";
 import { SAMPLE_MEDIA } from "./media";
 import type { StreamSink } from "./nvenc";
-import { clamp, resolveValue, settingsScript } from "./values";
+import { clamp, effectiveFontValue, resolveValue, settingsScript } from "./values";
 
 const OFFSCREEN_FPS = 30;
 const LAYOUT_FPS = 60;
@@ -41,6 +43,8 @@ export class OverlayWindow {
     private suspended = false;
     private pressed = false;
     private media: MediaState | null = null;
+    private lol: LolState | null = null;
+    private unsubLol: (() => void) | null = null;
     // in iframe order
     private entries: Entry[] = [];
     private loadedKey = "";
@@ -108,6 +112,27 @@ export class OverlayWindow {
         return win.webContents.executeJavaScript(`window.__streamOverlayMedia?.(${JSON.stringify(state)})`).catch(() => { });
     }
 
+    /** The live LoL player, for the overlays that asked for it (null outside a game). */
+    private pushLol() {
+        const win = this.live();
+        if (!win) return Promise.resolve();
+        return win.webContents.executeJavaScript(`window.__streamOverlayLol?.(${JSON.stringify(this.lol)})`).catch(() => { });
+    }
+
+    /** Follows the live game while an overlay wants it: nothing polls while none does. */
+    private syncLol(wanted: boolean) {
+        if (wanted && !this.unsubLol) {
+            this.unsubLol = subscribeLol(state => {
+                this.lol = state;
+                void this.pushLol();
+            });
+        } else if (!wanted && this.unsubLol) {
+            this.unsubLol();
+            this.unsubLol = null;
+            this.lol = null;
+        }
+    }
+
     private armed() {
         return this.layout ? this.entries.flatMap(e => e.manifest.draggable ? e.manifest.interactive : []) : [];
     }
@@ -147,7 +172,8 @@ export class OverlayWindow {
             keys: manifests[i].keys,
             interactive: manifests[i].interactive.length > 0,
             mouse: manifests[i].mouse,
-            media: manifests[i].media
+            media: manifests[i].media,
+            lol: manifests[i].lol
         }));
         const key = JSON.stringify(overlays);
         const fresh = key !== this.loadedKey;
@@ -157,9 +183,11 @@ export class OverlayWindow {
             this.loadedKey = key;
         }
 
+        this.syncLol(manifests.some(m => m.lol));
         // before it becomes visible, so the first frame already has the right values
         await this.applySettings();
         await this.pushMedia();
+        await this.pushLol();
         // hide() may have destroyed the window while the page was loading
         if (win.isDestroyed()) return null;
         if (!offscreen && !this.suspended) win.showInactive();
@@ -258,6 +286,7 @@ export class OverlayWindow {
     }
 
     private destroy() {
+        this.syncLol(false);
         if (this.offscreen) this.stream.stop();
         this.input.stop();
         this.live()?.destroy();
@@ -285,7 +314,13 @@ export class OverlayWindow {
             const url = pathToFileURL(file).href.toLowerCase();
             const frame = frames.find(f => f.url.toLowerCase() === url);
             if (!frame || !manifest.settings.length) return;
-            return frame.executeJavaScript(settingsScript(manifest.settings, values)).catch(() => { });
+
+            const code = settingsScript(manifest.settings, values);
+            // an imported font file lives in the fonts folder, not the overlay's: its @font-face is injected.
+            // The family is the effective one (stored, global or theme default), like --font above.
+            const font = manifest.settings.find(s => s.type === "font");
+            const css = font ? fontFaceCssFor(effectiveFontValue(font, manifest.settings, values)) : null;
+            return frame.executeJavaScript(code + fontStyleScript(css)).catch(() => { });
         }));
     }
 }

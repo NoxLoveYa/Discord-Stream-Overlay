@@ -17,6 +17,7 @@ import { useState } from "@webpack/common";
 import type { CSSProperties } from "react";
 
 import { AppBindings } from "./AppBindings";
+import { Fonts } from "./Fonts";
 import { Layout } from "./Layout";
 import { OverlayCard } from "./OverlayCard";
 import { PresetManager } from "./PresetManager";
@@ -27,7 +28,8 @@ const TABS = [
     { id: "overlays", label: "Overlays" },
     { id: "layout", label: "Layout" },
     { id: "presets", label: "Presets" },
-    { id: "apps", label: "Apps" }
+    { id: "apps", label: "Apps" },
+    { id: "fonts", label: "Fonts" }
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
@@ -40,7 +42,7 @@ interface OverlayGridProps {
 }
 
 export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
-    const { overlayRoot, enabledOverlays, overlayValues, globalPresets } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues", "globalPresets"]);
+    const { overlayRoot, enabledOverlays, overlayValues, globalPresets, globalFont } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues", "globalPresets", "globalFont"]);
     const { overlays } = info;
     const sections = byCategory(overlays);
     const [tab, setTab] = useState<Tab>("overlays");
@@ -118,7 +120,7 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
                         hint="A preset keeps which overlays are on and how every overlay is set up. Each overlay also has presets of its own."
                         emptyText="No presets yet. Turn on the overlays you want and set them up, then save it here to switch back to this setup in one click."
                         presets={presets}
-                        isActive={preset => isGlobalActive(preset, overlays, enabled, values)}
+                        isActive={preset => isGlobalActive(preset, overlays, enabled, values, globalFont)}
                         summarize={preset => <GlobalPresetSummary preset={preset} overlays={overlays} />}
                         save={name => setPresets(withPreset(presets, captureGlobal(name, overlays, enabled, values)))}
                         rename={(preset, to) => setPresets(renamePreset(presets, preset.name, to))}
@@ -140,6 +142,8 @@ export function OverlayGrid({ info, refresh, onOpen }: OverlayGridProps) {
                 )}
 
                 {tab === "apps" && <AppBindings presets={presets} onShowPresets={() => setTab("presets")} />}
+
+                {tab === "fonts" && <Fonts />}
             </Tabs>
         </section>
     );

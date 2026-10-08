@@ -5,13 +5,15 @@
  */
 
 import { changedCount, colorsOf } from "@plugins/streamOverlay.desktop/presets";
+import { settings } from "@plugins/streamOverlay.desktop/settings";
 import type { GlobalPreset, OverlayInfo, OverlayPreset } from "@plugins/streamOverlay.desktop/types";
 
 const MAX_SHOWN = 4;
 
 export function OverlayPresetSummary({ overlay, preset }: { overlay: OverlayInfo; preset: OverlayPreset; }) {
+    const { globalFont } = settings.use(["globalFont"]);
     const colors = colorsOf(overlay.settings, preset.values).slice(0, MAX_SHOWN);
-    const changed = changedCount(overlay.settings, preset.values);
+    const changed = changedCount(overlay.settings, preset.values, globalFont);
 
     return (
         <>

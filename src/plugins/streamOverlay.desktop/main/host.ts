@@ -12,6 +12,7 @@ interface HostOverlay {
     interactive: boolean;
     mouse: boolean;
     media: boolean;
+    lol: boolean;
 }
 
 // The page that holds every overlay as an iframe and bridges them to the main process (protocol: see the README).
@@ -23,7 +24,8 @@ export function hostHtml(overlays: HostOverlay[]) {
                 `data-keys="${o.keys.join(",")}"`,
                 o.interactive && "data-interactive",
                 o.mouse && "data-mouse",
-                o.media && "data-media"
+                o.media && "data-media",
+                o.lol && "data-lol"
             ];
             return `<iframe ${attrs.filter(Boolean).join(" ")}></iframe>`;
         })
@@ -36,17 +38,20 @@ iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:transpa
 let down = [];
 let pointer = null;
 let media;
+let lol;
 const saves = [];
 const frames = () => [...document.querySelectorAll("iframe")];
 const post = f => f.contentWindow.postMessage({ type: "streamoverlay:keys", down: down.filter(k => f.dataset.keys.split(",").includes(k)) }, "*");
 const postPointer = f => pointer && f.hasAttribute("data-interactive") && f.contentWindow.postMessage({ type: "streamoverlay:pointer", ...pointer }, "*");
 const postMedia = f => media !== undefined && f.hasAttribute("data-media") && f.contentWindow.postMessage({ type: "streamoverlay:media", state: media }, "*");
+const postLol = f => lol !== undefined && f.hasAttribute("data-lol") && f.contentWindow.postMessage({ type: "streamoverlay:lol", state: lol }, "*");
 window.__streamOverlayMedia = state => { media = state; frames().forEach(postMedia); };
+window.__streamOverlayLol = state => { lol = state; frames().forEach(postLol); };
 window.__streamOverlayKeys = keys => { down = keys; frames().forEach(post); };
 window.__streamOverlayPointer = (x, y) => { pointer = { x, y }; frames().forEach(postPointer); };
 window.__streamOverlayMouse = (dx, dy, wheel) => frames().forEach(f => f.hasAttribute("data-mouse") && f.contentWindow.postMessage({ type: "streamoverlay:mouse", dx, dy, wheel }, "*"));
 window.__streamOverlayTakeSaves = () => saves.splice(0);
-frames().forEach(f => f.addEventListener("load", () => { post(f); postPointer(f); postMedia(f); }));
+frames().forEach(f => f.addEventListener("load", () => { post(f); postPointer(f); postMedia(f); postLol(f); }));
 addEventListener("message", ({ source, data }) => {
     const i = frames().findIndex(f => f.contentWindow === source);
     if (i < 0 || !data) return;

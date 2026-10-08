@@ -19,8 +19,11 @@ the folder tools (pick another folder, open it).
 - An overlay's page has a tab for each group of its settings (the keyboard has **Look** and **Layout**, the mouse also has
   **Movement**, the frame has **Look**, **Wings** and **Details**) and a **Presets** tab. "Reset" on a tab only resets what is on
   that tab: where you moved the overlay to and what is on the other tabs stay.
-- The keyboard, the mouse and the Spotify card have a **Theme** setting, **Default** or **Gothic**. Each theme has its own accent
-  colors, and the page shows the ones of the theme that is on. Position, size and the other settings are shared, so switching
+- The keyboard, the mouse and the Spotify card have a **Theme** setting, each with its own: **Default**, **Gothic**
+  and seven customs — **Neon Nights** (dark cyberpunk), **Porcelain Light** (the only bright one), **Retro Terminal**
+  (green phosphor CRT, mono font while none is picked), **Sakura Pastel**, **Molten Lava**, **Royal Gold** and
+  **Ocean Abyss**. Default and Gothic have their own accent colors, and the page shows the ones of the theme that is
+  on; the customs have fixed palettes. Position, size and the other settings are shared, so switching
   the theme does not move anything. (The gothic ones used to be overlays of their own, `obnoxious-keyboard` and so on: what was
   saved for them is moved to the theme the first time the plugin starts.)
 
@@ -54,6 +57,50 @@ progress, animated bars, hide when nothing is playing, scale and position.
 - The card fills in when the track changes, starts, pauses or is sought: if the music was already playing when the
   overlay was switched on, it says "Nothing playing" until the next of those.
 - In the Layout tab it shows a sample track, so that there is something to drag while no music is playing.
+
+### Keyboard arrangements
+
+The keyboard has a **Key arrangement** setting (Keys tab): **Default** (the full keyboard), **FPS** (W over A S D,
+then Shift, Ctrl and a full-width Space) and **MOBA** (spells Q W E R and summoners D F on one row, a gap between
+them). Only the arranged keys show; every key is still read. **Key background** fades the rectangle behind the keys
+(0 removes it, the caps keep floating), and **Board background** fades the window behind them (0 removes the
+rectangle entirely). To switch per game, save one preset per arrangement on the keyboard's **Presets** tab
+(ex. "FPS", "MOBA", "Default"), save a global preset with it on the **Presets** tab of the main page, and bind the
+game to that preset on the **Apps** tab — the arrangement follows the game in focus. Hidden keys include Caps, so
+move the overlay from the **Layout** tab while an arrangement is on.
+
+The **MOBA** arrangement shows League of Legends spells. **Auto (in game)** (the default) reads your champion and
+summoner spells straight from the game client while a game is live — no login, nothing leaves your machine — and
+falls back to the manual picks outside a game. Or pick a **MOBA champion** yourself (Letters, Fiora or Akali) for
+QWER and a summoner spell each for **D** and **F** (Flash, Ignite, Teleport, Ghost, Exhaust, Heal, Barrier, Smite) —
+the summoners show with Letters too, no champion needed. Fiora, Akali and the summoner icons
+come from Data Dragon and are bundled with the plugin (Riot Games assets, see below); any other live-detected
+champion loads its ability icons from the Data Dragon CDN instead. Like the arrangement itself,
+these choices are saved per preset.
+
+### Fonts
+
+The **Fonts** tab of the settings picks the font of the overlays. **Default font** applies to every overlay that has
+no font of its own; the keyboard, the mouse and the Spotify card have their own **Font** setting (Look tab) which
+overrides it. That choice is saved per preset like any other, so a game gets its own font by saving a global preset
+with it and binding the game to that preset on the Apps tab. A font that is not picked follows the gothic theme
+(blackletter) or the default stack: picking one overrides it everywhere, and clearing the choice hands back to the
+theme. The picker says what an unset font follows.
+
+Custom fonts are added on the same tab: **Add font file…** imports a `.woff2`, `.woff`, `.ttf` or `.otf` file (up to
+5 MB, copied into the plugin's fonts folder), **Add system font…** registers a font installed on the machine by name
+(ex. `Segoe UI`). A chip next to the picker removes a custom again; an overlay that used it falls back to a readable
+font until another is picked.
+
+**Font weight** (Regular to Bold, one value per theme), **Letter spacing** (key labels and Spotify title) and **Text
+size** (a multiplier for every label) tune the text itself. They are saved per preset like any
+other setting.
+
+### Mouse buttons
+
+Besides the left, right and middle buttons the mouse overlay shows the two macro side buttons as thin barrettes
+without labels, **M5** over **M4**, left of the movement sensor. They light up like the rest. The sensor takes
+almost the whole width of the board and stays centered under the wheel.
 
 ### Presets
 
