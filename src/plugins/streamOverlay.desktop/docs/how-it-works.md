@@ -96,8 +96,7 @@ a transparent canvas positioned over the video:
 ### The Layout tab
 
 A second `OverlayWindow` (created with `layout = true`, fed to a `LayoutSink` instead of the encoder) renders the enabled
-overlays offscreen at 300 Hz (the stream's own window only runs at 30 fps). Electron documents 240 as the highest an
-offscreen window accepts, so the rate is read back and 240 is used if 300 was not taken. It keeps the layout of the full screen but is rendered in far fewer pixels: its window is
+overlays offscreen at 60 Hz (the stream's own window only runs at 30 fps). It keeps the layout of the full screen but is rendered in far fewer pixels: its window is
 smaller and its zoom factor matches, so the page still measures the real screen while about 1280 px (1920 when full
 screen) are painted instead of 2560 × 1440. It has its own session (`partition`) so that this zoom cannot reach the
 overlay window. The settings page (`components/Layout.tsx`) is in the renderer and cannot be pushed to, so it asks

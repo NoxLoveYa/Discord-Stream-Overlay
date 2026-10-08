@@ -20,8 +20,7 @@ import type { StreamSink } from "./nvenc";
 import { resolveValue, settingsScript } from "./values";
 
 const OFFSCREEN_FPS = 30;
-const LAYOUT_FPS = 300;
-const FALLBACK_FPS = 240; // what an offscreen window is documented to accept
+const LAYOUT_FPS = 60;
 
 interface Entry {
     name: string;
@@ -93,15 +92,6 @@ export class OverlayWindow {
         if (this.shown && !this.offscreen) this.live()?.showInactive();
     }
 
-    // the 240 Hz Electron documents as the highest is used when a higher rate is not taken
-    private setFrameRate(win: BrowserWindow, fps: number) {
-        const { webContents } = win;
-        try {
-            webContents.frameRate = fps;
-        } catch { /* refused */ }
-        if (webContents.frameRate !== fps) webContents.frameRate = Math.min(fps, FALLBACK_FPS);
-    }
-
     private armed() {
         return this.layout ? this.entries.flatMap(e => e.manifest.draggable ? e.manifest.interactive : []) : [];
     }
@@ -132,7 +122,7 @@ export class OverlayWindow {
         // The page keeps the layout of the full screen: a smaller window with a matching zoom shows it in fewer pixels
         const scale = this.layout && renderWidth ? Math.min(1, renderWidth / (display.bounds.width * screen.getPrimaryDisplay().scaleFactor)) : 1;
         win.setBounds({ ...display.bounds, width: Math.max(1, Math.round(display.bounds.width * scale)), height: Math.max(1, Math.round(display.bounds.height * scale)) });
-        if (offscreen) this.setFrameRate(win, this.layout ? LAYOUT_FPS : OFFSCREEN_FPS);
+        if (offscreen) win.webContents.frameRate = this.layout ? LAYOUT_FPS : OFFSCREEN_FPS;
 
         if (this.exiting) {
             this.exiting = false;
