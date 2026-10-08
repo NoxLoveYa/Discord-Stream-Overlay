@@ -74,11 +74,20 @@ Because the blend happens before encoding, everything downstream gets it: the en
 
 ### The frame path
 
-1. `OverlayWindow` creates the window with `offscreen: true` at 30 fps and, on every `paint`, hands the bitmap to the
-   sink (`Nvenc.frame`). Only the latest frame is kept, and one is sent at most every 16 ms.
-2. The bitmap goes over IPC to the renderer's preload script, which passes it to `addon.setOverlay(bitmap, w, h)` (the
-   addon keeps a copy; the encoder thread picks it up) and to the preview.
-3. With no overlay frame (nothing shown yet, or after `drawOff`), the addon draws nothing.
+1. `OverlayWindow` creates the window with `offscreen: true` at 30 fps and, on every `paint`, hands the picture and the
+   dirty rectangle (what changed) to the sink (`Nvenc.frame`). The rectangles are added up, only the latest picture is
+   kept, and a frame is sent at most every 16 ms.
+2. What goes over IPC is a rectangle of the picture, cropped from it, or all of it: the first frame, a new size, a
+   resync request, or a change that covers about half of it. A full screen of pixels is tens of MB and a moving bar is a
+   few KB, so this is what keeps the cost of an overlay (in Discord's renderer, which receives and copies every frame)
+   proportional to what changes, not to the size of the screen. The rectangle is trusted only when the picture and the
+   window have the same size in pixels (no display scaling); otherwise every frame is whole.
+3. The renderer's preload script passes a whole picture to `addon.setOverlay(bitmap, w, h)` and a rectangle to
+   `addon.updateOverlay(bitmap, x, y, w, h, fullW, fullH)`. The addon keeps the whole picture, and the encoder thread
+   uploads only the changed box of it to the GPU (`UpdateSubresource` with a box). When the addon or the preload has no
+   picture to put a rectangle on (a renderer that started late, an old addon), it answers `resync` and the main process
+   sends the whole picture next.
+4. With no overlay frame (nothing shown yet, or after `drawOff`), the addon draws nothing.
 
 ### The preview
 
@@ -86,9 +95,10 @@ Your own stream preview in the app is a `<video>` fed directly by the native mod
 different route from the encoder, so it never gets the blended frames. The preload script therefore draws the overlay on
 a transparent canvas positioned over the video:
 
-- the bitmap is uploaded to a WebGL texture at its full size and the channels are swapped in a shader (the canvas takes
-  premultiplied alpha as it is), only when a new frame arrived and a matching video is on screen, so no per-pixel work
-  runs in JavaScript;
+- the preload keeps a copy of the whole picture (rectangles are copied into it row by row) and uploads it to a WebGL
+  texture at its full size, the channels are swapped in a shader (the canvas takes premultiplied alpha as it is). Only
+  the changed rectangle is uploaded (`texSubImage2D`), and only when a new frame arrived and a matching video is on
+  screen; a preview that has just appeared takes the whole picture. No per-pixel work runs in JavaScript;
 - one canvas per matching video is placed over the picture (accounting for letterboxing) and follows it on every
   animation frame;
 - a video matches when it is not an http(s) file (those are the media in chat, embeds and the lightbox), is not inside
@@ -120,6 +130,18 @@ The button at the picture's top right asks the browser for full screen on the pi
 to a fixed element covering the window if that is refused.
 
 Closing the tab destroys the window.
+
+### The Spotify overlay
+
+Overlay pages cannot reach Discord, so the track is passed in from outside, like the keys and the mouse. `spotify.ts`
+(renderer) subscribes to the `SPOTIFY_PLAYER_STATE` event that Discord dispatches when the linked Spotify account starts,
+pauses, seeks or changes track (the same event Vencord's Spotify Controls plugin reads), and calls `Native.setMedia`. In
+the main process `cleanMedia` (`main/media.ts`) validates it: text is cut and whitespace-collapsed, numbers are clamped
+and the cover has to be an `https://*.scdn.co/` address. Both overlay windows (the stream's and the Layout tab's) keep the
+latest track and hand it to the host page (`window.__streamOverlayMedia`), which posts `streamoverlay:media` to the
+overlays that set `"media": true`, and again whenever one of them loads. The overlay moves the progress bar on its own
+from `position` and `at`, so no message is needed per second. The Layout window shows a sample track while nothing plays.
+Nothing is read at startup: the card stays on "Nothing playing" until the first event.
 
 ### Lifecycle
 

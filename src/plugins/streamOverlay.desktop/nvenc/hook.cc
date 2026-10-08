@@ -8,10 +8,12 @@
 #include <dxgi.h>
 #include <wrl/client.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -67,10 +69,15 @@ ComPtr<ID3D11Texture2D> g_overlayTex;
 ComPtr<ID3D11ShaderResourceView> g_overlaySrv;
 uint32_t g_overlayW = 0, g_overlayH = 0;
 
-// the latest overlay (B8G8R8A8, premultiplied), copied in from JS and uploaded by the encoding thread
+// the latest overlay (B8G8R8A8, premultiplied), copied in from JS and uploaded by the encoding thread. A frame from JS is
+// either the whole picture or a rectangle of it: g_pending always holds the whole picture, and the box is what changed
+// since the last upload, so that only that part goes to the GPU
 std::vector<uint8_t> g_pending;
 uint32_t g_pendingW = 0, g_pendingH = 0;
 bool g_pendingDirty = false;
+bool g_pendingFull = true;
+bool g_boxSet = false;
+uint32_t g_boxL = 0, g_boxT = 0, g_boxR = 0, g_boxB = 0;
 
 struct Opened {
     ComPtr<ID3D11Texture2D> tex;
@@ -153,7 +160,9 @@ bool uploadOverlay() {
             g_overlaySrv.Reset();
             g_overlayW = g_overlayH = 0;
         } else {
+            bool whole = g_pendingFull;
             if (!g_overlayTex || g_overlayW != g_pendingW || g_overlayH != g_pendingH) {
+                whole = true;
                 g_overlayTex.Reset();
                 g_overlaySrv.Reset();
                 D3D11_TEXTURE2D_DESC desc = {};
@@ -174,7 +183,15 @@ bool uploadOverlay() {
                 g_overlayW = g_pendingW;
                 g_overlayH = g_pendingH;
             }
-            g_ctx->UpdateSubresource(g_overlayTex.Get(), 0, nullptr, g_pending.data(), g_pendingW * 4, 0);
+            if (whole) {
+                g_ctx->UpdateSubresource(g_overlayTex.Get(), 0, nullptr, g_pending.data(), g_pendingW * 4, 0);
+            } else if (g_boxSet) {
+                // on an immediate context the source pointer is where the box starts, the pitch is that of the whole picture
+                D3D11_BOX box = { g_boxL, g_boxT, 0, g_boxR, g_boxB, 1 };
+                g_ctx->UpdateSubresource(g_overlayTex.Get(), 0, &box, g_pending.data() + (static_cast<size_t>(g_boxT) * g_pendingW + g_boxL) * 4, g_pendingW * 4, 0);
+            }
+            g_pendingFull = false;
+            g_boxSet = false;
         }
     }
     return g_overlaySrv != nullptr;
@@ -381,7 +398,32 @@ void setOverlay(const uint8_t* data, size_t size, uint32_t width, uint32_t heigh
         g_pendingW = width;
         g_pendingH = height;
     }
+    g_pendingFull = true;
+    g_boxSet = false;
     g_pendingDirty = true;
+}
+
+// A rectangle of a picture of the size the last whole one had. False when it does not fit that picture: a whole one has
+// to be sent first.
+bool updateOverlay(const uint8_t* data, size_t size, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t fullW, uint32_t fullH) {
+    std::lock_guard lock(g_mutex);
+    if (!w || !h || !g_pendingW || fullW != g_pendingW || fullH != g_pendingH ||
+        static_cast<uint64_t>(x) + w > fullW || static_cast<uint64_t>(y) + h > fullH ||
+        size < static_cast<size_t>(w) * h * 4 || g_pending.size() != static_cast<size_t>(fullW) * fullH * 4)
+        return false;
+
+    for (uint32_t row = 0; row < h; row++)
+        memcpy(g_pending.data() + (static_cast<size_t>(y + row) * fullW + x) * 4, data + static_cast<size_t>(row) * w * 4, static_cast<size_t>(w) * 4);
+
+    if (!g_boxSet) {
+        g_boxL = x; g_boxT = y; g_boxR = x + w; g_boxB = y + h;
+        g_boxSet = true;
+    } else {
+        g_boxL = (std::min)(g_boxL, x); g_boxT = (std::min)(g_boxT, y);
+        g_boxR = (std::max)(g_boxR, x + w); g_boxB = (std::max)(g_boxB, y + h);
+    }
+    g_pendingDirty = true;
+    return true;
 }
 
 // Node-API without node_api.h or an import library: the host is Discord.exe, not node.exe, so the few functions needed
@@ -427,6 +469,23 @@ napi_value jsSetOverlay(napi_env env, napi_callback_info info) {
     return toJs(env, "ok");
 }
 
+// updateOverlay(bitmap: Uint8Array, x, y, width, height, fullWidth, fullHeight): "ok", or "resync" when a whole picture is needed first
+napi_value jsUpdateOverlay(napi_env env, napi_callback_info info) {
+    size_t argc = 7;
+    napi_value argv[7] = {};
+    if (napi_get_cb_info(env, info, &argc, argv, nullptr, nullptr) != 0 || argc < 7) return toJs(env, "bad call");
+
+    int type = 0;
+    size_t length = 0;
+    void* data = nullptr;
+    uint32_t n[6] = {};
+    if (napi_get_typedarray_info(env, argv[0], &type, &length, &data, nullptr, nullptr) != 0) return toJs(env, "bad call");
+    for (int i = 0; i < 6; i++)
+        if (napi_get_value_uint32(env, argv[i + 1], &n[i]) != 0) return toJs(env, "bad call");
+
+    return toJs(env, updateOverlay(static_cast<const uint8_t*>(data), length, n[0], n[1], n[2], n[3], n[4], n[5]) ? "ok" : "resync");
+}
+
 void expose(napi_env env, napi_value exports, const char* name, napi_callback fn) {
     napi_value f = nullptr;
     if (napi_create_function(env, name, SIZE_MAX, fn, nullptr, &f) == 0) napi_set_named_property(env, exports, name, f);
@@ -449,6 +508,7 @@ extern "C" __declspec(dllexport) napi_value napi_register_module_v1(napi_env env
     expose(env, exports, "drawOn", jsDrawOn);
     expose(env, exports, "drawOff", jsDrawOff);
     expose(env, exports, "setOverlay", jsSetOverlay);
+    expose(env, exports, "updateOverlay", jsUpdateOverlay);
     return exports;
 }
 

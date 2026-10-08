@@ -1,6 +1,6 @@
 # StreamOverlay docs
 
-StreamOverlay draws HTML/CSS overlays (a red border, a keyboard, a mouse, or your own) over the screen you share with
+StreamOverlay draws HTML/CSS overlays (a red border, a keyboard, a mouse, what is playing in Spotify, or your own) over the screen you share with
 Discord's Go Live, so viewers see them. Windows desktop client only.
 
 | | |
@@ -12,14 +12,16 @@ Discord's Go Live, so viewers see them. Windows desktop client only.
 ## What it adds
 
 **Overlays**
-- Overlays are small web pages in a folder. Three are provided: `red-border`, `keyboard` (live key states) and `mouse`
-  (buttons, movement and wheel).
+- Overlays are small web pages in a folder. Four are provided: `red-border`, `keyboard` (live key states), `mouse`
+  (buttons, movement and wheel) and `spotify` (the track that is playing, with its cover and progress).
 - They are drawn in a transparent, click-through window over the monitor being shared, and only while a screen share is
   running.
-- The keyboard and mouse overlays can be moved and resized with Alt + Caps; the position is remembered.
+- The keyboard, mouse and Spotify overlays can be moved and resized with Alt + Caps; the position is remembered.
 
 **Settings page**
 - A card per overlay with a switch, and a page per overlay with its own settings (colors, sizes, toggles).
+- A **Layout** tab: the overlays as they are drawn over the screen (at its full resolution, 60 Hz, over a still of it),
+  where the draggable ones can be moved and resized with the mouse, also in full screen.
 - **Presets** per overlay and **global presets** (which overlays are on plus all their settings), with save, apply,
   rename, duplicate, update, delete and undo.
 - **Presets by app**: bind a global preset to a program (`game.exe`); it is applied while that program is in focus and
