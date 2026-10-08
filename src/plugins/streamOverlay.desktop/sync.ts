@@ -17,6 +17,7 @@ const SYNC_INTERVAL_MS = 1000;
 const COLLECT_INTERVAL_MS = 400;
 
 let running = false;
+let visible = false;
 let syncTimer: ReturnType<typeof setInterval> | undefined;
 let collectTimer: ReturnType<typeof setInterval> | undefined;
 let lastKey = "";
@@ -48,10 +49,12 @@ async function doSync() {
 
     if (!shouldShow) {
         logger.info("hiding overlay", { sourceId });
+        visible = false;
         return Native.hide();
     }
 
     const result = await Native.show(sourceId, sourceName, overlayRoot, overlays, values);
+    visible = result != null;
     if (state !== lastState) logger.info("showing overlay", { sourceId, sourceName, ...result });
     lastState = state;
 }
@@ -60,7 +63,7 @@ const sync = () => queue = queue.then(doSync).catch(e => logger.error("sync fail
 
 /** Overlays can save values themselves (the keyboard saves where it was dragged to): they end up in the settings. */
 async function collect() {
-    if (!running) return;
+    if (!running || !visible) return;
 
     const changes = await Native.takeChanges();
     if (!Object.keys(changes).length) return;
@@ -81,6 +84,7 @@ export function startSync() {
 
 export function stopSync() {
     running = false;
+    visible = false;
     clearInterval(syncTimer);
     clearInterval(collectTimer);
     FluxDispatcher.unsubscribe("STREAM_START", onStreamStart);

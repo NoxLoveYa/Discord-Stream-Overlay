@@ -42,32 +42,45 @@
     transition: opacity var(--press-out) ease-out;
 }
 
+/* Only transform and opacity are ever transitioned: animating shadows or colors repaints every frame, which in a window
+   this large costs hundreds of MB and several % of the GPU while keys are being pressed. The pressed look is therefore
+   layered on top and faded in (.cap::before, .cap::after). */
 .cap {
     position: absolute;
     inset: 0 0 4px;
     display: grid;
     place-items: center;
     overflow: hidden;
-    border: 1px solid rgb(255 255 255 / 8%);
     border-radius: 9px 9px 7px 7px;
     background: linear-gradient(180deg, var(--graphite-500), var(--graphite-700));
     box-shadow:
+        inset 0 0 0 1px rgb(255 255 255 / 8%),
         inset 0 1px 0 rgb(255 255 255 / 8%),
         inset 0 -12px 16px -12px rgb(0 0 0 / 55%),
         0 3px 5px rgb(var(--shadow-rgb) / 45%);
-    transition:
-        transform var(--press-out) cubic-bezier(0.25, 0.8, 0.25, 1),
-        border-color var(--press-out) ease-out,
-        box-shadow var(--press-out) ease-out;
+    transition: transform var(--press-out) cubic-bezier(0.25, 0.8, 0.25, 1);
     will-change: transform;
 }
 
-/* light rising from the bottom edge of the cap */
+.cap::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow:
+        inset 0 0 0 1px rgb(var(--accent) / 50%),
+        inset 0 1px 0 rgb(var(--edge) / 55%);
+    opacity: 0;
+    transition: opacity var(--press-out) ease-out;
+}
+
+/* light rising from the bottom edge of the cap, and a glow behind the label */
 .cap::after {
     content: "";
     position: absolute;
     inset: 0;
     background:
+        radial-gradient(32px 15px at 50% 50%, rgb(var(--accent) / 22%), rgb(var(--accent) / 0%)),
         radial-gradient(90% 85% at 50% 115%, rgb(var(--accent) / 62%), rgb(var(--accent) / 0%) 70%),
         linear-gradient(180deg, rgb(var(--accent) / 0%) 55%, rgb(var(--accent) / 14%));
     opacity: 0;
@@ -81,9 +94,6 @@
     font-size: 15px;
     font-weight: 600;
     letter-spacing: 0.04em;
-    transition:
-        color var(--press-out) ease-out,
-        text-shadow var(--press-out) ease-out;
 }
 
 .mod .cap span {
@@ -94,23 +104,17 @@
 
 .is-down::before,
 .is-down::after,
+.is-down .cap::before,
 .is-down .cap::after {
     opacity: 1;
     transition-duration: var(--press-in);
 }
 
 .is-down .cap {
-    border-color: rgb(var(--accent) / 50%);
-    box-shadow:
-        inset 0 1px 0 rgb(var(--edge) / 55%),
-        inset 0 -12px 16px -12px rgb(0 0 0 / 35%),
-        0 1px 2px rgb(var(--shadow-rgb) / 45%);
     transform: translateY(2px) scale(0.985);
     transition-duration: var(--press-in);
 }
 
 .is-down .cap span {
     color: #fff;
-    text-shadow: 0 0 12px rgb(var(--accent) / 70%);
-    transition-duration: var(--press-in);
 }
