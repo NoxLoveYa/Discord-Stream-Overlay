@@ -76,8 +76,10 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         source.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(out.buffer), w, h), 0, 0);
     };
 
-    // the previews: videos that show something shaped like the shared screen
+    // the previews: videos that show something shaped like the shared screen. The stream is fed natively, while every
+    // media in a message, embed or lightbox is a file loaded over http(s)
     const previews = () => [...document.querySelectorAll("video")].filter(v => {
+        if (/^https?:/i.test(v.currentSrc || v.src) || v.closest('[data-list-id="chat-messages"]')) return false;
         if (!v.videoWidth || Math.abs(v.videoWidth / v.videoHeight - ratio) > 0.02) return false;
         const r = v.getBoundingClientRect();
         return r.width > 120 && r.height > 60 && getComputedStyle(v).visibility !== "hidden";

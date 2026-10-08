@@ -122,7 +122,8 @@ travel to the renderer (`main/nvenc.ts`); a preload script loads the addon there
   starts: a stream that was already running has to be restarted. If the hook cannot be reached the overlays stay on screen.
 - Discord has to be restarted (and the page reloaded once) after the preload script is registered for the first time.
 - The overlays cannot be dragged while it is on: switch it off to move the keyboard or mouse overlay.
-- The preview overlay goes on any video with the shape of the shared screen, and assumes the picture is letterboxed.
+- The preview overlay goes on any video with the shape of the shared screen that is not a file loaded over http(s) (so
+  not the media in chats) and assumes the picture is letterboxed; someone else's stream of the same shape gets it too.
 - A Discord update can change the voice module and break the hook; failures are written to
   `%TEMP%\streamoverlay-nvenc.log`.
 
