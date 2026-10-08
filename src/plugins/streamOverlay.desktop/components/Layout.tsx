@@ -11,8 +11,8 @@ import { Native, plain, settings, updateValues } from "@plugins/streamOverlay.de
 import type { OverlayInfo } from "@plugins/streamOverlay.desktop/types";
 import { MediaEngineStore, useEffect, useRef } from "@webpack/common";
 
-const POLL_MS = 66;
 const PICTURE_WIDTH = 1280;
+const BACKGROUND_MS = 750;
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -48,6 +48,7 @@ function paint(canvas: HTMLCanvasElement, bitmap: Uint8Array, width: number, hei
 export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const { overlayRoot, enabledOverlays, overlayValues } = settings.use(["overlayRoot", "enabledOverlays", "overlayValues"]);
     const canvas = useRef<HTMLCanvasElement>(null);
+    const background = useRef<HTMLImageElement>(null);
     const pending = useRef<{ x: number; y: number; } | null>(null);
     const raf = useRef(0);
 
@@ -63,11 +64,12 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
 
     useEffect(() => {
         let alive = true;
-        let busy = false;
+        let frameRequest = 0;
+        let backgroundTimer: ReturnType<typeof setTimeout> | undefined;
+        let backgroundUrl = "";
 
+        // one request per frame of this window, and the window renders at the refresh rate of the monitor it draws on
         const tick = async () => {
-            if (busy) return;
-            busy = true;
             try {
                 const { frame, changes } = await Native.layoutFrame(PICTURE_WIDTH);
                 if (!alive) return;
@@ -79,14 +81,33 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
                 }
                 if (frame && canvas.current) paint(canvas.current, frame.bitmap, frame.width, frame.height);
             } finally {
-                busy = false;
+                if (alive) frameRequest = requestAnimationFrame(tick);
             }
         };
 
-        const timer = setInterval(tick, POLL_MS);
+        // what the stream shows behind the overlays: a screenshot of the monitor, refreshed a few times a second
+        const refreshBackground = async () => {
+            try {
+                const jpeg = await Native.layoutBackground(PICTURE_WIDTH);
+                if (!alive) return;
+                if (jpeg && background.current) {
+                    const url = URL.createObjectURL(new Blob([new Uint8Array(jpeg)], { type: "image/jpeg" }));
+                    background.current.src = url;
+                    if (backgroundUrl) URL.revokeObjectURL(backgroundUrl);
+                    backgroundUrl = url;
+                }
+            } finally {
+                if (alive) backgroundTimer = setTimeout(refreshBackground, BACKGROUND_MS);
+            }
+        };
+
+        tick();
+        refreshBackground();
         return () => {
             alive = false;
-            clearInterval(timer);
+            cancelAnimationFrame(frameRequest);
+            clearTimeout(backgroundTimer);
+            if (backgroundUrl) URL.revokeObjectURL(backgroundUrl);
             cancelAnimationFrame(raf.current);
             Native.layoutHide();
         };
@@ -108,11 +129,12 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         <div>
             <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
                 {draggable.length
-                    ? `Drag ${draggable.map(o => o.title).join(" or ")} to move it, or drag its corner to resize it. This is the screen being shared (or your main screen) as the overlays are drawn on it.`
+                    ? `Drag ${draggable.map(o => o.title).join(" or ")} to move it, or drag its corner to resize it. Behind the overlays is the screen being shared (or your main screen), a few times a second.`
                     : "No overlay that can be moved is on. Turn on one that is draggable (the keyboard or the mouse, for example) to place it here."}
             </Paragraph>
 
             <div className="vc-so-stage">
+                <img ref={background} className="vc-so-stage-background" alt="" draggable={false} />
                 <canvas
                     ref={canvas}
                     width={16}

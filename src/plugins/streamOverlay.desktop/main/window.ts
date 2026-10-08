@@ -20,6 +20,7 @@ import type { StreamSink } from "./nvenc";
 import { resolveValue, settingsScript } from "./values";
 
 const OFFSCREEN_FPS = 30;
+const MAX_FRAME_RATE = 240; // what an offscreen window can be asked for
 
 interface Entry {
     name: string;
@@ -38,6 +39,7 @@ export class OverlayWindow {
     private win: BrowserWindow | null = null;
     private offscreen = false;
     private shown = false;
+    private suspended = false;
     /** what is loaded, in iframe order */
     private entries: Entry[] = [];
     private loadedKey = "";
@@ -68,6 +70,22 @@ export class OverlayWindow {
             : { type: kind === "down" ? "mouseDown" : "mouseUp", x, y, button: "left", clickCount: 1 });
     }
 
+    /** The display being drawn on, once shown. */
+    currentDisplay() {
+        return this.display?.display ?? null;
+    }
+
+    /** Takes the on-screen window off the screen (the Layout tab shows it instead) until resume(). */
+    suspend() {
+        this.suspended = true;
+        if (!this.offscreen) this.live()?.hide();
+    }
+
+    resume() {
+        this.suspended = false;
+        if (this.shown && !this.offscreen) this.live()?.showInactive();
+    }
+
     private armed() {
         return this.layout ? this.entries.flatMap(e => e.manifest.draggable ? e.manifest.interactive : []) : [];
     }
@@ -94,6 +112,8 @@ export class OverlayWindow {
         const { display, match } = await this.displayFor(sourceId, sourceName);
         const win = this.window();
         win.setBounds(display.bounds);
+        // the Layout tab follows the monitor; the stream only needs what the stream runs at
+        if (offscreen) win.webContents.setFrameRate(this.layout ? Math.min(MAX_FRAME_RATE, Math.max(1, display.displayFrequency || 60)) : OFFSCREEN_FPS);
 
         if (this.exiting) {
             this.exiting = false;
@@ -116,7 +136,7 @@ export class OverlayWindow {
 
         // before it becomes visible, so the first frame already has the right values
         await this.applySettings();
-        if (!offscreen) win.showInactive();
+        if (!offscreen && !this.suspended) win.showInactive();
         this.shown = true;
         if (fresh) await playEnter(win);
 

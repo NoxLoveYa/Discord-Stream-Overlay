@@ -8,7 +8,7 @@ import { BrowserWindow, type IpcMainInvokeEvent, shell } from "electron";
 
 import { FocusWatcher } from "./main/focus";
 import { listOverlays as listOverlayFolder, pickFolder as pickOverlayFolder, resolveRoot } from "./main/folder";
-import { LayoutSink } from "./main/layout";
+import { LayoutSink, screenshot } from "./main/layout";
 import { Nvenc } from "./main/nvenc";
 import { OverlayWindow } from "./main/window";
 import type { OverlayValues } from "./types";
@@ -53,7 +53,15 @@ export function takeChanges() {
 // The Layout tab: the enabled overlays rendered offscreen, shown on the settings page where the draggable ones can be moved.
 
 export function layoutShow(_: IpcMainInvokeEvent, sourceId: string | null, root: string, names: string[], values: OverlayValues) {
+    // the real overlay would be in the background picture as well
+    overlay.suspend();
     return layout.show(sourceId, null, root, names, values, true);
+}
+
+/** What is on the screen being drawn on right now, as a JPEG (null when it cannot be had). */
+export function layoutBackground(_: IpcMainInvokeEvent, width: number) {
+    const display = layout.currentDisplay();
+    return display ? screenshot(display, width) : null;
 }
 
 /** The newest picture (null when unchanged) at the given width, and what the overlays saved since the last call. */
@@ -66,6 +74,7 @@ export function layoutPointer(_: IpcMainInvokeEvent, kind: "move" | "down" | "up
 }
 
 export function layoutHide() {
+    overlay.resume();
     return layout.hide(false);
 }
 

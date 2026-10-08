@@ -96,9 +96,13 @@ a transparent canvas positioned over the video:
 ### The Layout tab
 
 A second `OverlayWindow` (created with `layout = true`, fed to a `LayoutSink` instead of the encoder) renders the enabled
-overlays offscreen at the size of the shared display. The settings page (`components/Layout.tsx`) is in the renderer and
-cannot be pushed to, so it polls `Native.layoutFrame` every ~66 ms for the newest frame (scaled to 1280 px and drawn on a
-canvas) and for anything the overlays saved. While the tab is open:
+overlays offscreen at the size of the shared display, at that display's refresh rate (`displayFrequency`, up to 240 Hz;
+the stream's own window only runs at 30 fps). The settings page (`components/Layout.tsx`) is in the renderer and cannot
+be pushed to, so it asks `Native.layoutFrame` for the newest frame (scaled to 1280 px and drawn on a canvas) once per
+animation frame, and for anything the overlays saved. Behind the canvas is a screenshot of the display
+(`desktopCapturer`, refreshed every 750 ms), which is what the stream shows without the overlays: the real on-screen
+overlay window is hidden while the tab is open (`suspend()` / `resume()`) so that it is not in the picture twice. While
+the tab is open:
 
 - the draggable overlays (`draggable` in `overlay.json`) are told that their move keys are held, so they are always armed;
   `OverlayInput` merges those keys into the real key state;
