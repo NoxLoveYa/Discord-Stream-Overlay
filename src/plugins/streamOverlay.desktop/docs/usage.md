@@ -70,7 +70,7 @@ Custom fonts are added on the same tab: **Add font file…** imports a `.woff2`,
 font until another is picked.
 
 **Font weight** (Regular to Bold, one value per theme), **Letter spacing** (key labels and Spotify title) and **Text
-size** (a multiplier for every label, in the Layout tab) tune the text itself. They are saved per preset like any
+size** (a multiplier for every label) tune the text itself. They are saved per preset like any
 other setting.
 
 ### Presets

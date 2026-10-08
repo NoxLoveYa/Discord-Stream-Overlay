@@ -34,7 +34,7 @@ html[data-theme="gothic"] {
     .title {
         font-size: calc(23px * var(--text-scale, 1));
         font-weight: var(--card-font-weight, 700);
-        letter-spacing: 0;
+        letter-spacing: var(--card-letter-spacing, 0);
         line-height: 1.15;
         text-shadow: 0 2px 0 rgb(0 0 0 / 85%), 0 0 12px rgb(var(--silver-rgb) / 22%);
     }

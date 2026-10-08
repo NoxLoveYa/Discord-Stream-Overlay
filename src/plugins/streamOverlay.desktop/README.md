@@ -96,7 +96,7 @@ overlay with `@font-face`; a custom that was deleted afterwards falls back to a 
 
 The keyboard, the mouse and the Spotify card also tune the text itself: **Font weight** (Regular to Bold, one value
 per theme, like the accent colors), **Letter spacing** (key labels and Spotify title), and **Text size** (a multiplier
-for every label, next to Scale in the Layout tab). Like any setting they are saved per preset, so a game gets its own
+for every label, in the Look tab). Like any setting they are saved per preset, so a game gets its own
 typography through the Apps tab.
 
 ### Themes

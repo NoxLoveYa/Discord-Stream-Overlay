@@ -36,6 +36,7 @@
             "type": "select",
             "label": "Font weight",
             "group": "Look",
+            "when": { "theme": "default" },
             "default": "600",
             "options": [
                 { "label": "Regular", "value": "400" },
@@ -58,8 +59,9 @@
                 { "label": "Bold", "value": "700" }
             ]
         },
-        { "id": "letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0.01 },
+        { "id": "letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "when": { "theme": "default" }, "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0.01 },
         { "id": "g-letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "when": { "theme": "gothic" }, "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0 },
+        { "id": "text-scale", "type": "number", "label": "Text size", "group": "Look", "min": 0.7, "max": 1.6, "step": 0.05, "default": 1 },
         { "id": "accent", "type": "color", "label": "Accent", "group": "Look", "when": { "theme": "default" }, "default": "#8b5cf6" },
         { "id": "g-accent", "type": "color", "label": "Accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#e4def0" },
         { "id": "accent2", "type": "color", "label": "Second accent", "group": "Look", "when": { "theme": "default" }, "default": "#22d3ee" },
@@ -69,7 +71,6 @@
         { "id": "progress", "type": "boolean", "label": "Show the progress", "group": "Look", "default": true },
         { "id": "bars", "type": "boolean", "label": "Animated bars", "group": "Look", "default": true },
         { "id": "scale", "type": "number", "label": "Scale", "group": "Layout", "min": 0.6, "max": 2, "step": 0.05, "default": 1 },
-        { "id": "text-scale", "type": "number", "label": "Text size", "group": "Layout", "min": 0.7, "max": 1.6, "step": 0.05, "default": 1 },
         {
             "id": "position",
             "type": "select",

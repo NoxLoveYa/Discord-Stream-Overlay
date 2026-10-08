@@ -36,6 +36,7 @@
             "type": "select",
             "label": "Font weight",
             "group": "Look",
+            "when": { "theme": "default" },
             "default": "600",
             "options": [
                 { "label": "Regular", "value": "400" },
@@ -58,15 +59,15 @@
                 { "label": "Bold", "value": "700" }
             ]
         },
-        { "id": "letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0.04 },
+        { "id": "letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "when": { "theme": "default" }, "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0.04 },
         { "id": "g-letter-spacing", "type": "number", "label": "Letter spacing", "group": "Look", "when": { "theme": "gothic" }, "min": 0, "max": 0.3, "step": 0.01, "unit": "em", "default": 0 },
+        { "id": "text-scale", "type": "number", "label": "Text size", "group": "Look", "min": 0.7, "max": 1.6, "step": 0.05, "default": 1 },
         { "id": "letter-accent", "type": "color", "label": "Letter keys accent", "group": "Look", "when": { "theme": "default" }, "default": "#8b5cf6" },
         { "id": "g-letter-accent", "type": "color", "label": "Letter keys accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#e4def0" },
         { "id": "modifier-accent", "type": "color", "label": "Modifier keys accent", "group": "Look", "when": { "theme": "default" }, "default": "#22d3ee" },
         { "id": "g-modifier-accent", "type": "color", "label": "Modifier keys accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#b3122e" },
         { "id": "shadow", "type": "color", "label": "Shadow color", "group": "Look", "default": "#000000" },
         { "id": "scale", "type": "number", "label": "Scale", "group": "Layout", "min": 0.6, "max": 2, "step": 0.05, "default": 1 },
-        { "id": "text-scale", "type": "number", "label": "Text size", "group": "Layout", "min": 0.7, "max": 1.6, "step": 0.05, "default": 1 },
         {
             "id": "position",
             "type": "select",
