@@ -1,0 +1,25 @@
+{
+    "keys": ["TAB", "Q", "W", "E", "R", "T", "CAPS", "A", "S", "D", "F", "G", "SHIFT", "Z", "X", "C", "V", "B", "CTRL", "SPACE"],
+    "interactive": ["ALT", "CAPS"],
+    "settings": [
+        { "id": "letter-accent", "type": "color", "label": "Letter keys accent", "default": "#8b5cf6" },
+        { "id": "modifier-accent", "type": "color", "label": "Modifier keys accent", "default": "#22d3ee" },
+        { "id": "shadow", "type": "color", "label": "Shadow color", "default": "#000000" },
+        { "id": "scale", "type": "number", "label": "Scale", "min": 0.6, "max": 2, "step": 0.05, "default": 1 },
+        {
+            "id": "position",
+            "type": "select",
+            "label": "Position",
+            "default": "bottom-left",
+            "options": [
+                { "label": "Bottom left", "value": "bottom-left" },
+                { "label": "Bottom right", "value": "bottom-right" },
+                { "label": "Top left", "value": "top-left" },
+                { "label": "Top right", "value": "top-right" },
+                { "label": "Custom (moved by hand)", "value": "custom" }
+            ]
+        },
+        { "id": "x", "type": "number", "label": "X", "min": 0, "max": 20000, "step": 1, "unit": "px", "default": 0, "hidden": true },
+        { "id": "y", "type": "number", "label": "Y", "min": 0, "max": 20000, "step": 1, "unit": "px", "default": 0, "hidden": true }
+    ]
+}

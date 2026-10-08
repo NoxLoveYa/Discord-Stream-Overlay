@@ -1,0 +1,214 @@
+<!doctype html>
+<!--
+    Keyboard input overlay. overlay.json lists the keys this overlay may read (only those are polled, and only while it is visible)
+    and the settings shown in the plugin settings (accent colors, shadow color, scale, position): they arrive as CSS variables and data attributes.
+    While the "interactive" keys (Alt + Caps) are held the overlay receives the mouse: drag the board to move it, drag the corner
+    handle to scale it. The board follows the pointer live; only when the button is released is the result posted back as a
+    { type: "streamoverlay:save", values } message, which stores it in the settings.
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Keyboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="board">
+        <!-- widths (--span) are in key widths, as on a real keyboard; the last row is as wide as the widest one -->
+        <div class="row">
+            <div class="key mod" data-key="TAB" style="--span: 1.5"><div class="cap"><span>TAB</span></div></div>
+            <div class="key" data-key="Q"><div class="cap"><span>Q</span></div></div>
+            <div class="key" data-key="W"><div class="cap"><span>W</span></div></div>
+            <div class="key" data-key="E"><div class="cap"><span>E</span></div></div>
+            <div class="key" data-key="R"><div class="cap"><span>R</span></div></div>
+            <div class="key" data-key="T"><div class="cap"><span>T</span></div></div>
+        </div>
+        <div class="row">
+            <div class="key mod" data-key="CAPS" style="--span: 1.75"><div class="cap"><span>CAPS</span></div></div>
+            <div class="key" data-key="A"><div class="cap"><span>A</span></div></div>
+            <div class="key" data-key="S"><div class="cap"><span>S</span></div></div>
+            <div class="key" data-key="D"><div class="cap"><span>D</span></div></div>
+            <div class="key" data-key="F"><div class="cap"><span>F</span></div></div>
+            <div class="key" data-key="G"><div class="cap"><span>G</span></div></div>
+        </div>
+        <div class="row">
+            <div class="key mod" data-key="SHIFT" style="--span: 2.25"><div class="cap"><span>SHIFT</span></div></div>
+            <div class="key" data-key="Z"><div class="cap"><span>Z</span></div></div>
+            <div class="key" data-key="X"><div class="cap"><span>X</span></div></div>
+            <div class="key" data-key="C"><div class="cap"><span>C</span></div></div>
+            <div class="key" data-key="V"><div class="cap"><span>V</span></div></div>
+            <div class="key" data-key="B"><div class="cap"><span>B</span></div></div>
+        </div>
+        <div class="row">
+            <div class="key mod" data-key="CTRL" style="--span: 1.25"><div class="cap"><span>CTRL</span></div></div>
+            <div class="key mod" data-key="SPACE" style="--span: 6"><div class="cap"><span>SPACE</span></div></div>
+        </div>
+
+        <div class="resize" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.5 2.5h4v4M13.5 2.5 9 7M6.5 13.5h-4v-4M2.5 13.5 7 9" />
+            </svg>
+        </div>
+        <div class="hint">
+            <span class="hint-idle">Hold <kbd>Alt</kbd> + <kbd>Caps</kbd> to move or resize</span>
+            <span class="hint-armed">Drag to move · drag the corner to resize</span>
+        </div>
+    </main>
+
+    <script>
+        const MOVE_KEYS = ["ALT", "CAPS"]; // keep in sync with "interactive" in overlay.json
+        const MIN_SCALE = 0.6; // keep in sync with the "scale" setting in overlay.json
+        const MAX_SCALE = 2;
+
+        const root = document.documentElement;
+        const board = document.querySelector(".board");
+        const hint = document.querySelector(".hint");
+        const keys = [...document.querySelectorAll("[data-key]")];
+        const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+
+        let armed = false;
+        let drag = null;
+        let hintHeight = 0;
+
+        function setVars(el, x, y, scale) {
+            el.style.setProperty("--x", `${x}px`);
+            el.style.setProperty("--y", `${y}px`);
+            el.style.setProperty("--scale", scale);
+        }
+
+        // the hint goes above the board only when it does not fit below it (it keeps its size whatever the scale, its gap does not)
+        function setFlip(bottom, scale) {
+            hint.classList.toggle("flip", bottom + hintHeight + 12 * scale + 8 > innerHeight);
+        }
+
+        function placeHint() {
+            const rect = board.getBoundingClientRect();
+            hintHeight = hint.offsetHeight;
+            setFlip(rect.bottom, rect.width / board.offsetWidth);
+        }
+
+        function setArmed(on) {
+            if (on === armed) return;
+            armed = on;
+            root.classList.toggle("armed", on);
+            placeHint();
+            if (!on) endDrag();
+        }
+
+        // While dragging, the board is updated live: once per frame, through variables on the board itself (so nothing else is
+        // restyled), from sizes measured when the drag started (so nothing is measured). Nothing is posted until the release.
+        function frame(d = drag) {
+            if (!d) return;
+            d.frame = 0;
+
+            if (d.resize) {
+                // the bottom left corner stays where it is
+                const fromX = (d.pointer.x - d.left) / d.width;
+                const fromY = (d.bottom - d.pointer.y) / d.height;
+                d.scale = clamp((fromX + fromY) / 2, MIN_SCALE, MAX_SCALE);
+                d.x = d.left;
+                d.y = Math.max(0, d.bottom - d.height * d.scale);
+            } else {
+                d.x = clamp(d.pointer.x - d.grabX, 0, innerWidth - d.width * d.scale);
+                d.y = clamp(d.pointer.y - d.grabY, 0, innerHeight - d.height * d.scale);
+            }
+
+            setVars(board, d.x, d.y, d.scale);
+            setFlip(d.y + d.height * d.scale, d.scale);
+        }
+
+        // the variables of the board hide the ones on the page, so they only exist while dragging
+        function clearBoardVars() {
+            for (const name of ["--x", "--y", "--scale"]) board.style.removeProperty(name);
+        }
+
+        function endDrag() {
+            if (!drag) return;
+            const d = drag;
+            drag = null;
+            cancelAnimationFrame(d.frame);
+
+            // a click without any movement changes nothing
+            if (!d.moved) {
+                clearBoardVars();
+                if (d.previousPosition === undefined) delete root.dataset.position;
+                else root.dataset.position = d.previousPosition;
+                return;
+            }
+
+            frame(d); // the last pointer position
+            const values = { position: "custom", x: Math.round(d.x), y: Math.round(d.y), scale: +d.scale.toFixed(3) };
+            setVars(root, values.x, values.y, values.scale);
+            clearBoardVars();
+            parent.postMessage({ type: "streamoverlay:save", values }, "*");
+        }
+
+        // the window ignores the mouse until Alt + Caps is held, so the cursor position is relayed to us instead of real hover events
+        function setHovered(x, y) {
+            const rect = board.getBoundingClientRect();
+            const hovered = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+            if (hovered === root.classList.contains("hovered")) return;
+
+            root.classList.toggle("hovered", hovered);
+            if (hovered) placeHint();
+        }
+
+        addEventListener("message", ({ source, data }) => {
+            if (source !== parent) return;
+
+            if (data?.type === "streamoverlay:keys") {
+                const down = new Set(data.down);
+                for (const key of keys) key.classList.toggle("is-down", down.has(key.dataset.key));
+                setArmed(MOVE_KEYS.every(key => down.has(key)));
+            } else if (data?.type === "streamoverlay:pointer") {
+                setHovered(data.x, data.y);
+            }
+        });
+
+        board.addEventListener("pointerdown", e => {
+            if (!armed || e.button !== 0) return;
+
+            const rect = board.getBoundingClientRect();
+            const width = board.offsetWidth;
+            hintHeight = hint.offsetHeight;
+            // the exact scale, not the one derived from the (sub-pixel) rectangle
+            const scale = parseFloat(getComputedStyle(board).scale) || rect.width / width;
+
+            drag = {
+                id: e.pointerId,
+                resize: !!e.target.closest(".resize"),
+                pointer: { x: e.clientX, y: e.clientY },
+                grabX: e.clientX - rect.left,
+                grabY: e.clientY - rect.top,
+                left: rect.left,
+                bottom: rect.bottom,
+                width,
+                height: board.offsetHeight,
+                scale,
+                x: rect.left,
+                y: rect.top,
+                moved: false,
+                frame: 0,
+                previousPosition: root.dataset.position
+            };
+
+            // switches to the custom position, so it works from any preset without anything jumping
+            root.dataset.position = "custom";
+            setVars(board, rect.left, rect.top, scale);
+            board.setPointerCapture(e.pointerId);
+            e.preventDefault();
+        });
+
+        board.addEventListener("pointermove", e => {
+            if (!drag || e.pointerId !== drag.id) return;
+
+            drag.pointer = { x: e.clientX, y: e.clientY };
+            drag.moved = true;
+            drag.frame ||= requestAnimationFrame(() => frame());
+        });
+
+        board.addEventListener("pointerup", endDrag);
+        board.addEventListener("pointercancel", endDrag);
+    </script>
+</body>
+</html>
