@@ -23,10 +23,9 @@ resize it. The result is saved when you let go and applies to the stream straigh
 Hover the picture and use the button at its top right to make it full screen, which makes placing things easier (Esc or
 the same button goes back). The picture is then rendered larger.
 
-The overlays move at the refresh rate of that monitor. Behind them is a screenshot of the monitor, which is what the
-stream shows without the overlays, refreshed about once a second (so it is not live video). If that monitor is the one
-Discord is on, the screenshot contains the settings window itself, so the picture repeats inside itself; it is best used
-with the shared monitor being another one. While the tab is open the overlays are hidden on the real screen, and come
+The overlays are rendered at 300 Hz (240 if Discord's Electron refuses that). Behind them is a screenshot of the monitor,
+which is what the stream shows without the overlays, taken once when you open the tab; it is a still, not live video.
+If that monitor is the one Discord is on, the screenshot contains the settings window. While the tab is open the overlays are hidden on the real screen, and come
 back when you leave the tab.
 
 Only overlays tagged `draggable` can be moved there (the keyboard and the mouse; see the plugin README). On screen,

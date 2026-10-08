@@ -16,7 +16,6 @@ import { IconButton } from "./IconButton";
 
 const PICTURE_WIDTH = 1280;
 const EXPANDED_WIDTH = 1920;
-const BACKGROUND_MS = 750;
 const CHANGES_MS = 150;
 
 const ExpandIcon = (props: SVGProps<SVGSVGElement>) => (
@@ -93,18 +92,32 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const enabled = [...enabledOverlays];
     const draggable = overlays.filter(o => o.draggable && enabled.includes(o.name));
 
+    // the screen behind the overlays is a still, taken once when the tab opens (once it is known which screen it is)
+    const backgroundUrl = useRef("");
+    const backgroundTaken = useRef(false);
+    const takeBackground = async () => {
+        if (backgroundTaken.current) return;
+        backgroundTaken.current = true;
+
+        const jpeg = await Native.layoutBackground(EXPANDED_WIDTH);
+        if (!jpeg || !background.current) {
+            backgroundTaken.current = false;
+            return;
+        }
+        backgroundUrl.current = URL.createObjectURL(new Blob([new Uint8Array(jpeg)], { type: "image/jpeg" }));
+        background.current.src = backgroundUrl.current;
+    };
+
     // also when a drag has just been saved
     const state = JSON.stringify([overlayRoot, enabled, plain(overlayValues)]);
     useEffect(() => {
         const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
-        Native.layoutShow(sourceId, overlayRoot, enabled, plain(overlayValues), expanded ? EXPANDED_WIDTH : PICTURE_WIDTH);
+        Native.layoutShow(sourceId, overlayRoot, enabled, plain(overlayValues), expanded ? EXPANDED_WIDTH : PICTURE_WIDTH).then(takeBackground);
     }, [state, expanded]);
 
     useEffect(() => {
         let alive = true;
         let frameRequest = 0;
-        let backgroundTimer: ReturnType<typeof setTimeout> | undefined;
-        let backgroundUrl = "";
 
         const tick = async () => {
             try {
@@ -129,29 +142,12 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         };
         const changesTimer = setInterval(collect, CHANGES_MS);
 
-        const refreshBackground = async () => {
-            try {
-                const jpeg = await Native.layoutBackground(pictureWidth.current);
-                if (!alive) return;
-                if (jpeg && background.current) {
-                    const url = URL.createObjectURL(new Blob([new Uint8Array(jpeg)], { type: "image/jpeg" }));
-                    background.current.src = url;
-                    if (backgroundUrl) URL.revokeObjectURL(backgroundUrl);
-                    backgroundUrl = url;
-                }
-            } finally {
-                if (alive) backgroundTimer = setTimeout(refreshBackground, BACKGROUND_MS);
-            }
-        };
-
         tick();
-        refreshBackground();
         return () => {
             alive = false;
             cancelAnimationFrame(frameRequest);
-            clearTimeout(backgroundTimer);
             clearInterval(changesTimer);
-            if (backgroundUrl) URL.revokeObjectURL(backgroundUrl);
+            if (backgroundUrl.current) URL.revokeObjectURL(backgroundUrl.current);
             cancelAnimationFrame(raf.current);
             if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
             Native.layoutHide();
@@ -208,7 +204,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
         <div>
             <Paragraph size="sm" defaultColor={false} className="vc-so-muted vc-so-hint">
                 {draggable.length
-                    ? `Drag ${draggable.map(o => o.title).join(" or ")} to move it, or drag its corner to resize it. Behind the overlays is the screen being shared (or your main screen), a few times a second.`
+                    ? `Drag ${draggable.map(o => o.title).join(" or ")} to move it, or drag its corner to resize it. Behind the overlays is a still of the screen being shared (or your main screen).`
                     : "No overlay that can be moved is on. Turn on one that is draggable (the keyboard or the mouse, for example) to place it here."}
             </Paragraph>
 

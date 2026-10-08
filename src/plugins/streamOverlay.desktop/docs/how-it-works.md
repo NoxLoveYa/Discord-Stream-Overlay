@@ -96,15 +96,15 @@ a transparent canvas positioned over the video:
 ### The Layout tab
 
 A second `OverlayWindow` (created with `layout = true`, fed to a `LayoutSink` instead of the encoder) renders the enabled
-overlays offscreen at the refresh rate of the shared display, at least 60 and at most 240 Hz (the stream's own window
-only runs at 30 fps). It keeps the layout of the full screen but is rendered in far fewer pixels: its window is
+overlays offscreen at 300 Hz (the stream's own window only runs at 30 fps). Electron documents 240 as the highest an
+offscreen window accepts, so the rate is read back and 240 is used if 300 was not taken. It keeps the layout of the full screen but is rendered in far fewer pixels: its window is
 smaller and its zoom factor matches, so the page still measures the real screen while about 1280 px (1920 when full
 screen) are painted instead of 2560 × 1440. It has its own session (`partition`) so that this zoom cannot reach the
 overlay window. The settings page (`components/Layout.tsx`) is in the renderer and cannot be pushed to, so it asks
 `Native.layoutFrame` for the newest frame once per animation frame; the BGRA bytes are uploaded to a WebGL texture and
 the channels swapped in a shader, so no per-pixel work runs in JavaScript. What the overlays saved is collected
 separately every 150 ms (`Native.layoutChanges` asks the overlay page, which is slower than a frame). Behind the canvas is a screenshot of the display
-(`desktopCapturer`, refreshed every 750 ms), which is what the stream shows without the overlays: the real on-screen
+(`desktopCapturer`, taken once when the tab opens), which is what the stream shows without the overlays: the real on-screen
 overlay window is hidden while the tab is open (`suspend()` / `resume()`) so that it is not in the picture twice. While
 the tab is open:
 

@@ -20,8 +20,8 @@ import type { StreamSink } from "./nvenc";
 import { resolveValue, settingsScript } from "./values";
 
 const OFFSCREEN_FPS = 30;
-const MIN_LAYOUT_FPS = 60;
-const MAX_FRAME_RATE = 240; // what an offscreen window can be asked for
+const LAYOUT_FPS = 300;
+const FALLBACK_FPS = 240; // what an offscreen window is documented to accept
 
 interface Entry {
     name: string;
@@ -123,7 +123,11 @@ export class OverlayWindow {
         // The page keeps the layout of the full screen: a smaller window with a matching zoom shows it in fewer pixels
         const scale = this.layout && renderWidth ? Math.min(1, renderWidth / (display.bounds.width * screen.getPrimaryDisplay().scaleFactor)) : 1;
         win.setBounds({ ...display.bounds, width: Math.max(1, Math.round(display.bounds.width * scale)), height: Math.max(1, Math.round(display.bounds.height * scale)) });
-        if (offscreen) win.webContents.setFrameRate(this.layout ? Math.min(MAX_FRAME_RATE, Math.max(MIN_LAYOUT_FPS, display.displayFrequency)) : OFFSCREEN_FPS);
+        if (offscreen) {
+            const { webContents } = win;
+            webContents.setFrameRate(this.layout ? LAYOUT_FPS : OFFSCREEN_FPS);
+            if (this.layout && webContents.getFrameRate() !== LAYOUT_FPS) webContents.setFrameRate(FALLBACK_FPS);
+        }
 
         if (this.exiting) {
             this.exiting = false;
