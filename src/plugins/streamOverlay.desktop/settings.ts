@@ -46,6 +46,11 @@ export const settings = definePluginSettings({
         type: OptionType.COMPONENT,
         component: OverlayPicker
     },
+    streamOnly: {
+        type: OptionType.BOOLEAN,
+        description: "Only draw the overlays on the stream and its preview, not on your own screen (experimental: NVIDIA encoder only, the overlays cannot be dragged while it is on)",
+        default: false
+    },
     alwaysShow: {
         type: OptionType.BOOLEAN,
         description: "Show the overlays even when not screensharing (for testing)",

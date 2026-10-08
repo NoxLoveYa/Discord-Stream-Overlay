@@ -19,6 +19,7 @@ const COLLECT_INTERVAL_MS = 400;
 
 let running = false;
 let visible = false;
+let hooked = false;
 let syncTimer: ReturnType<typeof setInterval> | undefined;
 let collectTimer: ReturnType<typeof setInterval> | undefined;
 let lastKey = "";
@@ -37,13 +38,20 @@ async function doSync() {
 
     const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
     const active = ApplicationStreamingStore.getCurrentUserActiveStream();
-    const { overlayRoot, alwaysShow } = settings.store;
+    const { overlayRoot, alwaysShow, streamOnly } = settings.store;
+
+    // before any stream: the hook has to see the encoder being set up
+    if (streamOnly && !hooked) {
+        hooked = await Native.prepareStream();
+        if (hooked) logger.info("encoder hook installed, streams started from now on can carry the overlay");
+    }
+
     // the store hands out proxies, which cannot cross IPC
     const overlays = [...settings.store.enabledOverlays];
     const values = JSON.parse(JSON.stringify(settings.store.overlayValues));
 
     const shouldShow = overlays.length > 0 && (alwaysShow || (active != null && sourceId?.startsWith("screen") === true));
-    const state = JSON.stringify([shouldShow, sourceId, sourceName, overlayRoot, overlays]);
+    const state = JSON.stringify([shouldShow, sourceId, sourceName, overlayRoot, overlays, streamOnly]);
     const key = state + JSON.stringify(values);
     if (key === lastKey) return;
     lastKey = key;
@@ -54,8 +62,10 @@ async function doSync() {
         return Native.hide();
     }
 
-    const result = await Native.show(sourceId, sourceName, overlayRoot, overlays, values);
+    const result = await Native.show(sourceId, sourceName, overlayRoot, overlays, values, streamOnly);
     visible = result != null;
+    // the encoder hook is not reachable yet (Discord was not reloaded since the plugin registered its script): try again
+    if (streamOnly && result && !result.streamOnly) lastKey = "";
     if (state !== lastState) logger.info("showing overlay", { sourceId, sourceName, ...result });
     lastState = state;
 }
@@ -87,6 +97,7 @@ export function startSync() {
 export function stopSync() {
     running = false;
     visible = false;
+    hooked = false;
     clearInterval(syncTimer);
     clearInterval(collectTimer);
     stopAppPresets();

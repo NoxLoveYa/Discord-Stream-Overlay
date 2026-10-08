@@ -16,7 +16,10 @@ import { findOverlays } from "./folder";
 import { hostHtml } from "./host";
 import { OverlayInput } from "./input";
 import { readManifest, unionKeys } from "./manifest";
+import type { StreamSink } from "./nvenc";
 import { resolveValue, settingsScript } from "./values";
+
+const OFFSCREEN_FPS = 30;
 
 interface Entry {
     name: string;
@@ -27,9 +30,14 @@ interface Entry {
 
 const hostPath = () => join(app.getPath("temp"), "vencord-streamoverlay-host.html");
 
-/** The transparent, click-through window drawn over the shared screen, and everything that depends on what it shows. */
+/**
+ * The transparent, click-through window drawn over the shared screen, and everything that depends on what it shows. In
+ * "stream only" mode the window is never on screen: its pixels are rendered offscreen and handed to the stream sink.
+ */
 export class OverlayWindow {
     private win: BrowserWindow | null = null;
+    private offscreen = false;
+    private shown = false;
     /** what is loaded, in iframe order */
     private entries: Entry[] = [];
     private loadedKey = "";
@@ -40,13 +48,22 @@ export class OverlayWindow {
     private exiting = false;
     private readonly input = new OverlayInput(() => this.live(), () => this.entries.map(e => e.manifest.interactive));
 
-    async show(sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues) {
+    constructor(private readonly stream: StreamSink) { }
+
+    async show(sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false) {
         this.hideToken++;
 
         const found = findOverlays(root, names);
         if (!found.length) {
             this.destroy();
             return null;
+        }
+
+        // when the encoder cannot be reached the overlay stays on screen rather than disappearing
+        const offscreen = streamOnly && await this.stream.start();
+        if (offscreen !== this.offscreen) {
+            this.destroy();
+            this.offscreen = offscreen;
         }
 
         const manifests = found.map(o => readManifest(o.file));
@@ -77,20 +94,22 @@ export class OverlayWindow {
 
         // before it becomes visible, so the first frame already has the right values
         await this.applySettings();
-        win.showInactive();
+        if (!offscreen) win.showInactive();
+        this.shown = true;
         if (fresh) await playEnter(win);
 
+        // an offscreen overlay cannot be dragged, so there is no cursor to relay
         const keys = unionKeys(manifests);
-        this.input.sync(keys, manifests.some(m => m.mouse), manifests.some(m => m.interactive.length > 0), fresh);
+        this.input.sync(keys, manifests.some(m => m.mouse), !offscreen && manifests.some(m => m.interactive.length > 0), fresh);
 
-        return { match, displayId: display.id, bounds: display.bounds, overlays: found.length, keys: keys.length };
+        return { match, displayId: display.id, bounds: display.bounds, overlays: found.length, keys: keys.length, streamOnly: offscreen };
     }
 
     async hide(animate = true) {
         const token = ++this.hideToken;
         const win = this.live();
 
-        if (animate && win?.isVisible()) {
+        if (animate && win && this.shown) {
             this.exiting = true;
             await playExit(win);
             if (token !== this.hideToken) return;
@@ -140,6 +159,7 @@ export class OverlayWindow {
         const win = new BrowserWindow({
             show: false,
             transparent: true,
+            backgroundColor: "#00000000",
             frame: false,
             hasShadow: false,
             resizable: false,
@@ -148,10 +168,17 @@ export class OverlayWindow {
             skipTaskbar: true,
             fullscreenable: false,
             alwaysOnTop: true,
-            webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
+            webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false, offscreen: this.offscreen }
         });
         win.setAlwaysOnTop(true, "screen-saver");
         win.setIgnoreMouseEvents(true);
+        if (this.offscreen) {
+            win.webContents.setFrameRate(OFFSCREEN_FPS);
+            win.webContents.on("paint", (_, __, image) => {
+                const { width, height } = image.getSize();
+                this.stream.frame(image.toBitmap(), width, height);
+            });
+        }
         win.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
         win.webContents.on("will-navigate", e => e.preventDefault());
         win.on("closed", () => {
@@ -164,9 +191,11 @@ export class OverlayWindow {
     }
 
     private destroy() {
+        if (this.offscreen) this.stream.stop();
         this.input.stop();
         this.live()?.destroy();
         this.win = null;
+        this.shown = false;
         this.entries = [];
         this.loadedKey = "";
         this.display = null;

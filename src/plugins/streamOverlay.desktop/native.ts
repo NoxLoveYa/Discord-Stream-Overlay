@@ -8,12 +8,14 @@ import { BrowserWindow, type IpcMainInvokeEvent, shell } from "electron";
 
 import { FocusWatcher } from "./main/focus";
 import { listOverlays as listOverlayFolder, pickFolder as pickOverlayFolder, resolveRoot } from "./main/folder";
+import { Nvenc } from "./main/nvenc";
 import { OverlayWindow } from "./main/window";
 import type { OverlayValues } from "./types";
 
 // What the renderer can call: every export is an IPC method. The logic lives in ./main.
 
-const overlay = new OverlayWindow();
+const nvenc = new Nvenc();
+const overlay = new OverlayWindow(nvenc);
 const focus = new FocusWatcher();
 
 export function listOverlays(_: IpcMainInvokeEvent, root: string) {
@@ -28,8 +30,9 @@ export function openRoot(_: IpcMainInvokeEvent, root: string) {
     return shell.openPath(resolveRoot(root));
 }
 
-export function show(_: IpcMainInvokeEvent, sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues) {
-    return overlay.show(sourceId, sourceName, root, names, values);
+export function show(event: IpcMainInvokeEvent, sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false) {
+    nvenc.register(event.sender.session);
+    return overlay.show(sourceId, sourceName, root, names, values, streamOnly);
 }
 
 export function hide(_: IpcMainInvokeEvent, animate = true) {
@@ -51,4 +54,13 @@ export function watchFocus(_: IpcMainInvokeEvent, on: boolean) {
 
 export function getFocus() {
     return focus.read();
+}
+
+/**
+ * Hooks the encoder ahead of the stream: it only knows which texture an encoded frame is by watching Discord register
+ * them, so a stream that started before the hook cannot be drawn on. True once the hook is in.
+ */
+export function prepareStream(event: IpcMainInvokeEvent) {
+    nvenc.register(event.sender.session);
+    return nvenc.start();
 }

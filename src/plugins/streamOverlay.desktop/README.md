@@ -109,6 +109,26 @@ protected games, the lock screen) change nothing. Nothing runs while there are n
 tab is closed. Microsoft Store apps all appear as `ApplicationFrameHost.exe`. The bindings are stored in the plugin
 settings (`appBindings`, `appRevert`).
 
+### Stream only
+
+The setting "Only draw the overlays on the stream" keeps the overlays off your own screen. Windows, NVIDIA encoder only.
+Discord encodes the shared screen with NVENC inside its renderer process, so a small native addon (`nvenc/`, built with
+CMake, installed into `%APPDATA%\discord\StreamOverlay\nvenc`) hooks the encoder (MinHook) and, just before each frame is
+encoded, blends the overlay over it. The overlays are rendered by an offscreen window (`main/window.ts`) whose pixels
+travel to the renderer (`main/nvenc.ts`); a preload script loads the addon there and also draws the overlay over the
+`<video>` of the in-app preview, which the encoder hook never touches.
+
+- The hook only knows which texture a frame is by watching Discord set the encoder up, so it is installed when the plugin
+  starts: a stream that was already running has to be restarted. If the hook cannot be reached the overlays stay on screen.
+- Discord has to be restarted (and the page reloaded once) after the preload script is registered for the first time.
+- The overlays cannot be dragged while it is on: switch it off to move the keyboard or mouse overlay.
+- The preview overlay goes on any video with the shape of the shared screen, and assumes the picture is letterboxed.
+- A Discord update can change the voice module and break the hook; failures are written to
+  `%TEMP%\streamoverlay-nvenc.log`.
+
+Build the addon with `cmake -S . -B build -G "Visual Studio 17 2022" -A x64` then
+`cmake --build build --config Release` in `nvenc/` (Discord closed, or the old copy is renamed aside).
+
 ### Animations
 
 Finite CSS animations replay when the overlay appears and play in reverse when the share stops (use
@@ -133,4 +153,5 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `main/manifest.ts`, `main/values.ts` | reading and validating `overlay.json`, applying values to a page |
 | `main/host.ts` | the page that holds every overlay as an iframe and bridges them to the main process |
 | `main/display.ts`, `main/animations.ts` | finding the shared display, the enter / exit animations |
+| `main/nvenc.ts`, `nvenc/` | stream only: the preload script, frame transport and preview overlay; the native NVENC hook |
 | `main/focus.ts` | the program in focus: a small PowerShell helper (own process, only while somebody asks) and the object `native.ts` keeps it in |
