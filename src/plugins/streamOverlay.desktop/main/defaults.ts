@@ -28,6 +28,10 @@ import obnoxiousMouseManifest from "file://../defaultOverlays/obnoxious-mouse/ov
 import obnoxiousMouseScript from "file://../defaultOverlays/obnoxious-mouse/script.js";
 import obnoxiousMouseCss from "file://../defaultOverlays/obnoxious-mouse/style.css";
 import obnoxiousMouseBoardTheme from "file://../defaultOverlays/obnoxious-mouse/theme.css";
+import obnoxiousSpotifyHtml from "file://../defaultOverlays/obnoxious-spotify/index.html";
+import obnoxiousSpotifyManifest from "file://../defaultOverlays/obnoxious-spotify/overlay.json";
+import obnoxiousSpotifyCss from "file://../defaultOverlays/obnoxious-spotify/style.css";
+import obnoxiousSpotifyTheme from "file://../defaultOverlays/obnoxious-spotify/theme.css";
 import redBorderHtml from "file://../defaultOverlays/red-border/index.html";
 import redBorderManifest from "file://../defaultOverlays/red-border/overlay.json";
 import redBorderCss from "file://../defaultOverlays/red-border/style.css";
@@ -100,6 +104,18 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "style.css": obnoxiousMouseCss,
         "theme.css": obnoxiousMouseBoardTheme,
         "overlay.json": obnoxiousMouseManifest
+    },
+    "obnoxious-spotify": {
+        "board.css": boardCss,
+        "move.css": moveCss,
+        "move.js": moveScript,
+        "font.css": obnoxiousFont,
+        "FONT-LICENSE.txt": obnoxiousFontLicense,
+        "index.html": obnoxiousSpotifyHtml,
+        "script.js": spotifyScript,
+        "style.css": obnoxiousSpotifyCss,
+        "theme.css": obnoxiousSpotifyTheme,
+        "overlay.json": obnoxiousSpotifyManifest
     },
     "spotify": {
         "board.css": boardCss,
