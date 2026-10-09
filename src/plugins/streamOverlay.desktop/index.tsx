@@ -9,6 +9,7 @@ import definePlugin from "@utils/types";
 
 import { manageStreamsPatch } from "./menu";
 import { migrateOverlays, settings } from "./settings";
+import { startSoftwareStream, stopSoftwareStream } from "./softwareStream";
 import { startSync, stopSync } from "./sync";
 
 export default definePlugin({
@@ -24,7 +25,11 @@ export default definePlugin({
 
     start() {
         migrateOverlays();
+        startSoftwareStream();
         startSync();
     },
-    stop: stopSync
+    stop() {
+        stopSoftwareStream();
+        stopSync();
+    }
 });

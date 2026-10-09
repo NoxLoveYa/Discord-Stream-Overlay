@@ -70,12 +70,12 @@ game to that preset on the **Apps** tab — the arrangement follows the game in 
 move the overlay from the **Layout** tab while an arrangement is on.
 
 The **MOBA** arrangement shows League of Legends spells. **Auto (in game)** (the default) reads your champion and
-summoner spells straight from the game client while a game is live (no login, nothing leaves your machine) and shows
-letters outside a game. The ability icons of the live champion are loaded from the Data Dragon CDN, so they need an
-internet connection; set **MOBA champion** to **Letters (QWER)** to keep the letters on QWER. A summoner spell can be
-picked for each of **D** and **F** (Flash, Ignite, Teleport, Ghost, Exhaust, Heal, Barrier, Smite). The summoner icons
-are Riot Games assets from Data Dragon, bundled with the plugin, so they show with Letters too and outside a game. Like
-the arrangement itself, these choices are saved per preset.
+summoner spells straight from the game client while a game is live (no login, nothing leaves your machine), and the keys are
+plain letters again outside a game. The ability icons of the live champion are loaded from the Data Dragon CDN, so they need an
+internet connection; set **MOBA champion** to **Letters (QWER)** to keep the letters on QWER in a game too. A summoner spell can
+be picked by hand for each of **D** and **F** (Flash, Ignite, Teleport, Ghost, Exhaust, Heal, Barrier, Smite): a spell picked
+this way is always shown, game or not. The summoner icons are Riot Games assets from Data Dragon, bundled with the plugin, so
+they need no download. Like the arrangement itself, these choices are saved per preset.
 
 ### Fonts
 
@@ -116,8 +116,9 @@ Draws the overlays on the stream and its preview but not on your screen. It is o
 
 ### Requirements
 - Windows, and Discord encoding the stream with **NVENC** (an NVIDIA GPU, the default on NVIDIA) or with **Windows' own
-  software H.264 encoder** (what Discord falls back to when no graphics card can encode the screen, as on many laptops). An
-  AMD or Intel hardware encoder is not covered.
+  software H.264 encoder** (what Discord falls back to when no graphics card can encode the screen, as on many laptops).
+  The encoder of an AMD or Intel card cannot be drawn into: for those the plugin sends the stream through Windows' software
+  encoder (see "AMD, Intel and other cards" below).
 - A screen share of a monitor.
 - The native addon (below), which `pnpm install` and `pnpm build` take care of.
 
@@ -159,6 +160,23 @@ folder, separate from a checkout's. The addon only works on NVIDIA GPUs; the res
 
 Viewers now see the overlay; your monitor does not. In Discord, your own stream preview shows the overlay on top.
 
+### AMD, Intel and other cards
+Stream only switches to Windows' software H.264 encoder by itself when the encoder of the graphics card cannot carry the overlay:
+- Before the stream starts, Discord's voice engine is asked which encoders this machine has. If every hardware H.264 encoder it
+  lists is AMD's, Intel's or Windows' own (or it lists none), the stream is sent through the software encoder from the start.
+- Otherwise, if the stream turns out to be encoded by one of those anyway (a PC with an NVIDIA card that does not hold your
+  screen, a name the list did not show), the plugin switches the stream when its check finds no overlay in it (about 10 seconds
+  with a viewer watching), tells you in a notice, and gives the new encoder its own 10 seconds. If the overlay still does not
+  show up, stop and start the share again: the stream then starts on the software encoder. Only when that does not work either
+  are the overlays put back on your screen.
+- **Always use Windows' software H.264 encoder for Stream only** (plugin settings) forces it for every stream, NVIDIA included.
+  Restart the share after changing it.
+
+It works by telling Discord's connection of the screen share not to use the hardware encoders and not to offer H.265 or AV1,
+through the denylists Discord has for that; a camera or a call keeps its encoder. The software encoder costs processor time on
+top of the encoding, and the stream can look a little softer than on NVENC (see below). It was tested on a Radeon RX 5700 XT;
+the Intel and NVIDIA names in the denylist follow the same pattern and have not been tried on such a machine.
+
 ### Limits
 - Overlays cannot be dragged on screen while it is on; use the Layout tab.
 - NVENC and Windows' software H.264 encoder only, monitor shares only. If the hook cannot attach, the overlays stay on your
@@ -166,8 +184,9 @@ Viewers now see the overlay; your monitor does not. In Discord, your own stream 
 - The stream has to go through one of those two for the screen it shares. On a laptop with two graphics cards the screen is
   usually on the integrated one (an NVIDIA card with "no screen connected" in its settings is the sign), so Discord cannot hand
   those frames to NVENC: it then uses the encoder of the integrated card if it can, and Windows' software one if it cannot. The
-  software one is covered; the integrated card's (AMD's, Intel's) is not, and the overlay would be in neither place, so the plugin
-  checks (see "Does it reach the stream?" below) and puts the overlays back on your screen for that stream, with a notice.
+  integrated card's encoder (AMD's, Intel's) is not drawn into, so the plugin sends the stream through the software one (see above);
+  if that does not work either, the overlay would be in neither place, so the plugin checks (see "Does it reach the stream?"
+  below) and puts the overlays back on your screen for that stream, with a notice.
 - With the software encoder the overlay costs some processor time on top of the encoding (a few tenths of a millisecond a frame
   for an overlay of the usual size), and the colours of its thin edges and text are a little softer than with NVENC: video in
   system memory keeps only a quarter of the colour detail.
@@ -191,13 +210,13 @@ that cannot be drawn on (with the Windows error code), a frame the hook could no
 | Symptom | Likely cause |
 |---|---|
 | Overlay stays on your screen with "stream only" on | the addon is missing (`%APPDATA%\discord\StreamOverlay\nvenc\streamoverlay_nvenc.node`: `pnpm build` prints why it could not be built), or the page was not reloaded since Discord started (Ctrl + R) |
-| A notice says "Stream only does not work with this stream" | the plugin saw that nothing reached the stream and put the overlays on your screen: the reason is in the notice (the stream is not encoded by NVENC or Windows' software encoder; it began before the hook; drawing was switched off). The next stream is tried again |
+| A notice says "Stream only does not work with this stream" | the plugin saw that nothing reached the stream and put the overlays on your screen: the reason is in the notice (the stream is not encoded by NVENC or Windows' software encoder even after the plugin tried to switch it; it began before the hook; drawing was switched off). The next stream is tried again |
 | "Stream only" is on but nobody sees the overlay in the stream | Discord only encodes a stream while somebody is watching it, so until a viewer joins there is nothing to draw on. The plugin waits (the overlay stays off your screen) and draws as soon as the first frame is encoded. Your own preview of the stream carries the overlay either way |
 | Nothing on screen and nothing on the stream | the share started before the hook: stop and start the share again |
 | Viewers see nothing, still nothing after restarting the share | read `%TEMP%\streamoverlay-nvenc.log`: it states why drawing was switched off (not an encoder the hook covers, texture not shared, GPU timeout, ...) |
 | Overlay on the stream but not in your preview | the preview video was not recognised: it must be a non-http(s) `<video>` with the aspect ratio of the shared screen |
 | Overlay shows on videos in chat | a video in the chat list or loaded over http(s) is skipped on purpose; update to the latest build |
 
-To see which encoder a stream uses, look in `%APPDATA%\discord\logs\discord-webrtc_0` for "Outbound video stats": `codec: H264 (nvidia: direct3d)` is NVENC and `H264 (MediaFoundation SW)` is Windows' software encoder, which are covered; anything else (`amd`, `intel`...) is not.
+To see which encoder a stream uses, look in `%APPDATA%\discord\logs\discord-webrtc_0` (and `discord-webrtc_1`, the older half of the log once it has been rotated) for "Outbound video stats": `codec: H264 (nvidia: direct3d)` is NVENC and `H264 (MediaFoundation SW)` is Windows' software encoder, which are drawn into directly; with anything else (`amd`, `intel`...) the plugin sends the stream through the software encoder.
 
 To go back to normal: turn the setting off. The overlays return to your screen on the next sync (about a second).

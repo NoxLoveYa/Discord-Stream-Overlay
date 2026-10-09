@@ -53,8 +53,13 @@ export const settings = definePluginSettings({
     },
     streamOnly: {
         type: OptionType.BOOLEAN,
-        description: "Only draw the overlays on the stream and its preview, not on your own screen. Works with NVIDIA's encoder and Windows' software encoder; otherwise the overlays stay on your screen. The overlays cannot be dragged on screen while it is on (use the Layout tab)",
+        description: "Only draw the overlays on the stream and its preview, not on your own screen. Uses NVIDIA's encoder, or Windows' software encoder when the encoder of your graphics card (AMD, Intel...) cannot be drawn into; otherwise the overlays stay on your screen. The overlays cannot be dragged on screen while it is on (use the Layout tab)",
         default: true
+    },
+    softwareStreamOnly: {
+        type: OptionType.BOOLEAN,
+        description: "Always use Windows' software H.264 encoder for Stream only, even with an NVIDIA card (more processor use). Normally this is automatic: only when the encoder of your graphics card cannot be drawn into. Restart your stream after changing it",
+        default: false
     },
     alwaysShow: {
         type: OptionType.BOOLEAN,

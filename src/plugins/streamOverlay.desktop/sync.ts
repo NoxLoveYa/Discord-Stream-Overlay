@@ -11,8 +11,9 @@ import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore, UserStore 
 
 import { startAppPresets, stopAppPresets } from "./appPresets";
 import { explainEncoder } from "./encoders";
-import { GRACE_MS, judgeHook } from "./health";
+import { GRACE_MS, judgeHook, UNSUPPORTED_ENCODER } from "./health";
 import { Native, plain, saveOverlayChanges, settings, withGlobalFont } from "./settings";
+import { softwareWanted, useSoftwareEncoder } from "./softwareStream";
 import { startSpotify, stopSpotify } from "./spotify";
 import { streamState } from "./streamState";
 
@@ -60,6 +61,21 @@ async function checkHook() {
     if (!reason) return;
 
     const encoder = await Native.streamEncoder().catch(() => null);
+
+    // the card's own encoder (AMD, Intel...) cannot be drawn into but Windows' software one can: the stream goes there before giving up,
+    // and the new encoder gets its own grace period
+    if (reason === UNSUPPORTED_ENCODER && encoder?.kind !== "media-foundation-sw" && !softwareWanted()) {
+        useSoftwareEncoder();
+        streamState.offscreenSince = Date.now();
+        logger.info("stream only switches this stream to Windows' software encoder", encoder?.label);
+        showNotification({
+            title: "StreamOverlay",
+            body: `${explainEncoder(encoder)}. Stream only now sends this stream through Windows' software encoder, which uses more of your processor. If the overlay does not show up in a few seconds, stop and start the share again.`,
+            noPersist: true
+        });
+        return;
+    }
+
     streamState.failed = reason;
     lastKey = "";
     logger.warn("stream only does not work with this stream, the overlays go back on the screen", reason, encoder?.label);

@@ -35,7 +35,6 @@
         "summoner-flash", "summoner-ignite", "summoner-teleport", "summoner-ghost",
         "summoner-exhaust", "summoner-heal", "summoner-barrier", "summoner-smite"
     ]);
-    const FALLBACK_SUMMONER = { D: "summoner-flash", F: "summoner-ignite" };
 
     // the settings reach the page as data attributes (data-summoner-d is dataset.summonerD) and as an event
     const settingsOf = root => ({
@@ -72,7 +71,7 @@
         key.classList.add("has-icon");
     }
 
-    // the summoners follow the arrangement alone (a Letters board still shows them), the spells need a champion
+    // with "auto" every icon needs a live game and the keys are letters without one; a spell picked by hand is always shown
     function applyIcons() {
         const inMoba = picked.arrangement === "moba";
         const spells = inMoba ? qwer() : null;
@@ -94,8 +93,7 @@
         if (typeof manual === "string" && manual !== "auto")
             return SUMMONERS.has(manual) ? `spells/${manual}.png` : null;
         const id = which === "D" ? live?.summonerD : live?.summonerF;
-        const resolved = typeof id === "string" && SUMMONERS.has(id) ? id : FALLBACK_SUMMONER[which];
-        return `spells/${resolved}.png`;
+        return typeof id === "string" && SUMMONERS.has(id) ? `spells/${id}.png` : null;
     }
 
     function applyArrangement(name) {

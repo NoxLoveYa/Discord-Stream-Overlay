@@ -173,7 +173,7 @@ settings (`appBindings`, `appRevert`).
 
 ### Stream only
 
-The setting "Only draw the overlays on the stream" (on by default) keeps the overlays off your own screen. Windows, with NVENC or Windows' software H.264 encoder.
+The setting "Only draw the overlays on the stream" (on by default) keeps the overlays off your own screen. Windows, with NVENC or Windows' software H.264 encoder (the stream of an AMD or Intel card is sent through the latter).
 Discord encodes the shared screen with NVENC (or, when no graphics card can, with Windows' software encoder) inside its renderer process, so a small native addon (`nvenc/`, built with
 CMake by `scripts/build/nvenc.mjs`, installed into `%APPDATA%\discord\StreamOverlay\nvenc`) hooks the encoder (MinHook) and, just before each frame is
 encoded, blends the overlay over it. The overlays are rendered by an offscreen window (`main/window.ts`) whose pixels
@@ -212,7 +212,7 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `components/` | the settings page: `OverlayPicker` switches between `OverlayGrid` (tabs: cards and folder tools, layout, global presets, presets by app) and `OverlayDetail` (one overlay: tabs for its settings and its presets); Discord's `TextInput`, `Slider` and select; the color picker is built here (like Discord's role color picker) because Discord's own `ColorPicker` is only filled in once Discord has loaded it |
 | `encoders.ts` | which encoder the stream uses (read from Discord's voice log) and whether the overlay can be drawn into it, and whether Discord encodes at all (no React, no store, no Electron) |
 | `streamState.ts` | what the sync loop knows about "stream only" for the stream that is running |
-| `main/voiceLog.ts` | reads Discord's voice log: the encoder of the stream, and whether it encodes |
+| `main/voiceLog.ts` | reads Discord's voice log (both files of its rotation): the encoder of the stream, and whether it encodes |
 | `health.ts` | whether "stream only" really puts the overlay in the stream (what the hook reports, and the verdict) (no React, no store) |
 | `groups.ts`, `migrate.ts` | how an overlay's settings are split into tabs and which are shown (`group`, `when`) and the grouping of the cards; moving what was saved for the old gothic overlays to the theme (no React, no store) |
 | `sync.ts` | keeps the overlay window in line with the stream and the settings; collects what overlays save |
@@ -227,6 +227,7 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `main/manifest.ts`, `main/values.ts` | reading and validating `overlay.json`, applying values to a page |
 | `main/host.ts` | the page that holds every overlay as an iframe and bridges them to the main process |
 | `main/display.ts`, `main/animations.ts` | finding the shared display, the enter / exit animations |
+| `softwareStream.ts` | sends the stream through Windows' software encoder when the encoder of the graphics card cannot be drawn into (AMD, Intel): wraps Discord's encoder denylist for the screen share, decided from the engine's encoder list, the setting and the verdict of `sync.ts` |
 | `main/nvenc.ts`, `nvenc/` | stream only: the preload script, frame transport and preview overlay; the native hook (NVENC and Windows' software encoder; `yuvblend.h` blends into frames in memory, `napi.h` is the Node-API glue, `test/` has its tests) |
 | `main/layout.ts`, `components/Layout.tsx` | the Layout tab: a second offscreen overlay window whose frames the settings page asks for (answered as they are drawn) and whose mouse it feeds |
 | `spotify.ts`, `main/media.ts` | the track playing in Spotify: taken from Discord's player state events in the renderer, validated in the main process (`cleanMedia`) and pushed to the overlays that set `"media": true` |

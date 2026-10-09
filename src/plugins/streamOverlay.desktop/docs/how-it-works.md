@@ -179,12 +179,31 @@ rows and columns the overlay covers, so a frame costs a few tenths of a millisec
 the GPU path stretches the overlay over the texture. `test/mftest.cc` is a node addon that feeds frames to the real encoder, so that
 the hook can be tried without Discord: load both in node, draw, decode the stream with ffmpeg and look at the pixels.
 
+### Sending the stream to the software encoder (`softwareStream.ts`)
+
+The hook can only draw into NVENC and into the software encoder, so for the encoder of an AMD or Intel card the stream is sent to
+the software one. Discord's connection class (`setAudioVideoOverridesTransport`, found with `findByCode`, or through the prototype
+of a live connection) takes denylists of video encoders and codecs; the plugin wraps that method and, for the connection whose
+`context` is `"stream"` only, adds the hardware encoders (their internal ids such as `amd-dx11`, which are what the denylist
+matches, and the labels of the log) and H.265 / AV1 to what Discord asked for, leaving `MediaFoundation SW` allowed. Discord applies
+a change of the encoder denylist to a running connection itself (it passes it to the voice engine and renegotiates the codecs),
+so the wrapper also re-applies the lists to a stream that already runs. A camera or a call is never touched, the caller's own
+denylists are kept and come back when the routing stops, and `stopSoftwareStream()` puts the original method back.
+
+Whether to route is decided in three steps (`softwareWanted()`), any of which is enough while stream only is on: the setting
+`softwareStreamOnly`; the engine's list of encoders (`getCodecSurvey()`, read through `needsSoftware()` in `encoders.ts`: every
+hardware H.264 encoder in it is AMD's, Intel's or Windows' own, and an encoder of a name it does not know counts as possibly
+NVENC); and what `sync.ts` learned from the stream: when `judgeHook` says `UNSUPPORTED_ENCODER` and the encoder is not already the
+software one, `useSoftwareEncoder()` is called, the grace period starts again and the user gets a notice. If the verdict comes
+again after that, it is final. The log of the voice engine is not used for the first step: it rotates between two files and
+the line of the startup probe is gone after a long session.
+
 ### The log
 
 The hook writes `%TEMP%\streamoverlay-nvenc.log` from inside Discord's renderer (thread-safe, rotated at 1 MB), only for what goes
 wrong: why drawing was switched off, a texture that cannot be opened on the overlay's device (with its Windows error code), a
 frame whose texture the hook never saw registered, an encoder that could not be hooked. `main/voiceLog.ts` reads Discord's own
-voice log (`discord-webrtc_0`): `encoders.ts` tells which encoder the stream uses and whether it is one the overlay can be drawn
+voice log (`discord-webrtc_0` and `discord-webrtc_1`: Discord rotates the log at about 5 MB, the full file becomes `_1` and a new `_0` starts, so both are read, the older first; `discord-last-webrtc_*` belong to the previous session and are ignored): `encoders.ts` tells which encoder the stream uses and whether it is one the overlay can be drawn
 into, and whether it encodes at all.
 
 ### Does it reach the stream?
@@ -195,7 +214,7 @@ addon counts the frames NVENC was given since drawing went on and the ones it dr
 2 s and `judgeHook` (`health.ts`) decides:
 
 - drawing switched itself off (any time): a verdict;
-- nothing encoded in 10 s: a verdict that the stream is not NVENC or Windows' software encoder (a laptop whose screen is on the integrated GPU, AMD, Intel,
+- nothing encoded in 10 s: a verdict (`UNSUPPORTED_ENCODER`; first the stream is sent to the software encoder, see above) that the stream is not NVENC or Windows' software encoder (a laptop whose screen is on the integrated GPU, AMD, Intel,
   software), *unless Discord itself encodes nothing either*. Discord only encodes a stream while somebody watches it, and its
   voice log says so (`frames encoded: 0, encoded frame rate: 0`, read by `streamEncoding()` in `main/voiceLog.ts`); then there
   is nothing to draw on yet, so the plugin waits;
@@ -218,8 +237,9 @@ log), and the stream is left alone; the next stream is tried again, and so is tu
 
 - It depends on Discord's internals (NVENC with shared B8G8R8A8 textures, the voice module living in the renderer). An
   update can change them.
-- NVENC and Windows' software encoder only. AMD's and Intel's hardware encoders, a hardware Media Foundation encoder, or a capture
-  route that does not use these textures or these memory frames, are not drawn on.
+- NVENC and Windows' software encoder only. The stream of an AMD, Intel or hardware Media Foundation encoder is sent through the
+  software one, which relies on Discord's denylist of encoders and on the names it matches (tested with an AMD card, not with
+  Intel); a capture route that does not use these textures or these memory frames is not drawn on.
 - The software path assumes the frames are in system memory and that the encoder is the one that comes with Windows; if a
   Discord update changes either, the hook sees no frames (the plugin puts the overlays back on the screen) or says why it
   cannot draw in the log.

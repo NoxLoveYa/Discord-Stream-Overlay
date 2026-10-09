@@ -31,4 +31,4 @@ Discord's Go Live, so viewers see them. Windows desktop client only.
 **Stream only** (on by default)
 - Keeps the overlays off your own screen: they are blended into the video that Discord encodes, so viewers see them and
   you don't. The in-app preview of your stream gets a matching overlay on top.
-- Needs NVENC (an NVIDIA GPU) or Windows' software H.264 encoder, and a small native addon built from `nvenc/`. When the stream cannot be drawn into, the overlays stay on your screen.
+- Needs NVENC (an NVIDIA GPU) or Windows' software H.264 encoder, and a small native addon built from `nvenc/`. A stream on the encoder of an AMD or Intel card is sent through the software encoder; when the stream still cannot be drawn into, the overlays stay on your screen.

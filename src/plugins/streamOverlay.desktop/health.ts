@@ -19,6 +19,9 @@ interface HookStatus {
     error: string;
 }
 
+/** The verdict for a stream that an encoder other than NVENC and Windows' software one carries: sync.ts can still route it to the latter. */
+export const UNSUPPORTED_ENCODER = "the stream is not encoded by NVENC or by Windows' software encoder (another encoder, or the screen is on another graphics card)";
+
 /** How long the stream gets to start encoding before it counts that nothing went through the hook. */
 export const GRACE_MS = 10_000;
 
@@ -65,7 +68,7 @@ export function judgeHook(status: HookStatus | null, waited: number, encoding: b
     if (!status.draw) return switchedOff(status);
     if (status.encodes === 0) {
         if (encoding === false) return null;
-        return "the stream is not encoded by NVENC or by Windows' software encoder (another encoder, or the screen is on another graphics card)";
+        return UNSUPPORTED_ENCODER;
     }
     if (status.drawn === 0) {
         if (status.error) return status.error;

@@ -109,6 +109,19 @@ export function latestEncoder(lines: string[]): EncoderInfo | null {
     return latest;
 }
 
+// Discord's voice engine lists the encoders of this machine ("AMD/AMF DX11 H.264 encoder (HW)", "MediaFoundation H.264 (SW)").
+// True when every hardware H.264 encoder in the list is from a vendor the overlay cannot be drawn into (AMD, Intel, Windows'
+// own): the stream has to go to the software encoder. An encoder of a name we do not know might be NVENC, so it is left alone.
+// Null when the list says nothing about H.264.
+export function needsSoftware(survey: unknown): boolean | null {
+    const list = (survey as { available_video_encoders?: unknown; } | null)?.available_video_encoders;
+    const h264 = (Array.isArray(list) ? list : []).filter((name): name is string => typeof name === "string" && /h\.?264/i.test(name));
+    if (!h264.length) return null;
+
+    const hardware = h264.filter(name => /\(hw\)/i.test(name));
+    return hardware.length > 0 && hardware.every(name => /amd|amf|intel|qsv|mediafoundation/i.test(name));
+}
+
 const REASONS: Record<EncoderKind, string> = {
     "nvenc-d3d11": "this is the encoder \"stream only\" is built for",
     "nvenc-cuda": "NVENC is fed through CUDA, which \"stream only\" cannot draw into yet",
