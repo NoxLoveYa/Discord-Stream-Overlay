@@ -120,20 +120,14 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
 
     // the stream is fed natively; media in chats are files loaded over http(s)
     const previews = () => {
-        let skipped = 0;
-        const kept = [...document.querySelectorAll("video")].filter(v => {
+        return [...document.querySelectorAll("video")].filter(v => {
             if (/^https?:/i.test(v.currentSrc || v.src) || v.closest('[data-list-id="chat-messages"]')) return false;
             if (!v.videoWidth || Math.abs(v.videoWidth / v.videoHeight - ratio) > 0.02) return false;
-            if (ownedByOthers(v)) {
-                skipped++;
-                return false;
-            }
-            return true;
+            return !ownedByOthers(v);
         }).filter(v => {
             const r = v.getBoundingClientRect();
             return r.width > 120 && r.height > 60 && getComputedStyle(v).visibility !== "hidden";
         });
-        return kept;
     };
 
     const place = () => {
@@ -176,7 +170,7 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
             if ((update || canvas.fresh) && shadow) {
                 const rect = canvas.fresh || !update || update.whole ? null : update.box;
                 canvas.fresh = false;
-                try { (canvas.paint ??= painterFor(canvas))?.(shadow, fullW, fullH, rect); } catch { }
+                try { (canvas.paint ??= painterFor(canvas))?.(shadow, fullW, fullH, rect); } catch { /* a lost WebGL context: this frame is skipped */ }
             }
         }
         raf = requestAnimationFrame(place);
@@ -223,7 +217,7 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
         try {
             const native = load();
             result = part ? (native.updateOverlay ? native.updateOverlay(bitmap, x, y, width, height, fw, fh) : "resync") : native.setOverlay(bitmap, fw, fh);
-        } catch { }
+        } catch { /* the addon is not loaded: the previews are still drawn from the copy */ }
         if (result === "resync") ipcRenderer.send(${JSON.stringify(RESYNC)});
 
         // the previews are drawn from this copy

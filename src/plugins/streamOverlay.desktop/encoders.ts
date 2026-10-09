@@ -5,7 +5,6 @@
  */
 
 // Which encoder Discord uses for the stream, from its voice log ("Outbound video stats ... codec: AV1 (nvidia: direct3d)").
-// No React and no store, so it can be tested alone.
 
 type EncoderKind =
     | "nvenc-d3d11"
@@ -57,7 +56,6 @@ function parseOutbound(line: string): EncoderInfo | null {
 }
 
 interface OutboundActivity {
-    /** when the line was written (ms since the epoch) */
     at: number;
     encodedFps: number;
 }

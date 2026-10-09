@@ -9,7 +9,7 @@ import { readFileSync } from "fs";
 import { dirname, join } from "path";
 
 import { VIRTUAL_KEYS } from "./keys";
-import { clamp, COLOR, finite, FONT_FAMILY, text } from "./values";
+import { clamp, COLOR, finite, FONT_FAMILY, record, text } from "./values";
 
 const MAX_KEYS = 32;
 const MAX_INTERACTIVE = 4;
@@ -20,22 +20,27 @@ const ID = /^[a-z][a-z0-9-]{0,31}$/;
 const OPTION_VALUE = /^[\w .-]{1,40}$/;
 const UNIT = /^(px|%|em|rem|vw|vh|deg|s|ms)?$/;
 
-function parseOptions(raw: any, valid: RegExp, labelMax = Infinity) {
-    const options: { label: string; value: string; }[] = (Array.isArray(raw.options) ? raw.options : [])
-        .map((o: any) => typeof o === "string" ? { label: o, value: o } : { label: String(o?.label ?? o?.value).slice(0, labelMax), value: String(o?.value) })
-        .filter((o: { value: string; }) => valid.test(o.value))
+function parseOptions(raw: Record<string, unknown>, valid: RegExp, labelMax = Infinity) {
+    const options = (Array.isArray(raw.options) ? raw.options : [])
+        .map((o: unknown) => {
+            if (typeof o === "string") return { label: o, value: o };
+            const { label, value } = record(o);
+            return { label: String(label ?? value).slice(0, labelMax), value: String(value) };
+        })
+        .filter(o => valid.test(o.value))
         .slice(0, MAX_OPTIONS);
     if (!options.length) return null;
     return { options, default: options.find(o => o.value === raw.default)?.value ?? options[0].value };
 }
 
 // overlay.json belongs to a folder the user picked: nothing in it is trusted
-function parseSetting(raw: any): OverlaySetting | null {
-    if (!raw || typeof raw.id !== "string" || !ID.test(raw.id)) return null;
+function parseSetting(input: unknown): OverlaySetting | null {
+    const raw = record(input);
+    if (typeof raw.id !== "string" || !ID.test(raw.id)) return null;
 
     const group = text(raw.group, 24);
     // { "theme": "gothic" }: one setting and the value it has to have
-    const [[when, wanted] = []] = Object.entries(raw.when && typeof raw.when === "object" ? raw.when : {});
+    const [[when, wanted] = []] = Object.entries(record(raw.when));
 
     const base = {
         id: raw.id,
@@ -47,7 +52,7 @@ function parseSetting(raw: any): OverlaySetting | null {
 
     switch (raw.type) {
         case "color":
-            return { ...base, type: "color", default: COLOR.test(raw.default) ? raw.default.toLowerCase() : "#ffffff" };
+            return { ...base, type: "color", default: typeof raw.default === "string" && COLOR.test(raw.default) ? raw.default.toLowerCase() : "#ffffff" };
 
         case "number": {
             const min = finite(raw.min) ? raw.min : 0;
@@ -80,17 +85,17 @@ const keyNames = (list: unknown) =>
     [...new Set<string>((Array.isArray(list) ? list : []).map(k => String(k).toUpperCase()))].filter(k => VIRTUAL_KEYS.has(k));
 
 export function readManifest(indexFile: string): Manifest {
-    let raw: any = {};
+    let raw: Record<string, unknown> = {};
     try {
-        raw = JSON.parse(readFileSync(join(dirname(indexFile), "overlay.json"), "utf-8"));
+        raw = record(JSON.parse(readFileSync(join(dirname(indexFile), "overlay.json"), "utf-8")));
     } catch { /* no manifest, or an invalid one: the overlay asks for nothing */ }
 
-    const interactive = keyNames(raw?.interactive).slice(0, MAX_INTERACTIVE);
-    const keys = keyNames([...(Array.isArray(raw?.keys) ? raw.keys : []), ...interactive]);
+    const interactive = keyNames(raw.interactive).slice(0, MAX_INTERACTIVE);
+    const keys = keyNames([...(Array.isArray(raw.keys) ? raw.keys : []), ...interactive]);
 
     const seen = new Set<string>();
     const settings: OverlaySetting[] = [];
-    for (const entry of Array.isArray(raw?.settings) ? raw.settings : []) {
+    for (const entry of Array.isArray(raw.settings) ? raw.settings : []) {
         const setting = parseSetting(entry);
         if (!setting || seen.has(setting.id)) continue;
         seen.add(setting.id);
@@ -98,16 +103,16 @@ export function readManifest(indexFile: string): Manifest {
     }
 
     return {
-        title: text(raw?.title, 40),
-        description: text(raw?.description, 160),
-        category: text(raw?.category, 24),
+        title: text(raw.title, 40),
+        description: text(raw.description, 160),
+        category: text(raw.category, 24),
         keys,
-        mouse: raw?.mouse === true,
-        media: raw?.media === true,
-        lol: raw?.lol === true,
+        mouse: raw.mouse === true,
+        media: raw.media === true,
+        lol: raw.lol === true,
         interactive,
         // it has to have a move combo to be armed; overlays written before the tag existed count as draggable too
-        draggable: interactive.length > 0 && raw?.draggable !== false,
+        draggable: interactive.length > 0 && raw.draggable !== false,
         settings: settings.slice(0, MAX_SETTINGS)
     };
 }

@@ -27,18 +27,16 @@ export const BUILTIN_FONTS = [
 
 const fontCssValue = (family: string) => family === "default" ? DEFAULT_FONT_STACK : `'${family}', ${FALLBACK_FONTS}`;
 
-// what a theme draws with when no font is picked
 const THEME_FONTS: Record<string, string> = { gothic: "ObnoxiousGothic", terminal: "Consolas" };
 
 const globalFamily = (globalFont: unknown) =>
     typeof globalFont === "string" && globalFont !== "default" && FONT_FAMILY.test(globalFont) ? globalFont : null;
 
-// the theme that has a font of its own, or null
 function themeWithFont(settings: OverlaySetting[], stored: Record<string, unknown>) {
     const theme = settings.find(s => s.id === "theme" && s.type === "select");
     if (!theme) return null;
     const value = resolveValue(theme, stored[theme.id]);
-    return typeof value === "string" && THEME_FONTS[value] ? value : null;
+    return typeof value === "string" && own(THEME_FONTS, value) ? value : null;
 }
 
 const themeFontDefault = (settings: OverlaySetting[], stored: Record<string, unknown>) => {
@@ -64,6 +62,12 @@ export function effectiveFontValue(setting: OverlaySetting, settings: OverlaySet
 
 export const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 export const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+export const record = (value: unknown): Record<string, unknown> =>
+    value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+
+// the value of a table for a key that comes from outside: "constructor" is not in the table
+export const own = <T>(table: Record<string, T>, key: string): T | undefined => Object.hasOwn(table, key) ? table[key] : undefined;
+
 export const text = (value: unknown, max: number) => typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
 
 // values come from the renderer or from an overlay page: anything no longer valid for the setting becomes its default
@@ -91,8 +95,7 @@ export function settingsScript(settings: OverlaySetting[], stored: Record<string
     const detail: Record<string, OverlayValue> = {};
 
     for (const setting of settings) {
-        // a font draws with its effective family (stored, global or theme default), so the page and the
-        // dropdown agree even when nothing is stored; the event still carries the stored value
+        // a font draws with its effective family so the page and the dropdown agree; the event carries the stored value
         const value = setting.type === "font"
             ? effectiveFontValue(setting, settings, stored)
             : resolveValue(setting, stored[setting.id]);

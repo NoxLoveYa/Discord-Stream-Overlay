@@ -20,6 +20,7 @@ import { subscribeLol } from "./lol";
 import { readManifest, unionKeys } from "./manifest";
 import { SAMPLE_MEDIA } from "./media";
 import type { StreamSink } from "./nvenc";
+import { runInPage } from "./page";
 import { clamp, effectiveFontValue, resolveValue, settingsScript } from "./values";
 
 const OFFSCREEN_FPS = 30;
@@ -74,7 +75,7 @@ export class OverlayWindow {
         // the page only lets the mouse through to an overlay once it has seen the cursor over it, in the units of the
         // full screen (the window may be smaller); a drag in progress already has it
         if (kind !== "move" || !this.pressed) {
-            webContents.executeJavaScript(`window.__streamOverlayPointer?.(${Math.round(rx * screenSize.width)}, ${Math.round(ry * screenSize.height)})`).catch(() => { });
+            void runInPage(webContents, `window.__streamOverlayPointer?.(${Math.round(rx * screenSize.width)}, ${Math.round(ry * screenSize.height)})`);
         }
         if (kind !== "move") this.pressed = kind === "down";
         // a move without the button flag reads as a release to the page, and a drag would stop
@@ -104,7 +105,8 @@ export class OverlayWindow {
     }
 
     private push(hook: string, state: unknown) {
-        return this.live()?.webContents.executeJavaScript(`window.${hook}?.(${JSON.stringify(state)})`).catch(() => { }) ?? Promise.resolve();
+        const win = this.live();
+        return win ? runInPage(win.webContents, `window.${hook}?.(${JSON.stringify(state)})`) : Promise.resolve();
     }
 
     private pushMedia() {
@@ -202,7 +204,8 @@ export class OverlayWindow {
 
         const keys = unionKeys(manifests);
         this.input.sync(keys, manifests.some(m => m.mouse), !offscreen && manifests.some(m => m.interactive.length > 0), fresh);
-        if (this.layout) await this.live()?.webContents.executeJavaScript(`window.__streamOverlayKeys?.(${JSON.stringify(this.armed())})`).catch(() => { });
+        const live = this.layout ? this.live() : null;
+        if (live) await runInPage(live.webContents, `window.__streamOverlayKeys?.(${JSON.stringify(this.armed())})`);
 
         return { match, displayId: display.id, bounds: display.bounds, overlays: found.length, keys: keys.length, streamOnly: offscreen };
     }
@@ -328,7 +331,7 @@ export class OverlayWindow {
             // an imported font file lives in the fonts folder, not the overlay's: its @font-face is injected
             const font = manifest.settings.find(s => s.type === "font");
             const css = font ? fontFaceCssFor(effectiveFontValue(font, manifest.settings, values)) : null;
-            return frame.executeJavaScript(code + fontStyleScript(css)).catch(() => { });
+            return runInPage(frame, code + fontStyleScript(css));
         }));
     }
 }

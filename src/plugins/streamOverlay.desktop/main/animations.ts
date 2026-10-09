@@ -6,6 +6,8 @@
 
 import type { BrowserWindow } from "electron";
 
+import { runInPage } from "./page";
+
 const EXIT_TIMEOUT_MS = 5000;
 
 // Only finite animations can be played in and out: infinite ones (spinners) never end, so they keep running.
@@ -14,12 +16,12 @@ const ENTER_SCRIPT = `${FINITE_ANIMATIONS}.forEach(a => { a.cancel(); a.play(); 
 const EXIT_SCRIPT = `(() => {
     const anims = ${FINITE_ANIMATIONS};
     anims.forEach(a => a.reverse());
-    return Promise.all(anims.map(a => a.finished.catch(() => {})));
+    return Promise.all(anims.map(a => a.finished.catch(() => {}))); // a cancelled animation rejects
 })()`;
 
 // executeJavaScript works per frame whatever the origin, unlike reaching into the file:// iframes from the host page
 function runInFrames(win: BrowserWindow, script: string) {
-    return Promise.all(win.webContents.mainFrame.framesInSubtree.map(f => f.executeJavaScript(script).catch(() => { })));
+    return Promise.all(win.webContents.mainFrame.framesInSubtree.map(f => runInPage(f, script)));
 }
 
 // the page may have played the intro while the window was still hidden

@@ -46,5 +46,5 @@ export function startSpotify() {
 
 export function stopSpotify() {
     FluxDispatcher.unsubscribe("SPOTIFY_PLAYER_STATE", onPlayerState);
-    Native.setMedia(null).catch(() => { });
+    Native.setMedia(null).catch(() => { /* the plugin is stopping: the overlays are going away too */ });
 }

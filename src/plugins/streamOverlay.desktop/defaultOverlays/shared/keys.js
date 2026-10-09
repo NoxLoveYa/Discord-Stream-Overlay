@@ -105,7 +105,7 @@
 
     function applyArrangement(name) {
         if (!board) return;
-        const rows = ARRANGEMENTS[name];
+        const rows = Object.hasOwn(ARRANGEMENTS, name) ? ARRANGEMENTS[name] : undefined;
 
         if (!rows) {
             for (const { key, parent, next, span } of home) {

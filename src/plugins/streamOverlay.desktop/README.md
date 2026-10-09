@@ -220,6 +220,7 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `types.ts` | types shared by both sides, no runtime code |
 | `native.ts` | the IPC surface, a thin layer over `main/` |
 | `main/window.ts` | the overlay window: loading, settings, show / hide / reload, saves |
+| `main/page.ts` | runs a script in an overlay page and ignores the rejection of a page that is navigating or gone |
 | `main/input.ts` | key states, mouse movement, cursor relay and mouse capture for the window |
 | `main/keys.ts`, `main/powershell.ts` | key whitelist and the PowerShell helper: `GetAsyncKeyState` for keys and buttons, raw input for mouse movement and wheel; exits when Discord does. `powershell.ts` starts a helper and reads its lines (shared with `main/focus.ts`) |
 | `main/folder.ts`, `main/defaults.ts` | the overlays folder: listing, validating names, seeding the defaults |

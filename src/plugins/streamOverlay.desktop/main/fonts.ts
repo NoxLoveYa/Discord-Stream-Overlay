@@ -10,7 +10,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, wr
 import { basename, extname, join } from "path";
 import { pathToFileURL } from "url";
 
-import { FONT_FAMILY, MAX_FONT_FILE_MB } from "./values";
+import { FONT_FAMILY, MAX_FONT_FILE_MB, own } from "./values";
 
 const MAX_NAME = 40;
 const BYTES_PER_MB = 1024 * 1024;
@@ -27,11 +27,14 @@ const extensionOf = (file: string) => extname(file).slice(1).toLowerCase();
 
 type Stored = { family: string; file: string | null; };
 
+// no prototype: a name read from fonts.json (`__proto__`, `constructor`) is only ever a name
+const emptyRegistry = () => Object.create(null) as Record<string, Stored>;
+
 function readRegistry(): Record<string, Stored> {
     try {
         const parsed: unknown = JSON.parse(readFileSync(registryFile(), "utf-8"));
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-        const registry: Record<string, Stored> = {};
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return emptyRegistry();
+        const registry = emptyRegistry();
         for (const [name, v] of Object.entries(parsed as Record<string, unknown>)) {
             const stored = v as Partial<Stored>;
             if (v && typeof v === "object" && typeof stored.family === "string" && FONT_FAMILY.test(stored.family))
@@ -39,7 +42,7 @@ function readRegistry(): Record<string, Stored> {
         }
         return registry;
     } catch {
-        return {}; // no registry yet, or an unreadable one
+        return emptyRegistry(); // no registry yet, or an unreadable one
     }
 }
 
@@ -138,7 +141,7 @@ export function fontFaceCssFor(family: string) {
 
     return files.map(file => {
         const url = JSON.stringify(pathToFileURL(join(fontsDir(), file)).href);
-        const format = JSON.stringify(FORMATS[extensionOf(file)] ?? "woff2");
+        const format = JSON.stringify(own(FORMATS, extensionOf(file)) ?? "woff2");
         return `@font-face{font-family:"${family}";font-style:normal;font-weight:400 900;font-display:swap;src:url(${url}) format(${format});}`;
     }).join("\n");
 }

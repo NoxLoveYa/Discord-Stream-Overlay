@@ -6,7 +6,7 @@
 
 import type { MediaState } from "@plugins/streamOverlay.desktop/types";
 
-import { clamp, finite, text } from "./values";
+import { clamp, finite, record, text } from "./values";
 
 const COVER = /^https:\/\/[\w-]+\.scdn\.co\/[\w./-]{1,200}$/i;
 const HOUR_MS = 3_600_000;
@@ -25,8 +25,9 @@ export const SAMPLE_MEDIA = (): MediaState => ({
 });
 
 // the state comes from the renderer, and the names in it from Spotify: it is only ever shown as text
-export function cleanMedia(raw: any): MediaState | null {
-    const title = text(raw?.title, 200);
+export function cleanMedia(input: unknown): MediaState | null {
+    const raw = record(input);
+    const title = text(raw.title, 200);
     if (!title) return null;
 
     const duration = finite(raw.duration) ? clamp(raw.duration, 0, 10 * HOUR_MS) : 0;

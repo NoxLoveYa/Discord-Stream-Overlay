@@ -7,6 +7,8 @@
 import type { LolState } from "@plugins/streamOverlay.desktop/types";
 import { get } from "https";
 
+import { own } from "./values";
+
 // The Live Client API only answers while a game is live (never in champ select), so outside a game this reports null
 // and the overlay falls back to its manual settings. Nothing leaves the machine except the public Data Dragon lookups.
 const LIVE_URL = "https://127.0.0.1:2999/liveclientdata/allgamedata";
@@ -17,6 +19,7 @@ const REQUEST_TIMEOUT_MS = 4000;
 const MAX_RESPONSE_CHARS = 4_000_000;
 const ACTIVE_POLL_MS = 2000;
 const IDLE_POLL_MS = 5000;
+const DD_RETRY_MS = 60_000;
 
 // addresses the overlay may show as images: Data Dragon spell icons only (like cleanMedia's cover check)
 const DD_SPELL = /^https:\/\/ddragon\.leagueoflegends\.com\/cdn\/[\w.]+\/img\/spell\/[\w%.-]+\.png$/;
@@ -128,50 +131,47 @@ const norm = (value: unknown) =>
 
 const summonerId = (spell: LiveSpell | undefined) => {
     for (const field of [spell?.displayName, spell?.name, spell?.rawDisplayName]) {
-        const id = SUMMONER_NAMES[norm(field)];
+        const id = own(SUMMONER_NAMES, norm(field));
         if (id) return id;
     }
     return "";
 };
 
 let ddragonChampions: Map<string, DdragonChampion> | null = null;
-let ddragonFailed = false;
+let ddragonRetryAt = 0;
+
+async function loadDdragon(): Promise<Map<string, DdragonChampion> | null> {
+    const versions = await web<string[]>(DD_VERSIONS);
+    const version = versions?.[0];
+    if (typeof version !== "string" || !/^[\w.]+$/.test(version)) return null;
+
+    const json = await web<{ data?: Record<string, DdragonChampionJson>; }>(ddragon(version, "data/en_US/champion.json"));
+    if (!json?.data || typeof json.data !== "object") return null;
+
+    const map = new Map<string, DdragonChampion>();
+    for (const entry of Object.values(json.data)) {
+        if (typeof entry?.id !== "string" || !Array.isArray(entry.spells)) continue;
+        const spells = entry.spells.slice(0, 4).map(s =>
+            typeof s?.image?.full === "string" ? ddragon(version, `img/spell/${s.image.full}`) : "");
+        const champion = { id: entry.id, spells };
+        map.set(norm(entry.id), champion);
+        if (typeof entry.name === "string") map.set(norm(entry.name), champion);
+    }
+    return map;
+}
 
 async function ddragonData() {
-    if (ddragonChampions || ddragonFailed) return ddragonChampions;
-    try {
-        const versions = await web<string[]>(DD_VERSIONS);
-        const version = versions?.[0];
-        if (typeof version !== "string" || !/^[\w.]+$/.test(version)) {
-            ddragonFailed = true;
-            return null;
-        }
-        const json = await web<{ data?: Record<string, DdragonChampionJson>; }>(ddragon(version, "data/en_US/champion.json"));
-        if (!json?.data || typeof json.data !== "object") {
-            ddragonFailed = true;
-            return null;
-        }
-        const map = new Map<string, DdragonChampion>();
-        for (const entry of Object.values(json.data)) {
-            if (typeof entry?.id !== "string" || !Array.isArray(entry.spells)) continue;
-            const spells = entry.spells.slice(0, 4).map(s =>
-                typeof s?.image?.full === "string" ? ddragon(version, `img/spell/${s.image.full}`) : "");
-            const champion = { id: entry.id, spells };
-            map.set(norm(entry.id), champion);
-            if (typeof entry.name === "string") map.set(norm(entry.name), champion);
-        }
-        ddragonChampions = map;
-        return map;
-    } catch {
-        ddragonFailed = true;
-        return null;
-    }
+    if (ddragonChampions || Date.now() < ddragonRetryAt) return ddragonChampions;
+
+    ddragonChampions = await loadDdragon().catch(() => null);
+    if (!ddragonChampions) ddragonRetryAt = Date.now() + DD_RETRY_MS;
+    return ddragonChampions;
 }
 
 async function resolveChampion(raw: unknown): Promise<DdragonChampion | null> {
     const name = norm(typeof raw === "string" ? raw.replace(/^game_character_displayname_/, "") : "");
     if (!name) return null;
-    return (await ddragonData())?.get(norm(SPECIAL_CHAMPIONS[name] ?? name)) ?? null;
+    return (await ddragonData())?.get(norm(own(SPECIAL_CHAMPIONS, name) ?? name)) ?? null;
 }
 
 // image addresses are whitelisted and ids shape-checked: this goes straight to the overlay page

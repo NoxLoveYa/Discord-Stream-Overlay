@@ -6,15 +6,13 @@
 
 // Whether "stream only" really puts the overlay in the stream: the overlay leaves the screen as soon as the hook is in, so
 // a stream encoded by something the hook cannot draw into (an AMD or Intel hardware encoder) would show it nowhere.
-// No React and no store, so it can be tested alone.
 
 // what the native hook reports (see status() in nvenc/hook.cc), summed over the pages that have it
 interface HookStatus {
     /** drawing is on: it switches itself off when a frame cannot be drawn */
     draw: boolean;
-    /** frames NVENC was given since drawing went on */
+    /** frames given to an encoder since drawing went on, and the ones the overlay was drawn on */
     encodes: number;
-    /** of those, the ones the overlay was drawn on */
     drawn: number;
     /** frames whose texture the hook never saw being registered (the stream began before the hook) */
     unknown: number;
@@ -56,10 +54,7 @@ export function combineStatus(list: (HookStatus | null)[]): HookStatus | null {
 
 const switchedOff = (status: HookStatus) => `drawing was switched off${status.error ? `: ${status.error}` : ""}`;
 
-/**
- * Why the overlay is not in the stream, or null when it is (or it is too early to tell). `waited` is how long the overlay
- * has been off the screen. `encoding` is whether Discord says it encodes the stream at all (null: it does not say).
- */
+/** Why the overlay is not in the stream, or null when it is or it is too early to tell. `encoding`: whether Discord says it encodes at all. */
 export function judgeHook(status: HookStatus | null, waited: number, encoding: boolean | null = null): string | null {
     if (waited < GRACE_MS) {
         // it switches itself off when a frame cannot be drawn: no need to wait for that

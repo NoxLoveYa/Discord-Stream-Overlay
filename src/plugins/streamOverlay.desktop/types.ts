@@ -17,7 +17,6 @@ export interface OverlaySetting {
     default: OverlayValue;
     /** not shown in the settings window, the overlay sets it itself (a dragged position) */
     hidden?: boolean;
-    /** the settings tab it is on */
     group?: string;
     /** only shown while the setting `id` has this value, like the colors of one theme */
     when?: { id: string; value: OverlayValue; };
@@ -47,7 +46,6 @@ export interface Manifest {
 }
 
 export interface OverlayInfo {
-    /** the folder name */
     name: string;
     title: string;
     description: string;
@@ -94,13 +92,11 @@ export interface OverlayPreset {
     values: Record<string, OverlayValue>;
 }
 
-/** By overlay name */
 export type OverlayPresets = Record<string, OverlayPreset[]>;
 
 export interface AppBinding {
     /** the file name of the program, like "game.exe", in lower case */
     app: string;
-    /** the name of a global preset */
     preset: string;
     enabled: boolean;
 }
