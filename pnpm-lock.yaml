@@ -5,7 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  eslint-plugin-path-alias@2.1.0: 87545cb13985b338c8fa2ea7b0a3c75c57ad7fbc81c56b38d6c9438329957727
+  eslint-plugin-path-alias@2.1.0:
+    hash: 87545cb13985b338c8fa2ea7b0a3c75c57ad7fbc81c56b38d6c9438329957727
+    path: patches/eslint-plugin-path-alias@2.1.0.patch
 
 importers:
 
