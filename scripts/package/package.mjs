@@ -8,7 +8,7 @@
 // Vencord (built from this checkout), the prebuilt stream-only addon and the Vencord patcher, so the machine it is
 // installed on needs no Node, pnpm or Visual Studio. Run it with `pnpm package`.
 //
-// Inno Setup 6 is needed: `winget install JRSoftware.InnoSetup`, or set ISCC to the path of ISCC.exe.
+// Inno Setup 6 is needed: it is installed with winget when missing, or set ISCC to the path of ISCC.exe.
 
 import { spawnSync } from "child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "fs";
@@ -48,8 +48,14 @@ function findIscc() {
 
 if (process.platform !== "win32") fail("The installer is for Windows.");
 
-const iscc = findIscc();
-if (!iscc) fail("Inno Setup 6 was not found: run `winget install JRSoftware.InnoSetup` (or set ISCC to the path of ISCC.exe).");
+let iscc = findIscc();
+if (!iscc) {
+    log("Inno Setup 6 is missing: installing it with winget");
+    run("winget", ["install", "--id", "JRSoftware.InnoSetup", "-e", "--silent", "--accept-package-agreements", "--accept-source-agreements"], "installing Inno Setup");
+    // a new install is not on this process's PATH, but it is in a known place
+    iscc = findIscc();
+}
+if (!iscc) fail("Inno Setup 6 was not found after installing it: open a new terminal and run `pnpm package` again (or set ISCC to the path of ISCC.exe).");
 
 const { version } = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf-8"));
 

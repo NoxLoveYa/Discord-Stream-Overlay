@@ -92,6 +92,7 @@ console.log("Now running Installer...");
 const argStart = process.argv.indexOf("--");
 const args = argStart === -1 ? [] : process.argv.slice(argStart + 1);
 
+let patched = false;
 try {
     execFileSync(installerBin, args, {
         stdio: "inherit",
@@ -101,6 +102,12 @@ try {
             VENCORD_DEV_INSTALL: "1"
         }
     });
+    patched = true;
 } catch {
     console.error("Something went wrong. Please check the logs above.");
+}
+
+// the overlays of the StreamOverlay plugin go into the data folders of the Discords, so they are there when Discord starts
+if (patched && args.some(arg => /^--?(install|repair)$/.test(arg))) {
+    execFileSync(process.execPath, [join(BASE_DIR, "scripts", "build", "overlays.mjs")], { stdio: "inherit" });
 }

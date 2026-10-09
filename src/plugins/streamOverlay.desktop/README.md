@@ -195,6 +195,10 @@ The addon is built by `pnpm install` and `pnpm build` (`scripts/build/nvenc.mjs`
 build tools and CMake with winget when they are missing, builds, and installs the result. It skips itself when the sources
 did not change, never fails the install or the build, and `VENCORD_SKIP_NVENC=1` turns it off. See `docs/usage.md`.
 
+`pnpm inject` then runs `scripts/build/overlays.mjs`, which writes the bundled overlays into the data folder of each Discord with
+the code of `main/defaults.ts`, so they are there before Discord starts. `pnpm package` builds the Windows installer and installs
+Inno Setup with winget when it is missing.
+
 ### Animations
 
 Finite CSS animations replay when the overlay appears and play in reverse when the share stops (use
@@ -235,3 +239,4 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `components/keys.ts` | the Enter / Escape handler shared by the rename and name fields |
 | `painter.ts` | the WebGL setup that draws a BGRA picture on a canvas: used by the Layout tab, and its source is embedded in the preload script of `main/nvenc.ts` for the stream preview (so it has to stay self-contained) |
 | `main/focus.ts` | the program in focus: a small PowerShell helper (own process, only while somebody asks) and the object `native.ts` keeps it in |
+| `scripts/build/nvenc.mjs`, `scripts/build/overlays.mjs`, `scripts/package/` | outside this folder: builds and installs the native addon, writes the bundled overlays into the Discords' data folders (`pnpm inject` runs it), and builds the Windows installer (`pnpm package`: `package.mjs`, `installer.iss`, `patch.cmd`) |

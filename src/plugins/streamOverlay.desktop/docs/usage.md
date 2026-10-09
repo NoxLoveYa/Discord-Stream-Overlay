@@ -139,15 +139,23 @@ run `node scripts/build/nvenc.mjs` by hand. `VENCORD_SKIP_NVENC=1` turns it off.
 
 So on a fresh machine: clone, `pnpm install`, `pnpm build`, `pnpm inject`.
 
+`pnpm inject` also writes the overlays that come with the plugin into the data folder of every Discord that has been run
+(`scripts/build/overlays.mjs`, Windows only), with the code the plugin itself runs the first time it lists them. They are
+there before Discord starts, and an unedited copy from an older version is brought up to date. An overlay you edited, or
+added a file to or deleted a file from, is left alone, and the script says which. Run it by hand with
+`node scripts/build/overlays.mjs`.
+
 ### An installer for other machines
-`pnpm package` builds `dist/package/Vencord-StreamOverlay-Setup-<version>.exe` (needs Inno Setup 6: `winget install
-JRSoftware.InnoSetup`). It contains this checkout's build, the prebuilt addon and the Vencord patcher, so the machine it
+`pnpm package` builds `dist/package/Vencord-StreamOverlay-Setup-<version>.exe` (it installs Inno Setup 6 with
+winget when that is missing). It contains this checkout's build, the prebuilt addon and the Vencord patcher, so the machine it
 is installed on needs no Node, pnpm or Visual Studio. The setup installs to `%LOCALAPPDATA%\VencordStreamOverlay`, and
 for each Discord you tick (Stable, PTB, Canary: the ones that are installed are listed) it patches Discord to load that
 copy and puts the addon in that Discord's data folder (a running Discord keeps its old addon until it restarts).
 Uninstalling unpatches those Discords again. `patch.cmd` in the install folder does the same as `pnpm inject` by hand
 (`patch.cmd -install -branch stable`, `-repair`, `-uninstall`). The installed Vencord keeps its settings in the install
-folder, separate from a checkout's. The addon only works on NVIDIA GPUs; the rest works anywhere.
+folder, separate from a checkout's. It does not write the overlays (`patch.cmd` has no Node to run the script): the plugin
+writes them the first time it lists them. Stream only needs the addon (it draws into NVIDIA's encoder and Windows' software
+one); the rest works anywhere.
 
 ### Turn it on
 1. **Quit Discord completely** and start it again.
@@ -220,3 +228,15 @@ that cannot be drawn on (with the Windows error code), a frame the hook could no
 To see which encoder a stream uses, look in `%APPDATA%\discord\logs\discord-webrtc_0` (and `discord-webrtc_1`, the older half of the log once it has been rotated) for "Outbound video stats": `codec: H264 (nvidia: direct3d)` is NVENC and `H264 (MediaFoundation SW)` is Windows' software encoder, which are drawn into directly; with anything else (`amd`, `intel`...) the plugin sends the stream through the software encoder.
 
 To go back to normal: turn the setting off. The overlays return to your screen on the next sync (about a second).
+
+## Keeping up with Vencord
+
+This is a fork of [Vencord](https://github.com/Vendicated/Vencord), and the plugin lives in its own folder
+(`src/plugins/streamOverlay.desktop`), so taking in a new Vencord version rarely conflicts. Once:
+`git remote add upstream https://github.com/Vendicated/Vencord.git`. Then, each time:
+
+1. `git fetch upstream` and `git merge upstream/main`. Git can only conflict on a file both sides changed: so far that is
+   `package.json` (the version line is Vencord's, the `inject` / `package` scripts are ours), which merged without a conflict.
+2. `pnpm build` to check it builds, and `pnpm inject` if your Discord should load this checkout.
+3. `pnpm package` builds a new installer; its file name carries Vencord's version from `package.json`. An installed copy
+   does not update itself: run the new setup on each machine that has it.
