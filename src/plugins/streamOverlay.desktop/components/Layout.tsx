@@ -7,6 +7,8 @@
 import "./layout.css";
 
 import { Paragraph } from "@components/Paragraph";
+import { clamp } from "@plugins/streamOverlay.desktop/main/values";
+import { createGl } from "@plugins/streamOverlay.desktop/painter";
 import { Native, plain, saveOverlayChanges, settings, withGlobalFont } from "@plugins/streamOverlay.desktop/settings";
 import type { OverlayInfo } from "@plugins/streamOverlay.desktop/types";
 import { Logger } from "@utils/Logger";
@@ -29,45 +31,13 @@ const strokeIcon = (path: string) => (props: SVGProps<SVGSVGElement>) => (
 const ExpandIcon = strokeIcon("M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7");
 const CollapseIcon = strokeIcon("M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7");
 
-const clamp = (v: number) => Math.min(1, Math.max(0, v));
-
 const leaveFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
 };
 
-// The picture arrives as premultiplied BGRA bytes: the GPU uploads them as they are, swaps the channels in the shader
-// and the page composites the premultiplied result, which keeps this cheap enough to run on every frame.
-const VERTEX = "attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}";
-const FRAGMENT = "precision mediump float;varying vec2 uv;uniform sampler2D t;void main(){gl_FragColor=texture2D(t,uv).bgra;}";
-
 function createPainter(canvas: HTMLCanvasElement) {
-    const gl = canvas.getContext("webgl", { premultipliedAlpha: true, antialias: false });
+    const gl = createGl(canvas);
     if (!gl) return null;
-
-    const program = gl.createProgram();
-    if (!program) return null;
-    for (const [type, source] of [[gl.VERTEX_SHADER, VERTEX], [gl.FRAGMENT_SHADER, FRAGMENT]] as const) {
-        const shader = gl.createShader(type);
-        if (!shader) return null;
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-        gl.attachShader(program, shader);
-    }
-    gl.linkProgram(program);
-    gl.useProgram(program);
-
-    // one triangle that covers the canvas
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const position = gl.getAttribLocation(program, "p");
-    gl.enableVertexAttribArray(position);
-    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-
-    gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     return (bitmap: Uint8Array, width: number, height: number) => {
         if (canvas.width !== width || canvas.height !== height) {
@@ -156,7 +126,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     // as fractions of the picture, kept inside it: a captured pointer goes on outside the canvas, and the overlay stops at the edge
     const send = (kind: "move" | "down" | "up", e: PointerEvent<HTMLCanvasElement>) => {
         const r = e.currentTarget.getBoundingClientRect();
-        Native.layoutPointer(kind, clamp((e.clientX - r.left) / r.width), clamp((e.clientY - r.top) / r.height));
+        Native.layoutPointer(kind, clamp((e.clientX - r.left) / r.width, 0, 1), clamp((e.clientY - r.top) / r.height, 0, 1));
     };
 
     // the real full screen when Discord allows it, the window covered by the picture otherwise

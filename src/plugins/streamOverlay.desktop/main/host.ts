@@ -37,21 +37,24 @@ iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:transpa
 </style>${frames}<script>
 let down = [];
 let pointer = null;
-let media;
-let lol;
 const saves = [];
+const stateChannels = [];
 const frames = () => [...document.querySelectorAll("iframe")];
 const post = f => f.contentWindow.postMessage({ type: "streamoverlay:keys", down: down.filter(k => f.dataset.keys.split(",").includes(k)) }, "*");
 const postPointer = f => pointer && f.hasAttribute("data-interactive") && f.contentWindow.postMessage({ type: "streamoverlay:pointer", ...pointer }, "*");
-const postMedia = f => media !== undefined && f.hasAttribute("data-media") && f.contentWindow.postMessage({ type: "streamoverlay:media", state: media }, "*");
-const postLol = f => lol !== undefined && f.hasAttribute("data-lol") && f.contentWindow.postMessage({ type: "streamoverlay:lol", state: lol }, "*");
-window.__streamOverlayMedia = state => { media = state; frames().forEach(postMedia); };
-window.__streamOverlayLol = state => { lol = state; frames().forEach(postLol); };
+const stateChannel = (name, setter) => {
+    let state;
+    const postState = f => state !== undefined && f.hasAttribute("data-" + name) && f.contentWindow.postMessage({ type: "streamoverlay:" + name, state }, "*");
+    window[setter] = next => { state = next; frames().forEach(postState); };
+    stateChannels.push(postState);
+};
+stateChannel("media", "__streamOverlayMedia");
+stateChannel("lol", "__streamOverlayLol");
 window.__streamOverlayKeys = keys => { down = keys; frames().forEach(post); };
 window.__streamOverlayPointer = (x, y) => { pointer = { x, y }; frames().forEach(postPointer); };
 window.__streamOverlayMouse = (dx, dy, wheel) => frames().forEach(f => f.hasAttribute("data-mouse") && f.contentWindow.postMessage({ type: "streamoverlay:mouse", dx, dy, wheel }, "*"));
 window.__streamOverlayTakeSaves = () => saves.splice(0);
-frames().forEach(f => f.addEventListener("load", () => { post(f); postPointer(f); postMedia(f); postLol(f); }));
+frames().forEach(f => f.addEventListener("load", () => { post(f); postPointer(f); stateChannels.forEach(postState => postState(f)); }));
 addEventListener("message", ({ source, data }) => {
     const i = frames().findIndex(f => f.contentWindow === source);
     if (i < 0 || !data) return;

@@ -34,7 +34,8 @@ html[data-well-opacity="0"] .key {
     --edge: var(--key-accent-rgb);
 }
 
-.key::before {
+.key::before,
+.wheel::before {
     content: "";
     position: absolute;
     inset: -12px -10px -8px;

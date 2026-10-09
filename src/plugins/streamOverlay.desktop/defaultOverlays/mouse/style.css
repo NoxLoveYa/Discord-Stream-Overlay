@@ -91,18 +91,6 @@
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 4%);
 }
 
-.wheel::before {
-    content: "";
-    position: absolute;
-    inset: -12px -10px -8px;
-    z-index: -1;
-    border-radius: 18px;
-    background: radial-gradient(closest-side, rgb(var(--accent) / 38%), rgb(var(--accent) / 0%));
-    filter: blur(10px);
-    opacity: 0;
-    transition: opacity var(--press-out) ease-out;
-}
-
 .wheel::after {
     content: "";
     position: absolute;
@@ -116,7 +104,6 @@
     transition: opacity var(--press-out) ease-out;
 }
 
-.wheel.is-down::before,
 .wheel.is-down::after {
     opacity: 1;
     transition-duration: var(--press-in);

@@ -50,9 +50,9 @@ export function migrateLegacy(state: MigratableState): MigratableState | null {
     if (!present) return null;
 
     let enabled = [...state.enabled];
-    const values: OverlayValues = JSON.parse(JSON.stringify(state.values));
-    const presets: OverlayPresets = JSON.parse(JSON.stringify(state.presets));
-    const globals: GlobalPreset[] = JSON.parse(JSON.stringify(state.globals));
+    const values: OverlayValues = structuredClone(state.values);
+    const presets: OverlayPresets = structuredClone(state.presets);
+    const globals: GlobalPreset[] = structuredClone(state.globals);
 
     for (const legacy of names) {
         const { to } = LEGACY[legacy];

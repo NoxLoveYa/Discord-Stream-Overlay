@@ -27,7 +27,7 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
 |---|---|
 | `board.css` | the panel, its position presets (`data-position`) and the shared look (colors, shadow, intro) |
 | `keys.css`, `keys.js` | keys and buttons: `[data-key]` elements get `.is-down` while that key is held; the keyboard's `arrangement` setting regroups its keys per game (FPS, MOBA) and hides the rest (`.is-hidden`); in MOBA the `champion` setting puts Fiora/Akali spell icons on QWER and `summoner-d`/`summoner-f` on D/F (PNGs in `keyboard/spells/`, from Data Dragon, bundled by `main/defaults.ts` like the rest) |
-| `move.css`, `move.js` | Alt + Caps to move and resize the `.board`, saved on release (needs the `.resize` and `.hint` elements) |
+| `move.css`, `move.js` | Alt + Caps to move and resize the `.board`, saved on release (it adds the `.resize` handle and the `.hint` to the `.board` itself) |
 | `gothic-panel.css`, `gothic-keys.css` | the gothic theme of the window and of the keys (see below) |
 
 ### overlay.json
@@ -221,12 +221,15 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `native.ts` | the IPC surface, a thin layer over `main/` |
 | `main/window.ts` | the overlay window: loading, settings, show / hide / reload, saves |
 | `main/input.ts` | key states, mouse movement, cursor relay and mouse capture for the window |
-| `main/keys.ts` | key whitelist and the PowerShell helper: `GetAsyncKeyState` for keys and buttons, raw input for mouse movement and wheel; exits when Discord does |
+| `main/keys.ts`, `main/powershell.ts` | key whitelist and the PowerShell helper: `GetAsyncKeyState` for keys and buttons, raw input for mouse movement and wheel; exits when Discord does. `powershell.ts` starts a helper and reads its lines (shared with `main/focus.ts`) |
 | `main/folder.ts`, `main/defaults.ts` | the overlays folder: listing, validating names, seeding the defaults |
 | `main/manifest.ts`, `main/values.ts` | reading and validating `overlay.json`, applying values to a page |
 | `main/host.ts` | the page that holds every overlay as an iframe and bridges them to the main process |
 | `main/display.ts`, `main/animations.ts` | finding the shared display, the enter / exit animations |
-| `main/nvenc.ts`, `nvenc/` | stream only: the preload script, frame transport and preview overlay; the native hook (NVENC and Windows' software encoder; `yuvblend.h` blends into frames in memory, `test/` has its tests) |
+| `main/nvenc.ts`, `nvenc/` | stream only: the preload script, frame transport and preview overlay; the native hook (NVENC and Windows' software encoder; `yuvblend.h` blends into frames in memory, `napi.h` is the Node-API glue, `test/` has its tests) |
 | `main/layout.ts`, `components/Layout.tsx` | the Layout tab: a second offscreen overlay window whose frames the settings page asks for (answered as they are drawn) and whose mouse it feeds |
 | `spotify.ts`, `main/media.ts` | the track playing in Spotify: taken from Discord's player state events in the renderer, validated in the main process (`cleanMedia`) and pushed to the overlays that set `"media": true` |
+| `main/lol.ts` | the live League of Legends player (champion, spells, summoners) from the game client on this machine, polled only while an overlay with `"lol": true` is shown, with the icons from Data Dragon |
+| `components/keys.ts` | the Enter / Escape handler shared by the rename and name fields |
+| `painter.ts` | the WebGL setup that draws a BGRA picture on a canvas: used by the Layout tab, and its source is embedded in the preload script of `main/nvenc.ts` for the stream preview (so it has to stay self-contained) |
 | `main/focus.ts` | the program in focus: a small PowerShell helper (own process, only while somebody asks) and the object `native.ts` keeps it in |

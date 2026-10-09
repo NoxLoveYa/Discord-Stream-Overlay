@@ -5,6 +5,7 @@
  */
 
 import { combineStatus, parseStatus } from "@plugins/streamOverlay.desktop/health";
+import { createGl } from "@plugins/streamOverlay.desktop/painter";
 import { app, BrowserWindow, ipcMain, type NativeImage, type Rectangle, type Session, type WebContents } from "electron";
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
@@ -71,32 +72,11 @@ if (process.type === "renderer" && location.hostname.endsWith("discord.com")) {
     let stale = false;
     let scratch = new Uint8Array(0);
 
-    const VERTEX = "attribute vec2 p;varying vec2 uv;void main(){uv=vec2(p.x*.5+.5,.5-p.y*.5);gl_Position=vec4(p,0.,1.);}";
-    const FRAGMENT = "precision mediump float;varying vec2 uv;uniform sampler2D t;void main(){gl_FragColor=texture2D(t,uv).bgra;}";
+    const createGl = ${createGl};
 
     const painterFor = canvas => {
-        const gl = canvas.getContext("webgl", { premultipliedAlpha: true, antialias: false });
+        const gl = createGl(canvas);
         if (!gl) return null;
-
-        const program = gl.createProgram();
-        for (const [type, code] of [[gl.VERTEX_SHADER, VERTEX], [gl.FRAGMENT_SHADER, FRAGMENT]]) {
-            const shader = gl.createShader(type);
-            gl.shaderSource(shader, code);
-            gl.compileShader(shader);
-            gl.attachShader(program, shader);
-        }
-        gl.linkProgram(program);
-        gl.useProgram(program);
-
-        gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-        const position = gl.getAttribLocation(program, "p");
-        gl.enableVertexAttribArray(position);
-        gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-
-        gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
-        for (const [name, value] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]])
-            gl.texParameteri(gl.TEXTURE_2D, name, value);
 
         let texW = 0;
         let texH = 0;

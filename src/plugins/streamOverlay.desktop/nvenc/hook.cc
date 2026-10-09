@@ -26,11 +26,13 @@
 #include <ffnvcodec/nvEncodeAPI.h>
 
 #include "MinHook.h"
+#include "napi.h"
 #include "yuvblend.h"
 
 namespace {
 
 using Microsoft::WRL::ComPtr;
+using namespace napi;
 
 std::mutex g_mutex;
 bool g_on = false;
@@ -831,25 +833,6 @@ bool updateOverlay(const uint8_t* data, size_t size, uint32_t x, uint32_t y, uin
     return true;
 }
 
-// Node-API without node_api.h or an import library: the host is Discord.exe, not node.exe, so the functions are looked up in it
-using napi_env = void*;
-using napi_value = void*;
-using napi_callback_info = void*;
-using napi_callback = napi_value (*)(napi_env, napi_callback_info);
-
-int (*napi_create_function)(napi_env, const char*, size_t, napi_callback, void*, napi_value*);
-int (*napi_set_named_property)(napi_env, napi_value, const char*, napi_value);
-int (*napi_create_string_utf8)(napi_env, const char*, size_t, napi_value*);
-int (*napi_get_cb_info)(napi_env, napi_callback_info, size_t*, napi_value*, napi_value*, void**);
-int (*napi_get_typedarray_info)(napi_env, napi_value, int*, size_t*, void**, napi_value*, size_t*);
-int (*napi_get_value_uint32)(napi_env, napi_value, uint32_t*);
-
-napi_value toJs(napi_env env, const std::string& s) {
-    napi_value v = nullptr;
-    napi_create_string_utf8(env, s.c_str(), s.size(), &v);
-    return v;
-}
-
 napi_value jsStart(napi_env env, napi_callback_info) { return toJs(env, start()); }
 napi_value jsDrawOn(napi_env env, napi_callback_info) { return toJs(env, draw(true)); }
 napi_value jsDrawOff(napi_env env, napi_callback_info) { return toJs(env, draw(false)); }
@@ -891,30 +874,17 @@ napi_value jsUpdateOverlay(napi_env env, napi_callback_info info) {
     return toJs(env, updateOverlay(static_cast<const uint8_t*>(data), length, n[0], n[1], n[2], n[3], n[4], n[5]) ? "ok" : "resync");
 }
 
-void expose(napi_env env, napi_value exports, const char* name, napi_callback fn) {
-    napi_value f = nullptr;
-    if (napi_create_function(env, name, SIZE_MAX, fn, nullptr, &f) == 0) napi_set_named_property(env, exports, name, f);
-}
-
 }  // namespace
 
 extern "C" __declspec(dllexport) napi_value napi_register_module_v1(napi_env env, napi_value exports) {
-    HMODULE host = GetModuleHandleW(nullptr);
-#define RESOLVE(name) name = reinterpret_cast<decltype(name)>(GetProcAddress(host, #name)); if (!name) return exports
-    RESOLVE(napi_create_function);
-    RESOLVE(napi_set_named_property);
-    RESOLVE(napi_create_string_utf8);
-    RESOLVE(napi_get_cb_info);
-    RESOLVE(napi_get_typedarray_info);
-    RESOLVE(napi_get_value_uint32);
-#undef RESOLVE
+    if (!napi::load()) return exports;
 
-    expose(env, exports, "start", jsStart);
-    expose(env, exports, "drawOn", jsDrawOn);
-    expose(env, exports, "drawOff", jsDrawOff);
-    expose(env, exports, "status", jsStatus);
-    expose(env, exports, "setOverlay", jsSetOverlay);
-    expose(env, exports, "updateOverlay", jsUpdateOverlay);
+    napi::expose(env, exports, "start", jsStart);
+    napi::expose(env, exports, "drawOn", jsDrawOn);
+    napi::expose(env, exports, "drawOff", jsDrawOff);
+    napi::expose(env, exports, "status", jsStatus);
+    napi::expose(env, exports, "setOverlay", jsSetOverlay);
+    napi::expose(env, exports, "updateOverlay", jsUpdateOverlay);
     return exports;
 }
 

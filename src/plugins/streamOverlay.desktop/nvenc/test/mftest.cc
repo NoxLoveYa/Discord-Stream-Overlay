@@ -13,6 +13,8 @@
 #include <mftransform.h>
 #include <wrl/client.h>
 
+#include "../napi.h"
+
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -21,6 +23,7 @@
 #include <vector>
 
 using Microsoft::WRL::ComPtr;
+using namespace napi;
 
 namespace {
 
@@ -30,24 +33,6 @@ constexpr uint32_t kFps = 30;
 constexpr uint32_t kBitrate = 6'000'000;
 constexpr uint32_t kHighProfile = 100;  // eAVEncH264VProfile_High
 constexpr LONGLONG kFrameDuration = 10'000'000 / kFps;  // in 100 ns
-
-using napi_env = void*;
-using napi_value = void*;
-using napi_callback_info = void*;
-using napi_callback = napi_value (*)(napi_env, napi_callback_info);
-
-int (*napi_create_function)(napi_env, const char*, size_t, napi_callback, void*, napi_value*);
-int (*napi_set_named_property)(napi_env, napi_value, const char*, napi_value);
-int (*napi_create_string_utf8)(napi_env, const char*, size_t, napi_value*);
-int (*napi_get_cb_info)(napi_env, napi_callback_info, size_t*, napi_value*, napi_value*, void**);
-int (*napi_get_value_string_utf8)(napi_env, napi_value, char*, size_t, size_t*);
-int (*napi_get_value_uint32)(napi_env, napi_value, uint32_t*);
-
-napi_value toJs(napi_env env, const std::string& s) {
-    napi_value v = nullptr;
-    napi_create_string_utf8(env, s.c_str(), s.size(), &v);
-    return v;
-}
 
 std::string fail(const char* what, HRESULT hr) {
     char text[200];
@@ -246,16 +231,7 @@ napi_value jsEncode(napi_env env, napi_callback_info info) {
 }  // namespace
 
 extern "C" __declspec(dllexport) napi_value napi_register_module_v1(napi_env env, napi_value exports) {
-    HMODULE host = GetModuleHandleW(nullptr);
-#define RESOLVE(name) name = reinterpret_cast<decltype(name)>(GetProcAddress(host, #name)); if (!name) return exports
-    RESOLVE(napi_create_function);
-    RESOLVE(napi_set_named_property);
-    RESOLVE(napi_create_string_utf8);
-    RESOLVE(napi_get_cb_info);
-    RESOLVE(napi_get_value_string_utf8);
-    RESOLVE(napi_get_value_uint32);
-#undef RESOLVE
-    napi_value f = nullptr;
-    if (napi_create_function(env, "encode", SIZE_MAX, jsEncode, nullptr, &f) == 0) napi_set_named_property(env, exports, "encode", f);
+    if (!napi::load()) return exports;
+    napi::expose(env, exports, "encode", jsEncode);
     return exports;
 }
