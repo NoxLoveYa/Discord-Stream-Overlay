@@ -145,21 +145,25 @@ const hashOf = (files: string[], read: (file: string) => string | null) => {
 
 const shippedHash = (name: string) => hashOf(Object.keys(defaultOverlays[name]), file => defaultOverlays[name][file]);
 
-// shipped as base64 instead of text ("overlay/file"): read back the same way, so hashes match
-const binaryFiles = new Set(Object.keys(defaultOverlays.keyboard).filter(f => f.endsWith(".png")).map(f => `keyboard/${f}`));
+// the pngs are shipped as base64 instead of text and read back the same way, so hashes match: by the extension, since a copy from
+// an older version can have pngs that this version no longer ships
+const isBinary = (file: string) => file.endsWith(".png");
 
-const readInstalled = (target: string, name: string, file: string) => {
+const readInstalled = (target: string, file: string) => {
     try {
         const full = join(target, file);
-        return binaryFiles.has(`${name}/${file}`) ? readFileSync(full).toString("base64") : readFileSync(full, "utf-8");
+        return isBinary(file) ? readFileSync(full).toString("base64") : readFileSync(full, "utf-8");
     } catch {
         return null; // the user deleted it
     }
 };
 
-const installedHash = (target: string, name: string, files: string[]) => hashOf(files, file => readInstalled(target, name, file));
+const installedHash = (target: string, files: string[]) => hashOf(files, file => readInstalled(target, file));
 
-const filesIn = (target: string) => readdirSync(target, { withFileTypes: true }).filter(d => d.isFile()).map(d => d.name);
+// the files of a folder, the ones in subfolders too ("spells/flash.png"), like the names of the shipped files
+const filesIn = (target: string, base = ""): string[] =>
+    readdirSync(join(target, base), { withFileTypes: true }).flatMap(entry =>
+        entry.isDirectory() ? filesIn(target, `${base}${entry.name}/`) : entry.isFile() ? [`${base}${entry.name}`] : []);
 
 // overlay name -> the hash of the files written last, or "" when that is not known
 function readMarker(marker: string): Record<string, string> {
@@ -179,19 +183,12 @@ function install(target: string, name: string, prune = false) {
     for (const [file, content] of Object.entries(defaultOverlays[name])) {
         const dest = join(target, file);
         mkdirSync(dirname(dest), { recursive: true });
-        writeFileSync(dest, binaryFiles.has(`${name}/${file}`) ? Buffer.from(content, "base64") : content);
+        writeFileSync(dest, isBinary(file) ? Buffer.from(content, "base64") : content);
     }
 
     if (prune) {
         for (const file of filesIn(target))
-            if (!(file in defaultOverlays[name])) rmSync(join(target, file), { force: true });
-        // shipped subfolders (spells/): same treatment inside, filesIn only sees the top level
-        for (const dir of new Set(Object.keys(defaultOverlays[name]).map(f => dirname(f)).filter(d => d !== "."))) {
-            const full = join(target, dir);
-            if (!existsSync(full)) continue;
-            for (const file of filesIn(full))
-                if (!(`${dir}/${file}` in defaultOverlays[name])) rmSync(join(full, file), { force: true });
-        }
+            if (!Object.hasOwn(defaultOverlays[name], file)) rmSync(join(target, file), { force: true });
     }
 }
 
@@ -221,9 +218,9 @@ export function seedDefaults(dir: string) {
                 seeded[name] = shipped;
             }
         } else if (known !== shipped && known !== CUSTOM && existsSync(target)) {
-            if (installedHash(target, name, Object.keys(defaultOverlays[name])) === shipped) {
+            if (installedHash(target, Object.keys(defaultOverlays[name])) === shipped) {
                 seeded[name] = shipped;
-            } else if (known === "" || installedHash(target, name, filesIn(target)) === known) {
+            } else if (known === "" || installedHash(target, filesIn(target)) === known) {
                 // a new version can add files, so compare against what is there, not against the shipped file list
                 if (known === "") {
                     const backup = join(dir, `.${name}.backup`);
