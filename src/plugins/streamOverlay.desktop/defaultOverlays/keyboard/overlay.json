@@ -28,9 +28,7 @@
             "default": "auto",
             "options": [
                 { "label": "Auto (in game)", "value": "auto" },
-                { "label": "Letters (QWER)", "value": "generic" },
-                { "label": "Fiora", "value": "fiora" },
-                { "label": "Akali", "value": "akali" }
+                { "label": "Letters (QWER)", "value": "generic" }
             ]
         },
         {

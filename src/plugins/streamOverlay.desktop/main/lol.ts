@@ -137,10 +137,17 @@ const summonerId = (spell: LiveSpell | undefined) => {
     return "";
 };
 
-let ddragonChampions: Map<string, DdragonChampion> | null = null;
-let ddragonRetryAt = 0;
+// the list of champions, which has their names and ids but not their abilities
+interface DdragonIndex {
+    version: string;
+    ids: Map<string, string>; // normalised id or name -> id
+}
 
-async function loadDdragon(): Promise<Map<string, DdragonChampion> | null> {
+let ddragonIndex: DdragonIndex | null = null;
+let ddragonRetryAt = 0;
+const spellCache = new Map<string, { spells: string[]; retryAt: number; }>();
+
+async function loadIndex(): Promise<DdragonIndex | null> {
     const versions = await web<string[]>(DD_VERSIONS);
     const version = versions?.[0];
     if (typeof version !== "string" || !/^[\w.]+$/.test(version)) return null;
@@ -148,30 +155,44 @@ async function loadDdragon(): Promise<Map<string, DdragonChampion> | null> {
     const json = await web<{ data?: Record<string, DdragonChampionJson>; }>(ddragon(version, "data/en_US/champion.json"));
     if (!json?.data || typeof json.data !== "object") return null;
 
-    const map = new Map<string, DdragonChampion>();
+    const ids = new Map<string, string>();
     for (const entry of Object.values(json.data)) {
-        if (typeof entry?.id !== "string" || !Array.isArray(entry.spells)) continue;
-        const spells = entry.spells.slice(0, 4).map(s =>
-            typeof s?.image?.full === "string" ? ddragon(version, `img/spell/${s.image.full}`) : "");
-        const champion = { id: entry.id, spells };
-        map.set(norm(entry.id), champion);
-        if (typeof entry.name === "string") map.set(norm(entry.name), champion);
+        if (typeof entry?.id !== "string" || !CHAMPION_ID.test(entry.id)) continue;
+        ids.set(norm(entry.id), entry.id);
+        if (typeof entry.name === "string") ids.set(norm(entry.name), entry.id);
     }
-    return map;
+    return ids.size ? { version, ids } : null;
 }
 
 async function ddragonData() {
-    if (ddragonChampions || Date.now() < ddragonRetryAt) return ddragonChampions;
+    if (ddragonIndex || Date.now() < ddragonRetryAt) return ddragonIndex;
 
-    ddragonChampions = await loadDdragon().catch(() => null);
-    if (!ddragonChampions) ddragonRetryAt = Date.now() + DD_RETRY_MS;
-    return ddragonChampions;
+    ddragonIndex = await loadIndex().catch(() => null);
+    if (!ddragonIndex) ddragonRetryAt = Date.now() + DD_RETRY_MS;
+    return ddragonIndex;
+}
+
+// the abilities are in a file per champion, fetched the first time the champion is played
+async function championSpells({ version }: DdragonIndex, id: string) {
+    const cached = spellCache.get(id);
+    if (cached && (cached.spells.length || Date.now() < cached.retryAt)) return cached.spells;
+
+    const json = await web<{ data?: Record<string, DdragonChampionJson>; }>(ddragon(version, `data/en_US/champion/${id}.json`)).catch(() => null);
+    const list = json?.data ? own(json.data, id)?.spells : undefined;
+    const spells = Array.isArray(list)
+        ? list.slice(0, 4).map(s => typeof s?.image?.full === "string" ? ddragon(version, `img/spell/${s.image.full}`) : "")
+        : [];
+    spellCache.set(id, { spells, retryAt: Date.now() + DD_RETRY_MS });
+    return spells;
 }
 
 async function resolveChampion(raw: unknown): Promise<DdragonChampion | null> {
     const name = norm(typeof raw === "string" ? raw.replace(/^game_character_displayname_/, "") : "");
     if (!name) return null;
-    return (await ddragonData())?.get(norm(own(SPECIAL_CHAMPIONS, name) ?? name)) ?? null;
+
+    const index = await ddragonData();
+    const id = index?.ids.get(norm(own(SPECIAL_CHAMPIONS, name) ?? name));
+    return index && id ? { id, spells: await championSpells(index, id) } : null;
 }
 
 // image addresses are whitelisted and ids shape-checked: this goes straight to the overlay page
@@ -195,7 +216,12 @@ async function readLive(): Promise<LolState | null> {
     const me = players.find(p => p?.summonerName === active);
     if (!me) return null;
 
-    const champion = await resolveChampion(me.championName ?? me.rawChampionName);
+    // the raw name does not depend on the language of the client, the other one is translated
+    let champion: DdragonChampion | null = null;
+    for (const name of [me.rawChampionName, me.championName]) {
+        champion = await resolveChampion(name);
+        if (champion) break;
+    }
     return cleanLol({
         champion: champion?.id ?? "",
         spells: champion?.spells ?? [],

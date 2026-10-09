@@ -8,14 +8,6 @@ import { createHash } from "crypto";
 import keyboardGothic from "file://../defaultOverlays/keyboard/gothic.css";
 import keyboardHtml from "file://../defaultOverlays/keyboard/index.html";
 import keyboardManifest from "file://../defaultOverlays/keyboard/overlay.json";
-import akaliE from "file://../defaultOverlays/keyboard/spells/akali-e.png?base64";
-import akaliQ from "file://../defaultOverlays/keyboard/spells/akali-q.png?base64";
-import akaliR from "file://../defaultOverlays/keyboard/spells/akali-r.png?base64";
-import akaliW from "file://../defaultOverlays/keyboard/spells/akali-w.png?base64";
-import fioraE from "file://../defaultOverlays/keyboard/spells/fiora-e.png?base64";
-import fioraQ from "file://../defaultOverlays/keyboard/spells/fiora-q.png?base64";
-import fioraR from "file://../defaultOverlays/keyboard/spells/fiora-r.png?base64";
-import fioraW from "file://../defaultOverlays/keyboard/spells/fiora-w.png?base64";
 import summonerBarrier from "file://../defaultOverlays/keyboard/spells/summoner-barrier.png?base64";
 import summonerExhaust from "file://../defaultOverlays/keyboard/spells/summoner-exhaust.png?base64";
 import summonerFlash from "file://../defaultOverlays/keyboard/spells/summoner-flash.png?base64";
@@ -101,14 +93,6 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "index.html": keyboardHtml,
         "style.css": keyboardCss,
         "overlay.json": keyboardManifest,
-        "spells/akali-e.png": akaliE,
-        "spells/akali-q.png": akaliQ,
-        "spells/akali-r.png": akaliR,
-        "spells/akali-w.png": akaliW,
-        "spells/fiora-e.png": fioraE,
-        "spells/fiora-q.png": fioraQ,
-        "spells/fiora-r.png": fioraR,
-        "spells/fiora-w.png": fioraW,
         "spells/summoner-barrier.png": summonerBarrier,
         "spells/summoner-exhaust.png": summonerExhaust,
         "spells/summoner-flash.png": summonerFlash,

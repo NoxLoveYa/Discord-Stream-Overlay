@@ -70,13 +70,12 @@ game to that preset on the **Apps** tab — the arrangement follows the game in 
 move the overlay from the **Layout** tab while an arrangement is on.
 
 The **MOBA** arrangement shows League of Legends spells. **Auto (in game)** (the default) reads your champion and
-summoner spells straight from the game client while a game is live — no login, nothing leaves your machine — and
-falls back to the manual picks outside a game. Or pick a **MOBA champion** yourself (Letters, Fiora or Akali) for
-QWER and a summoner spell each for **D** and **F** (Flash, Ignite, Teleport, Ghost, Exhaust, Heal, Barrier, Smite) —
-the summoners show with Letters too, no champion needed. Fiora, Akali and the summoner icons
-come from Data Dragon and are bundled with the plugin (Riot Games assets, see below); any other live-detected
-champion loads its ability icons from the Data Dragon CDN instead. Like the arrangement itself,
-these choices are saved per preset.
+summoner spells straight from the game client while a game is live (no login, nothing leaves your machine) and shows
+letters outside a game. The ability icons of the live champion are loaded from the Data Dragon CDN, so they need an
+internet connection; set **MOBA champion** to **Letters (QWER)** to keep the letters on QWER. A summoner spell can be
+picked for each of **D** and **F** (Flash, Ignite, Teleport, Ghost, Exhaust, Heal, Barrier, Smite). The summoner icons
+are Riot Games assets from Data Dragon, bundled with the plugin, so they show with Letters too and outside a game. Like
+the arrangement itself, these choices are saved per preset.
 
 ### Fonts
 

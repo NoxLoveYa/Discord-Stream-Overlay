@@ -26,7 +26,7 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
 | | |
 |---|---|
 | `board.css` | the panel, its position presets (`data-position`) and the shared look (colors, shadow, intro) |
-| `keys.css`, `keys.js` | keys and buttons: `[data-key]` elements get `.is-down` while that key is held; the keyboard's `arrangement` setting regroups its keys per game (FPS, MOBA) and hides the rest (`.is-hidden`); in MOBA the `champion` setting puts Fiora/Akali spell icons on QWER and `summoner-d`/`summoner-f` on D/F (PNGs in `keyboard/spells/`, from Data Dragon, bundled by `main/defaults.ts` like the rest) |
+| `keys.css`, `keys.js` | keys and buttons: `[data-key]` elements get `.is-down` while that key is held; the keyboard's `arrangement` setting regroups its keys per game (FPS, MOBA) and hides the rest (`.is-hidden`); in MOBA the live champion's ability icons (Data Dragon CDN) go on QWER, or letters when the `champion` setting is on Letters, and the `summoner-d`/`summoner-f` icons on D/F (summoner PNGs in `keyboard/spells/`, from Data Dragon, bundled by `main/defaults.ts` like the rest) |
 | `move.css`, `move.js` | Alt + Caps to move and resize the `.board`, saved on release (it adds the `.resize` handle and the `.hint` to the `.board` itself) |
 | `gothic-panel.css`, `gothic-keys.css` | the gothic theme of the window and of the keys (see below) |
 

@@ -69,7 +69,7 @@ export interface MediaState {
 }
 
 export interface LolState {
-    /** Data Dragon champion id ("Fiora") */
+    /** Data Dragon champion id ("Ahri") */
     champion: string;
     /** the QWER ability icon addresses, "" when unknown */
     spells: string[];

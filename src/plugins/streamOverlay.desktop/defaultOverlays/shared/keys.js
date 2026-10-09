@@ -15,6 +15,8 @@
         next: key.nextElementSibling,
         span: key.style.getPropertyValue("--span")
     }));
+    const originalRows = board ? [...board.querySelectorAll(":scope > .row")] : [];
+    let arrangedRows = [];
 
     // rows of keys; pad is empty slots before a key, span its width in key widths (default: the one of index.html)
     const ARRANGEMENTS = {
@@ -29,15 +31,11 @@
         ]
     };
 
-    // QWER icons ship for these champions; any other live champion comes with Data Dragon urls
-    const BUNDLED_CHAMPIONS = new Set(["fiora", "akali"]);
     const SUMMONERS = new Set([
         "summoner-flash", "summoner-ignite", "summoner-teleport", "summoner-ghost",
         "summoner-exhaust", "summoner-heal", "summoner-barrier", "summoner-smite"
     ]);
     const FALLBACK_SUMMONER = { D: "summoner-flash", F: "summoner-ignite" };
-
-    const bundledSpells = champion => ["q", "w", "e", "r"].map(spell => `spells/${champion}-${spell}.png`);
 
     // the settings reach the page as data attributes (data-summoner-d is dataset.summonerD) and as an event
     const settingsOf = root => ({
@@ -83,12 +81,9 @@
         setIcon("F", inMoba ? summonerFile("F") : null);
     }
 
+    // the ability icons of the live champion: Data Dragon addresses, validated by the host
     function qwer() {
-        if (picked.champion !== "auto")
-            return BUNDLED_CHAMPIONS.has(picked.champion) ? bundledSpells(picked.champion) : null;
-
-        const id = typeof live?.champion === "string" ? live.champion.toLowerCase() : "";
-        if (BUNDLED_CHAMPIONS.has(id)) return bundledSpells(id);
+        if (picked.champion !== "auto") return null;
 
         const urls = Array.isArray(live?.spells) ? live.spells : [];
         return [0, 1, 2, 3].map(i => typeof urls[i] === "string" && urls[i] ? urls[i] : null);
@@ -106,24 +101,29 @@
     function applyArrangement(name) {
         if (!board) return;
         const rows = Object.hasOwn(ARRANGEMENTS, name) ? ARRANGEMENTS[name] : undefined;
+        const anchor = board.querySelector(".resize");
+
+        for (const row of [...arrangedRows, ...originalRows]) row.remove();
+        arrangedRows = [];
 
         if (!rows) {
-            for (const { key, parent, next, span } of home) {
+            // last key first, so that the sibling a key goes before is back in its row already
+            for (const { key, parent, next, span } of [...home].reverse()) {
                 parent.insertBefore(key, next);
                 key.style.marginLeft = "";
                 if (span) key.style.setProperty("--span", span);
                 else key.style.removeProperty("--span");
                 key.classList.remove("is-hidden");
             }
+            for (const row of originalRows) board.insertBefore(row, anchor);
             return;
         }
-
-        for (const row of board.querySelectorAll(":scope > .row")) row.remove();
 
         const shown = new Set();
         for (const line of rows) {
             const row = document.createElement("div");
             row.className = "row";
+            arrangedRows.push(row);
             for (const { k, span, pad } of line) {
                 const key = byKey.get(k);
                 if (!key) continue;
@@ -132,7 +132,7 @@
                 if (span) key.style.setProperty("--span", span);
                 row.appendChild(key);
             }
-            board.insertBefore(row, board.querySelector(".resize"));
+            board.insertBefore(row, anchor);
         }
         for (const key of keys) key.classList.toggle("is-hidden", !shown.has(key.dataset.key));
     }
