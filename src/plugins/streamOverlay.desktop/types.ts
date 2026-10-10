@@ -26,7 +26,7 @@ export interface OverlaySetting {
     max?: number;
     step?: number;
     unit?: string;
-    options?: { label: string; value: string; }[];
+    options?: { label: string; value: string; font?: string; }[];
 }
 
 export interface Manifest {
@@ -36,15 +36,24 @@ export interface Manifest {
     keys: string[];
     /** the overlay receives how far the mouse moved and the wheel turned (not where the cursor is) */
     mouse: boolean;
-    /** the overlay receives the track that is playing in Spotify */
-    media: boolean;
-    /** the overlay receives the local League of Legends player's champion and summoner spells while in game */
-    lol: boolean;
+    /** the live data it receives (main/channels.ts): the channels whose flag it set */
+    channels: string[];
     /** while all of these are held, the overlay window takes the mouse */
     interactive: string[];
     /** can be moved and resized with the `interactive` keys, so the Layout tab lets you drag it */
     draggable: boolean;
     settings: OverlaySetting[];
+}
+
+/** What the settings page asks the main process to draw. */
+export interface ShowRequest {
+    sourceId: string | null;
+    sourceName?: string | null;
+    root: string;
+    names: string[];
+    values: OverlayValues;
+    globalFont: string;
+    streamOnly?: boolean;
 }
 
 export interface OverlayInfo {
@@ -70,14 +79,12 @@ export interface MediaState {
     at: number;
 }
 
-export interface LolState {
-    /** Data Dragon champion id ("Ahri") */
-    champion: string;
-    /** the QWER ability icon addresses, "" when unknown */
-    spells: string[];
-    /** "summoner-flash" style ids, "" when unknown */
-    summonerD: string;
-    summonerF: string;
+/** A listener in Discord's page that feeds a channel of the overlays (sources.ts). */
+export interface Source<T = unknown> {
+    /** the channel it feeds */
+    channel: string;
+    start(push: (state: T | null) => void): void;
+    stop(): void;
 }
 
 export interface FontEntry {

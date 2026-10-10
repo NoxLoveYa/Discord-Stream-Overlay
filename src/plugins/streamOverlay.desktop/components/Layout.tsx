@@ -9,7 +9,7 @@ import "./layout.css";
 import { Paragraph } from "@components/Paragraph";
 import { clamp } from "@plugins/streamOverlay.desktop/main/values";
 import { createGl } from "@plugins/streamOverlay.desktop/painter";
-import { Native, plain, saveOverlayChanges, settings, withGlobalFont } from "@plugins/streamOverlay.desktop/settings";
+import { Native, plain, saveOverlayChanges, settings } from "@plugins/streamOverlay.desktop/settings";
 import type { OverlayInfo } from "@plugins/streamOverlay.desktop/types";
 import { Logger } from "@utils/Logger";
 import { MediaEngineStore, useEffect, useRef, useState } from "@webpack/common";
@@ -85,7 +85,7 @@ export function Layout({ overlays }: { overlays: OverlayInfo[]; }) {
     const state = JSON.stringify([overlayRoot, enabled, plain(overlayValues), globalFont]);
     useEffect(() => {
         const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
-        Native.layoutShow(sourceId, overlayRoot, enabled, withGlobalFont(plain(overlayValues), enabled)).then(takeBackground);
+        Native.layoutShow({ sourceId, root: overlayRoot, names: enabled, values: plain(overlayValues), globalFont }).then(takeBackground);
     }, [state]);
 
     useEffect(() => {

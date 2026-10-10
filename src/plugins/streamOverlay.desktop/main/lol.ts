@@ -4,10 +4,20 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import type { LolState } from "@plugins/streamOverlay.desktop/types";
 import { get } from "https";
 
+import type { Channel } from "./channels";
 import { own } from "./values";
+
+export interface LolState {
+    /** Data Dragon champion id ("Ahri") */
+    champion: string;
+    /** the QWER ability icon addresses, "" when unknown */
+    spells: string[];
+    /** "summoner-flash" style ids, "" when unknown */
+    summonerD: string;
+    summonerF: string;
+}
 
 // The Live Client API only answers while a game is live (never in champ select), so outside a game this reports null
 // and the overlay falls back to its manual settings. Nothing leaves the machine except the public Data Dragon lookups.
@@ -21,7 +31,7 @@ const ACTIVE_POLL_MS = 2000;
 const IDLE_POLL_MS = 5000;
 const DD_RETRY_MS = 60_000;
 
-// addresses the overlay may show as images: Data Dragon spell icons only (like cleanMedia's cover check)
+// addresses the overlay may show as images: Data Dragon spell icons only (like the cover check of the media channel)
 const DD_SPELL = /^https:\/\/ddragon\.leagueoflegends\.com\/cdn\/[\w.]+\/img\/spell\/[\w%.-]+\.png$/;
 const CHAMPION_ID = /^[A-Za-z]+$/;
 const SUMMONERS = new Set([
@@ -261,7 +271,7 @@ async function tick() {
 }
 
 /** Calls back whenever the live LoL state changes (null outside a game). Polls only while someone is subscribed. */
-export function subscribeLol(fn: Listener) {
+function subscribeLol(fn: Listener) {
     listeners.add(fn);
     if (last) notify(fn, last);
     if (!timer && !busy) void tick();
@@ -276,3 +286,6 @@ export function subscribeLol(fn: Listener) {
         last = null;
     };
 }
+
+/** The local League of Legends player while a game is live, read from the game client. */
+export const lolChannel: Channel<LolState> = { name: "lol", watch: subscribeLol };

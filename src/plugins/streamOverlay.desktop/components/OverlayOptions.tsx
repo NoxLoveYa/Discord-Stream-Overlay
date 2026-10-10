@@ -20,7 +20,7 @@ function OverlayOption({ overlay, setting, all }: { overlay: string; setting: Ov
     const { overlayValues, globalFont } = settings.use(["overlayValues", "globalFont"]);
     const storedAll = overlayValues[overlay] ?? {};
     const stored = storedAll[setting.id];
-    // a font shows what it draws with (stored, global or theme default), so a gothic preset shows its blackletter
+    // a font shows what it draws with (stored, global or the chosen option's), so a gothic preset shows its blackletter
     const value = setting.type === "font"
         ? effectiveFontValue(setting, all, storedAll, globalFont)
         : stored ?? setting.default;

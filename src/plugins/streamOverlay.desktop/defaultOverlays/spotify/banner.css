@@ -18,6 +18,10 @@ html[data-theme="banner"] {
     /* the direction away from the edge the card hangs on */
     --bx: -1;
     --by: 0;
+
+    /* move.js slides the card along the edge: the axis along it, and the variable that places it (and names its setting) */
+    --slide-axis: y;
+    --slide-prop: --banner-offset;
 }
 
 html[data-theme="banner"][data-banner-edge="right"] {
@@ -28,11 +32,13 @@ html[data-theme="banner"][data-banner-edge="right"] {
 html[data-theme="banner"][data-banner-edge="top"] {
     --bx: 0;
     --by: -1;
+    --slide-axis: x;
 }
 
 html[data-theme="banner"][data-banner-edge="bottom"] {
     --bx: 0;
     --by: 1;
+    --slide-axis: x;
 }
 
 html[data-theme="banner"] .board {
@@ -60,7 +66,7 @@ html[data-theme="banner"] .board.swapping {
     animation: banner-out 340ms linear both;
 }
 
-/* it slides along its edge (move.js): no corner to resize, and the hint would be cut by the card's own edge */
+/* it slides along its edge (move.js, --slide-axis): no corner to resize, and the hint would be cut by the card's own edge */
 html[data-theme="banner"] .resize,
 html[data-theme="banner"] .hint {
     display: none;

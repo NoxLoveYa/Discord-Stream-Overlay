@@ -4,23 +4,22 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-import type { LolState, Manifest, MediaState, OverlayValue, OverlayValues } from "@plugins/streamOverlay.desktop/types";
+import type { Manifest, OverlayValue, OverlayValues, ShowRequest } from "@plugins/streamOverlay.desktop/types";
 import { app, BrowserWindow, type Display } from "electron";
 import { writeFileSync } from "fs";
 import { join } from "path";
 import { pathToFileURL } from "url";
 
 import { playEnter, playExit } from "./animations";
+import { Channels } from "./channels";
 import { pickDisplay } from "./display";
 import { findOverlays } from "./folder";
 import { fontFaceCssFor, fontStyleScript } from "./fonts";
 import { hostHtml } from "./host";
 import { OverlayInput } from "./input";
-import { subscribeLol } from "./lol";
 import { readManifest, unionKeys } from "./manifest";
-import { SAMPLE_MEDIA } from "./media";
 import type { StreamSink } from "./nvenc";
-import { runInPage } from "./page";
+import { callHook, runInPage } from "./page";
 import { clamp, effectiveFontValue, resolveValue, settingsScript } from "./values";
 
 const OFFSCREEN_FPS = 30;
@@ -43,11 +42,9 @@ export class OverlayWindow {
     private shown = false;
     private suspended = false;
     private pressed = false;
-    private media: MediaState | null = null;
-    private lol: LolState | null = null;
-    private unsubLol: (() => void) | null = null;
     // in iframe order
     private entries: Entry[] = [];
+    private globalFont = "default";
     private loadedKey = "";
     private display: { key: string; display: Display; match: string; } | null = null;
     // bumped by show() and hide(), so an exit animation still playing can tell it was superseded
@@ -55,9 +52,12 @@ export class OverlayWindow {
     // the page has been played backwards and must be reloaded before it is shown again
     private exiting = false;
     private readonly input = new OverlayInput(() => this.live(), () => this.entries.map(e => e.manifest.interactive), () => this.armed());
+    private readonly channels: Channels;
 
     // `layout`: the window of the Layout tab, where the draggable overlays are always ready to be moved
-    constructor(private readonly stream: StreamSink, private readonly layout = false) { }
+    constructor(private readonly stream: StreamSink, private readonly layout = false) {
+        this.channels = new Channels(() => this.live(), layout);
+    }
 
     // fx/fy are fractions of the picture (an offscreen page has no real mouse)
     pointer(kind: "move" | "down" | "up", fx: number, fy: number) {
@@ -75,7 +75,7 @@ export class OverlayWindow {
         // the page only lets the mouse through to an overlay once it has seen the cursor over it, in the units of the
         // full screen (the window may be smaller); a drag in progress already has it
         if (kind !== "move" || !this.pressed) {
-            void runInPage(webContents, `window.__streamOverlayPointer?.(${Math.round(rx * screenSize.width)}, ${Math.round(ry * screenSize.height)})`);
+            void callHook(webContents, "Pointer", Math.round(rx * screenSize.width), Math.round(ry * screenSize.height));
         }
         if (kind !== "move") this.pressed = kind === "down";
         // a move without the button flag reads as a release to the page, and a drag would stop
@@ -99,44 +99,15 @@ export class OverlayWindow {
         if (this.shown && !this.offscreen) this.live()?.showInactive();
     }
 
-    setMedia(state: MediaState | null) {
-        this.media = state;
-        return this.pushMedia();
-    }
-
-    private push(hook: string, state: unknown) {
-        const win = this.live();
-        return win ? runInPage(win.webContents, `window.${hook}?.(${JSON.stringify(state)})`) : Promise.resolve();
-    }
-
-    private pushMedia() {
-        // the Layout tab has no music of its own to show: a sample gives the overlay something to drag
-        return this.push("__streamOverlayMedia", this.media ?? (this.layout ? SAMPLE_MEDIA() : null));
-    }
-
-    private pushLol() {
-        return this.push("__streamOverlayLol", this.lol);
-    }
-
-    // nothing polls while no overlay wants the live game
-    private syncLol(wanted: boolean) {
-        if (wanted && !this.unsubLol) {
-            this.unsubLol = subscribeLol(state => {
-                this.lol = state;
-                void this.pushLol();
-            });
-        } else if (!wanted && this.unsubLol) {
-            this.unsubLol();
-            this.unsubLol = null;
-            this.lol = null;
-        }
+    setChannel(name: string, state: unknown) {
+        return this.channels.set(name, state);
     }
 
     private armed() {
         return this.layout ? this.entries.flatMap(e => e.manifest.draggable ? e.manifest.interactive : []) : [];
     }
 
-    async show(sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false) {
+    async show({ sourceId, sourceName = null, root, names, values, globalFont, streamOnly = false }: ShowRequest) {
         this.hideToken++;
 
         const found = findOverlays(root, names);
@@ -153,6 +124,7 @@ export class OverlayWindow {
         }
 
         const manifests = found.map(o => readManifest(o.file));
+        this.globalFont = globalFont;
         this.entries = found.map((o, i) => ({ ...o, manifest: manifests[i], values: values?.[o.name] ?? {} }));
 
         const { display, match } = await this.displayFor(sourceId, sourceName);
@@ -171,8 +143,7 @@ export class OverlayWindow {
             keys: manifests[i].keys,
             interactive: manifests[i].interactive.length > 0,
             mouse: manifests[i].mouse,
-            media: manifests[i].media,
-            lol: manifests[i].lol
+            channels: manifests[i].channels
         }));
         const key = JSON.stringify(overlays);
         const fresh = key !== this.loadedKey;
@@ -189,11 +160,10 @@ export class OverlayWindow {
         }
         if (win.isDestroyed()) return null;
 
-        this.syncLol(manifests.some(m => m.lol));
+        this.channels.sync(manifests.flatMap(m => m.channels));
         // before it becomes visible, so the first frame already has the right values
         await this.applySettings();
-        await this.pushMedia();
-        await this.pushLol();
+        await this.channels.push();
         // hide() may have destroyed the window while the settings were applied
         if (win.isDestroyed()) return null;
         if (!offscreen && !this.suspended) win.showInactive();
@@ -205,7 +175,7 @@ export class OverlayWindow {
         const keys = unionKeys(manifests);
         this.input.sync(keys, manifests.some(m => m.mouse), !offscreen && manifests.some(m => m.interactive.length > 0), fresh);
         const live = this.layout ? this.live() : null;
-        if (live) await runInPage(live.webContents, `window.__streamOverlayKeys?.(${JSON.stringify(this.armed())})`);
+        if (live) await callHook(live.webContents, "Keys", this.armed());
 
         return { match, displayId: display.id, bounds: display.bounds, overlays: found.length, keys: keys.length, streamOnly: offscreen };
     }
@@ -237,8 +207,7 @@ export class OverlayWindow {
         const win = this.live();
         if (!win) return changes;
 
-        const saves: { i: number; values: Record<string, unknown>; }[] =
-            await win.webContents.executeJavaScript("window.__streamOverlayTakeSaves?.() ?? []").catch(() => []);
+        const saves = (await callHook(win.webContents, "TakeSaves") ?? []) as { i: number; values: Record<string, unknown>; }[];
 
         for (const { i, values } of saves) {
             const entry = this.entries[i];
@@ -288,7 +257,7 @@ export class OverlayWindow {
         win.on("closed", () => {
             // destroy() already cleaned up, and a newer window may have taken its place
             if (this.win !== win) return;
-            this.syncLol(false);
+            this.channels.stop();
             this.win = null;
             this.loadedKey = "";
             this.exiting = false;
@@ -298,7 +267,7 @@ export class OverlayWindow {
     }
 
     private destroy() {
-        this.syncLol(false);
+        this.channels.stop();
         if (this.offscreen) this.stream.stop();
         this.input.stop();
         this.live()?.destroy();
@@ -327,10 +296,10 @@ export class OverlayWindow {
             const frame = frames.find(f => f.url.toLowerCase() === url);
             if (!frame || !manifest.settings.length) return;
 
-            const code = settingsScript(manifest.settings, values);
+            const code = settingsScript(manifest.settings, values, this.globalFont);
             // an imported font file lives in the fonts folder, not the overlay's: its @font-face is injected
-            const font = manifest.settings.find(s => s.type === "font");
-            const css = font ? fontFaceCssFor(effectiveFontValue(font, manifest.settings, values)) : null;
+            const families = new Set(manifest.settings.filter(s => s.type === "font").map(s => effectiveFontValue(s, manifest.settings, values, this.globalFont)));
+            const css = [...families].map(fontFaceCssFor).filter(Boolean).join("\n");
             return runInPage(frame, code + fontStyleScript(css));
         }));
     }

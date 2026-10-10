@@ -98,16 +98,6 @@ export function updateStored<K extends "overlayValues" | "overlayPresets" | "glo
 
 export const updateValues = (edit: (values: OverlayValues) => void) => updateStored("overlayValues", edit);
 
-// a global "default" fills nothing, so the theme's default font still applies (gothic draws blackletter);
-// an overlay without a `font` setting ignores the extra key
-export function withGlobalFont(values: OverlayValues, names: string[]): OverlayValues {
-    const globalFont = typeof settings.store.globalFont === "string" ? settings.store.globalFont : "default";
-    const merged: OverlayValues = { ...values };
-    if (globalFont === "default") return merged;
-    for (const name of names) merged[name] = { font: globalFont, ...merged[name] };
-    return merged;
-}
-
 // overlays save values themselves (where the keyboard was dragged to): they end up in the settings
 export const saveOverlayChanges = (changes: OverlayValues) => updateValues(values => {
     for (const [name, saved] of Object.entries(changes)) Object.assign(values[name] ??= {}, saved);

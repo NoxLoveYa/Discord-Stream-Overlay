@@ -23,10 +23,10 @@ interface FontControlProps {
     label: string;
     /** what the overlay draws with (stored, global or theme default) */
     value: string;
-    /** what is stored for it: only nothing stored follows the theme */
+    /** what is stored for it: only nothing stored follows the chosen option */
     stored: string | undefined;
     builtin: { label: string; value: string; }[];
-    /** where an unset font follows ("the gothic theme (…)"), null when just the default stack */
+    /** where an unset font follows ("the Gothic theme (ObnoxiousGothic)"), null when just the default stack */
     follows: string | null;
     onChange(family: string): void;
     /** back to following: deletes the stored family */
@@ -102,7 +102,7 @@ export function FontControl({ label, value, stored, builtin, follows, onChange, 
         try {
             if (await Native.removeCustomFont(entry.name)) {
                 await refresh();
-                // the stored family is gone: follow the theme (or the default font) again instead of a missing name
+                // the stored family is gone: follow the chosen option (or the default font) again instead of a missing name
                 if (stored === entry.family) onClear();
                 say(`Removed “${entry.name}”.`);
             }

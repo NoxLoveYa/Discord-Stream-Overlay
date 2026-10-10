@@ -140,11 +140,13 @@ Closing the tab destroys the window.
 
 Overlay pages cannot reach Discord, so the track is passed in from outside, like the keys and the mouse. `spotify.ts`
 (renderer) subscribes to the `SPOTIFY_PLAYER_STATE` event that Discord dispatches when the linked Spotify account starts,
-pauses, seeks or changes track (the same event Vencord's Spotify Controls plugin reads), and calls `Native.setMedia`. In
-the main process `cleanMedia` (`main/media.ts`) validates it: text is cut and whitespace-collapsed, numbers are clamped
-and the cover has to be an `https://*.scdn.co/` address. Both overlay windows (the stream's and the Layout tab's) keep the
-latest track and hand it to the host page (`window.__streamOverlayMedia`), which posts `streamoverlay:media` to the
-overlays that set `"media": true`, and again whenever one of them loads. The overlay moves the progress bar on its own
+pauses, seeks or changes track (the same event Vencord's Spotify Controls plugin reads); `sources.ts` hands it to
+`Native.setChannel("media", ...)`. In the main process the `media` channel (`main/media.ts`) validates it: text is cut and
+whitespace-collapsed, numbers are clamped and the cover has to be an `https://*.scdn.co/` address. Both overlay windows (the
+stream's and the Layout tab's) keep the latest track (`Channels`, `main/channels.ts`) and hand it to the host page
+(`window.__streamOverlayChannel`), which posts `streamoverlay:media` to the overlays that set `"media": true`, and again whenever
+one of them loads. The live League of Legends player (`lol`) goes the same way, except that the main process reads it itself
+while an overlay that asked for it is shown. The overlay moves the progress bar on its own
 from `position` and `at`, so no message is needed per second. The Layout window shows a sample track while nothing plays.
 Nothing is read at startup: the card stays on "Nothing playing" until the first event.
 

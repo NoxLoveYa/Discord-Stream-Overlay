@@ -8,6 +8,7 @@ import type { Manifest, OverlaySetting } from "@plugins/streamOverlay.desktop/ty
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
 
+import { CHANNELS } from "./channels";
 import { VIRTUAL_KEYS } from "./keys";
 import { clamp, COLOR, finite, FONT_FAMILY, record, text } from "./values";
 
@@ -24,8 +25,13 @@ function parseOptions(raw: Record<string, unknown>, valid: RegExp, labelMax = In
     const options = (Array.isArray(raw.options) ? raw.options : [])
         .map((o: unknown) => {
             if (typeof o === "string") return { label: o, value: o };
-            const { label, value } = record(o);
-            return { label: String(label ?? value).slice(0, labelMax), value: String(value) };
+            const { label, value, font } = record(o);
+            return {
+                label: String(label ?? value).slice(0, labelMax),
+                value: String(value),
+                // a family that the font setting follows while this option is chosen
+                ...(typeof font === "string" && FONT_FAMILY.test(font) && { font })
+            };
         })
         .filter(o => valid.test(o.value))
         .slice(0, MAX_OPTIONS);
@@ -115,8 +121,7 @@ export function readManifest(indexFile: string): Manifest {
         category: text(raw.category, 24),
         keys,
         mouse: raw.mouse === true,
-        media: raw.media === true,
-        lol: raw.lol === true,
+        channels: CHANNELS.filter(channel => raw[channel.name] === true).map(channel => channel.name),
         interactive,
         // it has to have a move combo to be armed; overlays written before the tag existed count as draggable too
         draggable: interactive.length > 0 && raw.draggable !== false,

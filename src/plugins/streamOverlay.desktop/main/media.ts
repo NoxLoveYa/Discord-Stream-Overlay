@@ -6,13 +6,13 @@
 
 import type { MediaState } from "@plugins/streamOverlay.desktop/types";
 
+import type { Channel } from "./channels";
 import { clamp, finite, record, text } from "./values";
 
 const COVER = /^https:\/\/[\w-]+\.scdn\.co\/[\w./-]{1,200}$/i;
 const HOUR_MS = 3_600_000;
 
-// shown in the Layout tab while nothing is playing, so that there is something to drag
-export const SAMPLE_MEDIA = (): MediaState => ({
+const sample = (): MediaState => ({
     id: "sample",
     title: "Song title",
     artists: ["Artist"],
@@ -25,7 +25,7 @@ export const SAMPLE_MEDIA = (): MediaState => ({
 });
 
 // the state comes from the renderer, and the names in it from Spotify: it is only ever shown as text
-export function cleanMedia(input: unknown): MediaState | null {
+function clean(input: unknown): MediaState | null {
     const raw = record(input);
     const title = text(raw.title, 200);
     if (!title) return null;
@@ -43,3 +43,6 @@ export function cleanMedia(input: unknown): MediaState | null {
         at: finite(raw.at) ? raw.at : Date.now()
     };
 }
+
+/** The track that is playing in Spotify, fed by spotify.ts. */
+export const mediaChannel: Channel<MediaState> = { name: "media", clean, sample };

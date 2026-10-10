@@ -27,9 +27,14 @@
     const hint = board.querySelector(".hint");
     const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
-    // the banner theme of the Spotify overlay hangs on an edge: it only slides along it (--banner-offset) and has no corner to resize
-    const isBanner = () => root.dataset.theme === "banner";
-    const slidesAlongY = () => root.dataset.bannerEdge === "left" || root.dataset.bannerEdge === "right";
+    // An overlay that hangs on an edge sets --slide-axis (x or y) and --slide-prop (the custom property that places it along that axis,
+    // and the name of the setting that saves it) in its CSS: it then only slides along that axis and has no corner to resize.
+    function slide() {
+        const style = getComputedStyle(root);
+        const axis = style.getPropertyValue("--slide-axis").trim();
+        const prop = style.getPropertyValue("--slide-prop").trim();
+        return (axis === "x" || axis === "y") && /^--[\w-]+$/.test(prop) ? { axis, prop } : null;
+    }
 
     let armed = false;
     let drag = null;
@@ -74,9 +79,9 @@
         if (!d) return;
         d.frame = 0;
 
-        if (d.banner) {
-            d.offset = clamp(d.pointer[d.axis] - d.grab, 0, d.limit);
-            board.style.setProperty("--banner-offset", `${d.offset}px`);
+        if (d.slide) {
+            d.offset = clamp(d.pointer[d.slide.axis] - d.grab, 0, d.limit);
+            board.style.setProperty(d.slide.prop, `${d.offset}px`);
             return;
         }
 
@@ -96,8 +101,8 @@
     }
 
     // the board's own variables hide the page's, so they only exist while dragging
-    function clearBoardVars() {
-        for (const name of ["--x", "--y", "--scale", "--banner-offset"]) board.style.removeProperty(name);
+    function clearBoardVars(d) {
+        for (const name of ["--x", "--y", "--scale", d.slide?.prop]) if (name) board.style.removeProperty(name);
     }
 
     function endDrag() {
@@ -108,24 +113,24 @@
         updateCapture();
 
         if (!d.moved) {
-            clearBoardVars();
-            if (d.banner) return;
+            clearBoardVars(d);
+            if (d.slide) return;
             if (d.previousPosition === undefined) delete root.dataset.position;
             else root.dataset.position = d.previousPosition;
             return;
         }
 
         frame(d);
-        if (d.banner) {
+        if (d.slide) {
             const offset = Math.round(d.offset);
-            root.style.setProperty("--banner-offset", `${offset}px`);
-            clearBoardVars();
-            parent.postMessage({ type: "streamoverlay:save", values: { "banner-offset": offset } }, "*");
+            root.style.setProperty(d.slide.prop, `${offset}px`);
+            clearBoardVars(d);
+            parent.postMessage({ type: "streamoverlay:save", values: { [d.slide.prop.slice(2)]: offset } }, "*");
             return;
         }
         const values = { position: "custom", x: Math.round(d.x), y: Math.round(d.y), scale: +d.scale.toFixed(3) };
         setVars(root, values.x, values.y, values.scale);
-        clearBoardVars();
+        clearBoardVars(d);
         parent.postMessage({ type: "streamoverlay:save", values }, "*");
     }
 
@@ -156,17 +161,16 @@
         // the exact scale: the one derived from the (sub-pixel) rectangle would drift
         const scale = parseFloat(getComputedStyle(board).scale) || rect.width / width;
 
-        const banner = isBanner();
-        const along = slidesAlongY() ? "y" : "x";
-        const offset = along === "y" ? rect.top : rect.left;
+        const sliding = slide();
+        const vertical = sliding?.axis === "y";
+        const offset = vertical ? rect.top : rect.left;
 
         drag = {
             id: e.pointerId,
-            banner,
-            axis: along,
-            grab: (along === "y" ? e.clientY : e.clientX) - offset,
-            limit: Math.max(0, Math.floor(along === "y" ? innerHeight - board.offsetHeight * scale : innerWidth - width * scale)),
-            resize: !banner && !!e.target.closest(".resize"),
+            slide: sliding,
+            grab: (vertical ? e.clientY : e.clientX) - offset,
+            limit: Math.max(0, Math.floor(vertical ? innerHeight - board.offsetHeight * scale : innerWidth - width * scale)),
+            resize: !sliding && !!e.target.closest(".resize"),
             pointer: { x: e.clientX, y: e.clientY },
             grabX: e.clientX - rect.left,
             grabY: e.clientY - rect.top,
@@ -182,7 +186,7 @@
             previousPosition: root.dataset.position
         };
 
-        if (!banner) {
+        if (!sliding) {
             root.dataset.position = "custom";
             setVars(board, rect.left, rect.top, scale);
         }

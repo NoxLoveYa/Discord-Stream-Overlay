@@ -12,9 +12,9 @@ import { ApplicationStreamingStore, FluxDispatcher, MediaEngineStore, UserStore 
 import { startAppPresets, stopAppPresets } from "./appPresets";
 import { explainEncoder } from "./encoders";
 import { GRACE_MS, judgeHook, UNSUPPORTED_ENCODER } from "./health";
-import { Native, plain, saveOverlayChanges, settings, withGlobalFont } from "./settings";
+import { Native, plain, saveOverlayChanges, settings } from "./settings";
 import { softwareWanted, useSoftwareEncoder } from "./softwareStream";
-import { startSpotify, stopSpotify } from "./spotify";
+import { startSources, stopSources } from "./sources";
 import { streamState } from "./streamState";
 
 const logger = new Logger("StreamOverlay");
@@ -93,7 +93,7 @@ async function doSync() {
 
     const sourceId = MediaEngineStore.getGoLiveSource()?.desktopSource?.id ?? null;
     const active = ApplicationStreamingStore.getCurrentUserActiveStream();
-    const { overlayRoot, alwaysShow } = settings.store;
+    const { overlayRoot, alwaysShow, globalFont } = settings.store;
 
     // turning the setting off and on again tries again
     if (settings.store.streamOnly !== lastStreamOnly) {
@@ -111,11 +111,11 @@ async function doSync() {
 
     // the store hands out proxies, which cannot cross IPC
     const overlays = [...settings.store.enabledOverlays];
-    const values = withGlobalFont(plain(settings.store.overlayValues), overlays);
+    const values = plain(settings.store.overlayValues);
 
     const shouldShow = overlays.length > 0 && (alwaysShow || (active != null && sourceId?.startsWith("screen") === true));
     const state = JSON.stringify([shouldShow, sourceId, sourceName, overlayRoot, overlays, streamOnly]);
-    const key = state + JSON.stringify(values);
+    const key = state + JSON.stringify([values, globalFont]);
     if (key === lastKey) return;
     lastKey = key;
 
@@ -128,7 +128,7 @@ async function doSync() {
         return Native.hide();
     }
 
-    const result = await Native.show(sourceId, sourceName, overlayRoot, overlays, values, streamOnly);
+    const result = await Native.show({ sourceId, sourceName, root: overlayRoot, names: overlays, values, globalFont, streamOnly });
     visible = result != null;
     streamState.offscreenSince = streamOnly && result?.streamOnly ? streamState.offscreenSince || Date.now() : 0;
     // the encoder hook is not reachable yet (Discord was not reloaded since the plugin registered its script): try again
@@ -155,7 +155,7 @@ export function startSync() {
     syncTimer = setInterval(sync, SYNC_INTERVAL_MS);
     collectTimer = setInterval(() => collect().catch(e => logger.error("collect failed", e)), COLLECT_INTERVAL_MS);
     startAppPresets();
-    startSpotify();
+    startSources();
     sync();
 }
 
@@ -166,7 +166,7 @@ export function stopSync() {
     clearInterval(syncTimer);
     clearInterval(collectTimer);
     stopAppPresets();
-    stopSpotify();
+    stopSources();
     document.documentElement.removeAttribute(SELF_ATTRIBUTE);
     FluxDispatcher.unsubscribe("STREAM_START", onStreamStart);
     SettingsStore.removePrefixChangeListener(SETTINGS_PATH, sync);

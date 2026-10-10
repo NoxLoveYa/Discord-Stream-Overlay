@@ -54,7 +54,7 @@ export function withPreset<T extends Named>(list: T[], preset: T): T[] {
 
 export const withoutPreset = <T extends Named>(list: T[], name: string) => list.filter(p => !sameName(p.name, name));
 
-// a value that is not saved is its default; a font follows the theme when nothing is saved, so fonts compare as effective
+// a value that is not saved is its default; a font follows the chosen option when nothing is saved, so fonts compare as effective
 export const sameSettings = (settings: OverlaySetting[], a: Stored, b: Stored, globalFont: unknown = "default") =>
     settings.every(s => s.type === "font"
         ? effectiveFontValue(s, settings, a ?? {}, globalFont) === effectiveFontValue(s, settings, b ?? {}, globalFont)

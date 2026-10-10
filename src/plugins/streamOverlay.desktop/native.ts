@@ -6,15 +6,15 @@
 
 import { BrowserWindow, type IpcMainInvokeEvent, shell } from "electron";
 
+import { CHANNELS } from "./main/channels";
 import { FocusWatcher } from "./main/focus";
 import { listOverlays as listOverlayFolder, pickFolder as pickOverlayFolder, resolveRoot } from "./main/folder";
 import { addFontFamily, importFont, listFonts, removeFont } from "./main/fonts";
 import { LayoutSink, screenshot } from "./main/layout";
-import { cleanMedia } from "./main/media";
 import { Nvenc } from "./main/nvenc";
 import { currentEncoder, streamEncoding as discordEncoding } from "./main/voiceLog";
 import { OverlayWindow } from "./main/window";
-import type { OverlayValues } from "./types";
+import type { ShowRequest } from "./types";
 
 // every export is an IPC method the renderer can call; the logic lives in ./main
 const nvenc = new Nvenc();
@@ -51,9 +51,9 @@ export function removeCustomFont(_: IpcMainInvokeEvent, name: string) {
     return removeFont(name);
 }
 
-export function show(event: IpcMainInvokeEvent, sourceId: string | null, sourceName: string | null, root: string, names: string[], values: OverlayValues, streamOnly = false) {
+export function show(event: IpcMainInvokeEvent, request: ShowRequest) {
     nvenc.register(event.sender.session);
-    return overlay.show(sourceId, sourceName, root, names, values, streamOnly);
+    return overlay.show(request);
 }
 
 export function hide(_: IpcMainInvokeEvent, animate = true) {
@@ -68,15 +68,19 @@ export function takeChanges() {
     return overlay.takeChanges();
 }
 
-export function setMedia(_: IpcMainInvokeEvent, state: unknown) {
-    const media = cleanMedia(state);
-    return Promise.all([overlay.setMedia(media), layout.setMedia(media)]).then(() => { });
+// the state of a channel fed by the settings page (see main/channels.ts)
+export function setChannel(_: IpcMainInvokeEvent, name: string, state: unknown) {
+    const channel = CHANNELS.find(c => c.name === name);
+    if (!channel?.clean) return;
+
+    const clean = channel.clean(state);
+    return Promise.all([overlay.setChannel(name, clean), layout.setChannel(name, clean)]).then(() => { });
 }
 
-export function layoutShow(_: IpcMainInvokeEvent, sourceId: string | null, root: string, names: string[], values: OverlayValues) {
+export function layoutShow(_: IpcMainInvokeEvent, request: Omit<ShowRequest, "streamOnly">) {
     // or the live overlay would be in the screenshot behind the layout too
     overlay.suspend();
-    return layout.show(sourceId, null, root, names, values, true);
+    return layout.show({ ...request, streamOnly: true });
 }
 
 export function layoutBackground() {

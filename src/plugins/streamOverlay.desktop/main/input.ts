@@ -7,7 +7,7 @@
 import { type BrowserWindow, screen } from "electron";
 
 import { type InputHandlers, type InputPoll, startInputPoll } from "./keys";
-import { runInPage } from "./page";
+import { callHook } from "./page";
 
 const POINTER_INTERVAL_MS = 50;
 
@@ -63,11 +63,11 @@ export class OverlayInput {
             const down = [...new Set([...pressed, ...this.heldAlways()])];
             this.setMouseCaptured(this.getCombos().some(combo => combo.length > 0 && combo.every(k => down.includes(k))));
             const win = this.getWindow();
-            if (win) void runInPage(win.webContents, `window.__streamOverlayKeys?.(${JSON.stringify(down)})`);
+            if (win) void callHook(win.webContents, "Keys", down);
         },
         mouse: (dx, dy, wheel) => {
             const win = this.getWindow();
-            if (win) void runInPage(win.webContents, `window.__streamOverlayMouse?.(${dx}, ${dy}, ${wheel})`);
+            if (win) void callHook(win.webContents, "Mouse", dx, dy, wheel);
         }
     };
 
@@ -100,6 +100,6 @@ export class OverlayInput {
         const key = `${x},${y}`;
         if (key === this.lastPointer) return;
         this.lastPointer = key;
-        void runInPage(win.webContents, `window.__streamOverlayPointer?.(${x}, ${y})`);
+        void callHook(win.webContents, "Pointer", x, y);
     };
 }

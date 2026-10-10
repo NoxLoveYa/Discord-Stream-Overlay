@@ -62,6 +62,8 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
 - `settings`: a control per entry on the overlay's page in the plugin settings (`hidden` ones are only set by the
   overlay itself). Types are `color`, `number`, `boolean`, `select` and `font` (a font picker over its `options`,
   plus the user's custom fonts from the Fonts tab; the value is the family, `"default"` keeps the old look).
+  A `select` option can also be `{ "label": "Gothic", "value": "gothic", "font": "ObnoxiousGothic" }`: while it is chosen, a
+  `font` setting that has no choice of its own follows that family.
   Each value reaches the page as:
   - a CSS variable on `<html>`: `--id` (numbers get their `unit`, booleans are `1` / `0`); colors also get `--id-rgb`
     (`"139 92 246"`), which allows `rgb(var(--accent-rgb) / 50%)`
@@ -75,13 +77,17 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
   `SPACE`, `TAB`, `ENTER`, `ESC`, arrows, and the mouse buttons `LMB`, `RMB`, `MMB`).
 - `mouse`: the page receives how far the mouse moved and the wheel turned (never where the cursor is, or what is under
   it). Read from raw input, so it also works in games that lock the cursor.
-- `media`: the page receives the track that is playing in Spotify (title, artists, cover, position), as long as Spotify is
-  linked to the Discord account. Nothing else about what you listen to is read.
-- `lol`: the page receives the local League of Legends player's champion and summoner spells while a game is live
-  (`null` outside one). Read straight from the game client on this machine: no login, and nothing leaves it.
+- live data, one flag per channel (see "Adding live data" below); the ones that exist:
+  - `media`: the page receives the track that is playing in Spotify (title, artists, cover, position), as long as Spotify is
+    linked to the Discord account. Nothing else about what you listen to is read.
+  - `lol`: the page receives the local League of Legends player's champion and summoner spells while a game is live
+    (`null` outside one). Read straight from the game client on this machine: no login, and nothing leaves it.
 - `interactive`: while all these keys are held the window takes the mouse instead of passing clicks through.
 - `draggable`: the overlay moves itself with those keys (`move.js`), so the Layout tab of the settings lets you drag it.
-  Defaults to true when `interactive` is set; `"draggable": false` keeps an overlay out of it.
+  Defaults to true when `interactive` is set; `"draggable": false` keeps an overlay out of it. `move.js` moves the `.board`
+  anywhere and saves `position`, `x`, `y` and `scale`. An overlay that hangs on an edge sets `--slide-axis: x` (or `y`) and
+  `--slide-prop: --its-variable` in its CSS instead: `move.js` then slides it along that axis only, keeps it on the screen, changes
+  that variable and saves the setting of the same name (`--its-variable` is saved as `its-variable`); there is no corner to resize.
 
 Everything in `overlay.json` is validated (`main/manifest.ts`, `main/values.ts`): invalid entries are dropped, invalid
 values fall back to the default.
@@ -92,8 +98,8 @@ The **Fonts** tab picks the default font of every overlay and manages the custom
 (`.woff2`, `.woff`, `.ttf`, `.otf`, up to 5 MB, copied into `%APPDATA%\discord\StreamOverlay\fonts`) and system
 fonts by name. The keyboard, the mouse and the Spotify card have their own **Font** setting (Look tab) which
 overrides the default; like any setting it is saved per preset, so a game gets its own font through a global preset
-bound to it on the Apps tab. A font that is not picked follows the gothic theme (blackletter) or the default stack:
-picking one overrides it everywhere, deleting the choice hands back to the theme. An imported file is served to the
+bound to it on the Apps tab. A font that is not picked follows the chosen option that names a font (the Gothic theme draws blackletter, Retro Terminal
+Consolas) or the default stack: picking one overrides it everywhere, deleting the choice hands back to the option. An imported file is served to the
 overlay with `@font-face`; a custom that was deleted afterwards falls back to a readable font until another is picked.
 
 The keyboard, the mouse and the Spotify card also tune the text itself: **Font weight** (Regular to Bold, one value
@@ -121,8 +127,9 @@ hairlines) and Ocean Abyss (deep navy, cyan, generously round).
 
 The Spotify card has one more, **Banner**, which is not shared because it only makes sense there (`defaultOverlays/spotify/banner.css`).
 The card hangs on one edge of the screen: the `banner-edge` setting picks it (`html[data-banner-edge="left"]`) and `banner-offset`
-places it along the edge, from the top or the left; the `position` setting is hidden (`unless`). `move.js` slides the card along
-its edge while Alt + Caps is held (only `--banner-offset` changes and `banner-offset` is saved; there is no corner to resize). The card is wider than it looks: the side behind the edge is padding, so the slide can overshoot without showing
+places it along the edge, from the top or the left; the `position` setting is hidden (`unless`). `banner.css` sets `--slide-axis` (`y` for
+the left and right edges, `x` for the others) and `--slide-prop: --banner-offset`, so `move.js` slides the card along its edge while
+Alt + Caps is held and saves `banner-offset`. The card is wider than it looks: the side behind the edge is padding, so the slide can overshoot without showing
 a gap, and it scales from the edge. The entrance is a finite CSS animation on the card and its parts, which the host replays when the
 overlay appears and plays backwards when the share stops. On a track change `script.js` adds `.swapping` (the card goes into the edge,
 `banner-out`), changes the text and cover after `SWAP_OUT_MS` and removes it again, which starts the entrance over; messages that arrive
@@ -149,6 +156,21 @@ Sent by the page:
 - `parent.postMessage({ type: "streamoverlay:capture", on: true }, "*")`, for interactive overlays: overlays are stacked
   over the whole screen, so the window only passes the mouse to an overlay while it says it has something to grab
   (`move.js` does this while the cursor is over the board or a drag is going on). Send `on: false` when it lets go.
+
+### Adding live data
+
+Overlays get live data through channels (`main/channels.ts`), so a new source touches neither the overlay window, the manifest nor
+the host page:
+
+1. In `main/`, write a `Channel` (see `media.ts` and `lol.ts`): its `name` is the flag in `overlay.json` and the type of the message
+   (`streamoverlay:<name>`). Give it `clean` when the settings page pushes the state (checked there before any overlay sees it) or
+   `watch` when the main process reads it itself (started only while a shown overlay asked for it, and stopped after), and a
+   `sample` for the Layout tab if there is something to drag.
+2. List it in `CHANNELS`.
+3. For data that lives in Discord's page, add a `Source` to `SOURCES` in `sources.ts` (see `spotify.ts`): it listens to Discord and
+   pushes the state, which reaches the channel through `Native.setChannel`.
+
+An overlay then sets `"<name>": true` in its `overlay.json` and listens for the messages.
 
 ### The settings page
 
@@ -233,7 +255,9 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `types.ts` | types shared by both sides, no runtime code |
 | `native.ts` | the IPC surface, a thin layer over `main/` |
 | `main/window.ts` | the overlay window: loading, settings, show / hide / reload, saves |
-| `main/page.ts` | runs a script in an overlay page and ignores the rejection of a page that is navigating or gone |
+| `main/page.ts` | runs a script in an overlay page and ignores the rejection of a page that is navigating or gone; `callHook` calls one of the `window.__streamOverlay*` functions of the host page |
+| `main/channels.ts` | the live data an overlay can ask for: the `Channel` interface, the `CHANNELS` list, and `Channels`, which keeps the latest state and the watchers of one window and hands them to the host page |
+| `sources.ts` | listeners on Discord that feed a channel from the settings page (`SOURCES`) |
 | `main/input.ts` | key states, mouse movement, cursor relay and mouse capture for the window |
 | `main/keys.ts`, `main/powershell.ts` | key whitelist and the PowerShell helper: `GetAsyncKeyState` for keys and buttons, raw input for mouse movement and wheel; exits when Discord does. `powershell.ts` starts a helper and reads its lines (shared with `main/focus.ts`) |
 | `main/folder.ts`, `main/defaults.ts` | the overlays folder: listing, validating names, seeding the defaults |
@@ -243,8 +267,8 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `softwareStream.ts` | sends the stream through Windows' software encoder when the encoder of the graphics card cannot be drawn into (AMD, Intel): wraps Discord's encoder denylist for the screen share, decided from the engine's encoder list, the setting and the verdict of `sync.ts` |
 | `main/nvenc.ts`, `nvenc/` | stream only: the preload script, frame transport and preview overlay; the native hook (NVENC and Windows' software encoder; `yuvblend.h` blends into frames in memory, `napi.h` is the Node-API glue, `test/` has its tests) |
 | `main/layout.ts`, `components/Layout.tsx` | the Layout tab: a second offscreen overlay window whose frames the settings page asks for (answered as they are drawn) and whose mouse it feeds |
-| `spotify.ts`, `main/media.ts` | the track playing in Spotify: taken from Discord's player state events in the renderer, validated in the main process (`cleanMedia`) and pushed to the overlays that set `"media": true` |
-| `main/lol.ts` | the live League of Legends player (champion, spells, summoners) from the game client on this machine, polled only while an overlay with `"lol": true` is shown, with the icons from Data Dragon |
+| `spotify.ts`, `main/media.ts` | the `media` channel: the track playing in Spotify, taken from Discord's player state events in the renderer, validated in the main process (`clean`) and pushed to the overlays that set `"media": true` |
+| `main/lol.ts` | the `lol` channel: the live League of Legends player (champion, spells, summoners) from the game client on this machine, polled only while an overlay with `"lol": true` is shown, with the icons from Data Dragon |
 | `components/keys.ts` | the Enter / Escape handler shared by the rename and name fields |
 | `painter.ts` | the WebGL setup that draws a BGRA picture on a canvas: used by the Layout tab, and its source is embedded in the preload script of `main/nvenc.ts` for the stream preview (so it has to stay self-contained) |
 | `main/focus.ts` | the program in focus: a small PowerShell helper (own process, only while somebody asks) and the object `native.ts` keeps it in |

@@ -27,37 +27,31 @@ export const BUILTIN_FONTS = [
 
 const fontCssValue = (family: string) => family === "default" ? DEFAULT_FONT_STACK : `'${family}', ${FALLBACK_FONTS}`;
 
-const THEME_FONTS: Record<string, string> = { gothic: "ObnoxiousGothic", terminal: "Consolas" };
-
 const globalFamily = (globalFont: unknown) =>
     typeof globalFont === "string" && globalFont !== "default" && FONT_FAMILY.test(globalFont) ? globalFont : null;
 
-function themeWithFont(settings: OverlaySetting[], stored: Record<string, unknown>) {
-    const theme = settings.find(s => s.id === "theme" && s.type === "select");
-    if (!theme) return null;
-    const value = resolveValue(theme, stored[theme.id]);
-    return typeof value === "string" && own(THEME_FONTS, value) ? value : null;
+// the font that a chosen option asks for (`font` on an option of a select: the gothic theme draws blackletter)
+function optionFont(settings: OverlaySetting[], stored: Record<string, unknown>) {
+    for (const setting of settings) {
+        if (setting.type !== "select") continue;
+        const option = setting.options?.find(o => o.value === resolveValue(setting, stored[setting.id]));
+        if (option?.font) return { family: option.font, label: `the ${option.label} ${setting.label.toLowerCase()} (${option.font})` };
+    }
+    return null;
 }
-
-const themeFontDefault = (settings: OverlaySetting[], stored: Record<string, unknown>) => {
-    const theme = themeWithFont(settings, stored);
-    return theme ? THEME_FONTS[theme] : "default";
-};
 
 // the picker's hint for an unset font: null when it is just the default stack
 export function fontFollows(settings: OverlaySetting[], stored: Record<string, unknown>, globalFont: unknown = "default"): string | null {
     const family = globalFamily(globalFont);
-    if (family) return `the default font (${family})`;
-    const theme = themeWithFont(settings, stored);
-    return theme ? `the ${theme} theme (${THEME_FONTS[theme]})` : null;
+    return family ? `the default font (${family})` : optionFont(settings, stored)?.label ?? null;
 }
 
-// "default" stored is an explicit choice of the Segoe stack: only nothing stored follows the global font or the theme,
+// "default" stored is an explicit choice of the Segoe stack: only nothing stored follows the global font or the chosen option,
 // so a gothic preset applies its blackletter without storing a font, and picking one overrides it
 export function effectiveFontValue(setting: OverlaySetting, settings: OverlaySetting[], stored: Record<string, unknown>, globalFont: unknown = "default") {
     const raw = stored[setting.id];
     if (typeof raw === "string" && FONT_FAMILY.test(raw)) return raw;
-    return globalFamily(globalFont) ?? themeFontDefault(settings, stored);
+    return globalFamily(globalFont) ?? optionFont(settings, stored)?.family ?? "default";
 }
 
 export const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -89,7 +83,7 @@ export function resolveValue(setting: OverlaySetting, stored: unknown): OverlayV
 
 // a CSS variable and a data attribute per setting on <html> (colors also get `--id-rgb`, "r g b"),
 // and a `streamoverlay:settings` event with every value
-export function settingsScript(settings: OverlaySetting[], stored: Record<string, unknown> = {}) {
+export function settingsScript(settings: OverlaySetting[], stored: Record<string, unknown> = {}, globalFont: unknown = "default") {
     const vars: Record<string, string> = {};
     const attrs: Record<string, string> = {};
     const detail: Record<string, OverlayValue> = {};
@@ -97,7 +91,7 @@ export function settingsScript(settings: OverlaySetting[], stored: Record<string
     for (const setting of settings) {
         // a font draws with its effective family so the page and the dropdown agree; the event carries the stored value
         const value = setting.type === "font"
-            ? effectiveFontValue(setting, settings, stored)
+            ? effectiveFontValue(setting, settings, stored, globalFont)
             : resolveValue(setting, stored[setting.id]);
         detail[setting.id] = setting.type === "font" ? resolveValue(setting, stored[setting.id]) : value;
         attrs[`data-${setting.id}`] = String(value);
