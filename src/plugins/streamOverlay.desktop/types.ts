@@ -20,6 +20,8 @@ export interface OverlaySetting {
     group?: string;
     /** only shown while the setting `id` has this value, like the colors of one theme */
     when?: { id: string; value: OverlayValue; };
+    /** not shown while the setting `id` has this value: the opposite of `when` */
+    unless?: { id: string; value: OverlayValue; };
     min?: number;
     max?: number;
     step?: number;

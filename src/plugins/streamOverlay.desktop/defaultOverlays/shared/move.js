@@ -27,6 +27,10 @@
     const hint = board.querySelector(".hint");
     const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
+    // the banner theme of the Spotify overlay hangs on an edge: it only slides along it (--banner-offset) and has no corner to resize
+    const isBanner = () => root.dataset.theme === "banner";
+    const slidesAlongY = () => root.dataset.bannerEdge === "left" || root.dataset.bannerEdge === "right";
+
     let armed = false;
     let drag = null;
     let hintHeight = 0;
@@ -70,6 +74,12 @@
         if (!d) return;
         d.frame = 0;
 
+        if (d.banner) {
+            d.offset = clamp(d.pointer[d.axis] - d.grab, 0, d.limit);
+            board.style.setProperty("--banner-offset", `${d.offset}px`);
+            return;
+        }
+
         if (d.resize) {
             const fromX = (d.pointer.x - d.left) / d.width;
             const fromY = (d.bottom - d.pointer.y) / d.height;
@@ -87,7 +97,7 @@
 
     // the board's own variables hide the page's, so they only exist while dragging
     function clearBoardVars() {
-        for (const name of ["--x", "--y", "--scale"]) board.style.removeProperty(name);
+        for (const name of ["--x", "--y", "--scale", "--banner-offset"]) board.style.removeProperty(name);
     }
 
     function endDrag() {
@@ -99,12 +109,20 @@
 
         if (!d.moved) {
             clearBoardVars();
+            if (d.banner) return;
             if (d.previousPosition === undefined) delete root.dataset.position;
             else root.dataset.position = d.previousPosition;
             return;
         }
 
         frame(d);
+        if (d.banner) {
+            const offset = Math.round(d.offset);
+            root.style.setProperty("--banner-offset", `${offset}px`);
+            clearBoardVars();
+            parent.postMessage({ type: "streamoverlay:save", values: { "banner-offset": offset } }, "*");
+            return;
+        }
         const values = { position: "custom", x: Math.round(d.x), y: Math.round(d.y), scale: +d.scale.toFixed(3) };
         setVars(root, values.x, values.y, values.scale);
         clearBoardVars();
@@ -138,9 +156,17 @@
         // the exact scale: the one derived from the (sub-pixel) rectangle would drift
         const scale = parseFloat(getComputedStyle(board).scale) || rect.width / width;
 
+        const banner = isBanner();
+        const along = slidesAlongY() ? "y" : "x";
+        const offset = along === "y" ? rect.top : rect.left;
+
         drag = {
             id: e.pointerId,
-            resize: !!e.target.closest(".resize"),
+            banner,
+            axis: along,
+            grab: (along === "y" ? e.clientY : e.clientX) - offset,
+            limit: Math.max(0, Math.floor(along === "y" ? innerHeight - board.offsetHeight * scale : innerWidth - width * scale)),
+            resize: !banner && !!e.target.closest(".resize"),
             pointer: { x: e.clientX, y: e.clientY },
             grabX: e.clientX - rect.left,
             grabY: e.clientY - rect.top,
@@ -156,8 +182,10 @@
             previousPosition: root.dataset.position
         };
 
-        root.dataset.position = "custom";
-        setVars(board, rect.left, rect.top, scale);
+        if (!banner) {
+            root.dataset.position = "custom";
+            setVars(board, rect.left, rect.top, scale);
+        }
         board.setPointerCapture(e.pointerId);
         updateCapture();
         e.preventDefault();

@@ -25,7 +25,8 @@ the folder tools (pick another folder, open it).
   **Ocean Abyss**. Default and Gothic have their own accent colors, and the page shows the ones of the theme that is
   on; the customs have fixed palettes. Position, size and the other settings are shared, so switching
   the theme does not move anything. (The gothic ones used to be overlays of their own, `obnoxious-keyboard` and so on: what was
-  saved for them is moved to the theme the first time the plugin starts.)
+  saved for them is moved to the theme the first time the plugin starts.) The Spotify card has one more, **Banner**, which is not a
+  card in a corner: see Spotify below.
 
 ### Moving the keyboard and mouse overlays
 
@@ -50,6 +51,16 @@ On screen, outside the settings, **Alt + Caps** still moves them while "stream o
 The **Spotify** overlay is a card with the cover, title, artist and a progress bar of the track that is playing, in the look
 of the keyboard and the mouse. It is moved and resized like them. Settings: two accent colors, show the cover, show the
 progress, animated bars, hide when nothing is playing, scale and position.
+
+**Banner** (the **Theme** setting) hangs the track on an edge of the screen instead of in a corner:
+- **Edge** is the side it hangs on (left, right, top or bottom), and **Offset along the edge** is how far from the top (left and
+  right edges) or from the left (top and bottom edges) it starts, in pixels. **Position** is not shown while it is on.
+- It slides out of the edge when the overlay appears (and back into it when the share stops). Whenever the **track changes** it
+  goes back into the edge, changes behind it and comes out again with the new track; pausing and seeking do not move it. If the
+  music starts while the card says "Nothing playing", that is a change too.
+- It has accent colors of its own. **Scale** grows it away from the edge it hangs on. Hold Alt + Caps and drag it to slide
+  it along its edge: **Offset along the edge** follows. It stays on its edge and on the screen, and has no corner to resize (use
+  **Scale**). The Layout tab drags it the same way.
 
 - Spotify has to be **linked to your Discord account** (Settings, Connections). The plugin listens to the player state that
   Discord itself receives from Spotify, so no login or key is involved and nothing about what you listen to leaves your

@@ -7,6 +7,7 @@
 // The track that is playing, from the "streamoverlay:media" messages ({ state }: the track, or null when nothing plays).
 (() => {
     const STEP = 500; // ms between two steps of the progress bar
+    const SWAP_OUT_MS = 340; // how long the banner theme takes to put the card away: `banner-out` in banner.css
 
     const board = document.querySelector(".board");
     const cover = board.querySelector(".cover img");
@@ -18,6 +19,9 @@
 
     let media = null;
     let timer = 0;
+    let started = false; // the first message is the state the page found, not a new track
+    let swapTimer = 0;
+    let latest = null; // the last message that came while the card was on its way out
 
     const time = ms => {
         const s = Math.max(0, Math.floor(ms / 1000));
@@ -36,7 +40,7 @@
         now.textContent = time(p);
     }
 
-    function show(next) {
+    function render(next) {
         const changed = (next?.id ?? "") !== (media?.id ?? "");
         media = next;
 
@@ -62,6 +66,31 @@
 
         clearInterval(timer);
         if (media?.playing) timer = setInterval(step, STEP);
+    }
+
+    // The banner theme puts the card away when the track changes, changes it behind the edge and brings it back. Pausing, seeking and
+    // the first message just change it; so does a card nobody sees.
+    function show(next) {
+        if (swapTimer) {
+            latest = next;
+            return;
+        }
+
+        const swap = started && (next?.id ?? "") !== (media?.id ?? "")
+            && document.documentElement.dataset.theme === "banner" && getComputedStyle(board).display !== "none";
+        started = true;
+        if (!swap) {
+            render(next);
+            return;
+        }
+
+        latest = next;
+        board.classList.add("swapping");
+        swapTimer = setTimeout(() => {
+            swapTimer = 0;
+            render(latest);
+            board.classList.remove("swapping");
+        }, SWAP_OUT_MS);
     }
 
     // a cover that cannot be loaded leaves the note

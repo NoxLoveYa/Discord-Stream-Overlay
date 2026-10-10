@@ -45,6 +45,7 @@ import themePorcelain from "file://../defaultOverlays/shared/theme-porcelain.css
 import themeRoyal from "file://../defaultOverlays/shared/theme-royal.css";
 import themeSakura from "file://../defaultOverlays/shared/theme-sakura.css";
 import themeTerminal from "file://../defaultOverlays/shared/theme-terminal.css";
+import spotifyBanner from "file://../defaultOverlays/spotify/banner.css";
 import spotifyGothic from "file://../defaultOverlays/spotify/gothic.css";
 import spotifyHtml from "file://../defaultOverlays/spotify/index.html";
 import spotifyManifest from "file://../defaultOverlays/spotify/overlay.json";
@@ -119,6 +120,7 @@ const defaultOverlays: Record<string, Record<string, string>> = {
         "move.js": moveScript,
         ...gothic,
         ...themes,
+        "banner.css": spotifyBanner,
         "gothic.css": spotifyGothic,
         "index.html": spotifyHtml,
         "script.js": spotifyScript,

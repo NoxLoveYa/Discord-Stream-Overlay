@@ -19,9 +19,11 @@ const FIRST_TAB = "Settings";
 const valueOf = (settings: OverlaySetting[], stored: Record<string, OverlayValue> | undefined, id: string) =>
     stored?.[id] ?? settings.find(s => s.id === id)?.default;
 
-/** Not the hidden settings, nor the ones that belong to another value of a setting (`when`). */
+/** Not the hidden settings, nor the ones that belong to another value of a setting (`when`, `unless`). */
 export const isShown = (setting: OverlaySetting, settings: OverlaySetting[], stored: Record<string, OverlayValue> | undefined) =>
-    !setting.hidden && (!setting.when || valueOf(settings, stored, setting.when.id) === setting.when.value);
+    !setting.hidden
+    && (!setting.when || valueOf(settings, stored, setting.when.id) === setting.when.value)
+    && (!setting.unless || valueOf(settings, stored, setting.unless.id) !== setting.unless.value);
 
 /** Tabs in the order the groups first appear; a setting without a group goes on the first tab. Tabs with nothing to show are left out. */
 export function settingsTabs(settings: OverlaySetting[], stored: Record<string, OverlayValue> | undefined): SettingsTab[] {

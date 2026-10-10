@@ -33,21 +33,28 @@ function parseOptions(raw: Record<string, unknown>, valid: RegExp, labelMax = In
     return { options, default: options.find(o => o.value === raw.default)?.value ?? options[0].value };
 }
 
+// { "theme": "gothic" }: one setting and the value it has to have
+function parseCondition(raw: unknown) {
+    const [[id, value] = []] = Object.entries(record(raw));
+    return typeof id === "string" && ID.test(id) && (typeof value === "string" || typeof value === "boolean") ? { id, value } : undefined;
+}
+
 // overlay.json belongs to a folder the user picked: nothing in it is trusted
 function parseSetting(input: unknown): OverlaySetting | null {
     const raw = record(input);
     if (typeof raw.id !== "string" || !ID.test(raw.id)) return null;
 
     const group = text(raw.group, 24);
-    // { "theme": "gothic" }: one setting and the value it has to have
-    const [[when, wanted] = []] = Object.entries(record(raw.when));
+    const when = parseCondition(raw.when);
+    const unless = parseCondition(raw.unless);
 
     const base = {
         id: raw.id,
         label: typeof raw.label === "string" ? raw.label.slice(0, 60) : raw.id,
         ...(raw.hidden === true && { hidden: true }),
         ...(group && { group }),
-        ...(typeof when === "string" && ID.test(when) && (typeof wanted === "string" || typeof wanted === "boolean") && { when: { id: when, value: wanted } })
+        ...(when && { when }),
+        ...(unless && { unless })
     };
 
     switch (raw.type) {

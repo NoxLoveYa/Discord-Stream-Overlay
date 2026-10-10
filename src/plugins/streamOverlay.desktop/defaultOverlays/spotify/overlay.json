@@ -1,7 +1,7 @@
 {
     "title": "Spotify",
     "category": "Media",
-    "description": "The track that is playing in Spotify, with its cover and progress, in a default or a gothic look. Needs Spotify linked to Discord. Hold Alt + Caps to move or resize it.",
+    "description": "The track that is playing in Spotify, with its cover and progress: a card in a default or a gothic look, or a banner that slides out of an edge of the screen. Needs Spotify linked to Discord. Hold Alt + Caps to move or resize the card (the banner only slides along its edge).",
     "media": true,
     "interactive": ["ALT", "CAPS"],
     "draggable": true,
@@ -21,7 +21,8 @@
                 { "label": "Sakura Pastel", "value": "sakura" },
                 { "label": "Molten Lava", "value": "molten" },
                 { "label": "Royal Gold", "value": "royal" },
-                { "label": "Ocean Abyss", "value": "ocean" }
+                { "label": "Ocean Abyss", "value": "ocean" },
+                { "label": "Banner (on an edge of the screen)", "value": "banner" }
             ]
         },
         {
@@ -73,6 +74,8 @@
         { "id": "g-accent", "type": "color", "label": "Accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#e4def0" },
         { "id": "accent2", "type": "color", "label": "Second accent", "group": "Look", "when": { "theme": "default" }, "default": "#22d3ee" },
         { "id": "g-accent2", "type": "color", "label": "Second accent", "group": "Look", "when": { "theme": "gothic" }, "default": "#b3122e" },
+        { "id": "b-accent", "type": "color", "label": "Accent", "group": "Look", "when": { "theme": "banner" }, "default": "#1ed760" },
+        { "id": "b-accent2", "type": "color", "label": "Second accent", "group": "Look", "when": { "theme": "banner" }, "default": "#22d3ee" },
         { "id": "shadow", "type": "color", "label": "Shadow color", "group": "Look", "default": "#000000" },
         { "id": "cover", "type": "boolean", "label": "Show the cover", "group": "Look", "default": true },
         { "id": "progress", "type": "boolean", "label": "Show the progress", "group": "Look", "default": true },
@@ -83,6 +86,7 @@
             "type": "select",
             "label": "Position",
             "group": "Layout",
+            "unless": { "theme": "banner" },
             "default": "top-left",
             "options": [
                 { "label": "Bottom left", "value": "bottom-left" },
@@ -92,6 +96,21 @@
                 { "label": "Custom (moved by hand)", "value": "custom" }
             ]
         },
+        {
+            "id": "banner-edge",
+            "type": "select",
+            "label": "Edge",
+            "group": "Layout",
+            "when": { "theme": "banner" },
+            "default": "left",
+            "options": [
+                { "label": "Left", "value": "left" },
+                { "label": "Right", "value": "right" },
+                { "label": "Top", "value": "top" },
+                { "label": "Bottom", "value": "bottom" }
+            ]
+        },
+        { "id": "banner-offset", "type": "number", "label": "Offset along the edge (from the top / left)", "group": "Layout", "when": { "theme": "banner" }, "min": 0, "max": 5200, "step": 10, "unit": "px", "default": 120 },
         { "id": "hide-idle", "type": "boolean", "label": "Hide when nothing is playing", "group": "Layout", "default": false },
         { "id": "x", "type": "number", "label": "X", "min": 0, "max": 20000, "step": 1, "unit": "px", "default": 0, "hidden": true },
         { "id": "y", "type": "number", "label": "Y", "min": 0, "max": 20000, "step": 1, "unit": "px", "default": 0, "hidden": true }

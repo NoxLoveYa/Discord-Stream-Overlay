@@ -20,7 +20,7 @@ Discord's Go Live, so viewers see them. Windows desktop client only.
 
 **Settings page**
 - A card per overlay with a switch (grouped under Input, Media and Frames), and a page per overlay with its own settings (colors,
-  sizes, toggles) split into tabs. The keyboard, mouse and Spotify card come in a default and a gothic theme.
+  sizes, toggles) split into tabs. The keyboard, mouse and Spotify card come in a default and a gothic theme, and more; the Spotify card can also hang on an edge of the screen (the Banner theme).
 - A **Layout** tab: the overlays as they are drawn over the screen (at its full resolution, 60 Hz, over a still of it),
   where the draggable ones can be moved and resized with the mouse, also in full screen.
 - **Presets** per overlay and **global presets** (which overlays are on plus all their settings), with save, apply,

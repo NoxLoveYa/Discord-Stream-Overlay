@@ -1,0 +1,249 @@
+/* Banner: the card hangs on one edge of the screen ("Edge"), placed along it by "Offset along the edge". It slides out of the edge when
+   the overlay appears and, when the track changes, goes back in and comes out again (script.js adds .swapping for the way in).
+   Only the Spotify overlay has it, so it is not one of the shared themes. Its rules weigh more than the corner of "Position" in
+   board.css on purpose, so they are not inside :where(). */
+
+html[data-theme="banner"] {
+    --card-accent-rgb: var(--b-accent-rgb);
+    --card-accent2-rgb: var(--b-accent2-rgb);
+    --art: 72px;
+    --banner-w: 360px;
+
+    /* the part of the card behind the edge of the screen: the slide can overshoot without showing a gap */
+    --tuck: 28px;
+
+    /* how far the slide overshoots */
+    --reach: 12px;
+
+    /* the direction away from the edge the card hangs on */
+    --bx: -1;
+    --by: 0;
+}
+
+html[data-theme="banner"][data-banner-edge="right"] {
+    --bx: 1;
+    --by: 0;
+}
+
+html[data-theme="banner"][data-banner-edge="top"] {
+    --bx: 0;
+    --by: -1;
+}
+
+html[data-theme="banner"][data-banner-edge="bottom"] {
+    --bx: 0;
+    --by: 1;
+}
+
+html[data-theme="banner"] .board {
+    /* where the card goes to leave: away from its edge, past its own size and its shadow */
+    --out-x: calc(var(--bx) * (100% * var(--scale) + 90px));
+    --out-y: calc(var(--by) * (100% * var(--scale) + 90px));
+
+    overflow: hidden;
+    width: var(--banner-w);
+    padding: 14px 20px;
+    gap: 16px;
+    border: 1px solid rgb(var(--card-accent-rgb) / 28%);
+    border-radius: 20px;
+    background:
+        linear-gradient(115deg, rgb(var(--card-accent-rgb) / 14%), transparent 55%),
+        linear-gradient(180deg, rgb(15 17 22 / 94%), rgb(8 9 12 / 96%));
+    box-shadow:
+        0 18px 40px -14px rgb(var(--shadow-rgb) / 70%),
+        0 0 26px -6px rgb(var(--card-accent-rgb) / 35%);
+    translate: none;
+    animation: banner-in 900ms linear both;
+}
+
+html[data-theme="banner"] .board.swapping {
+    animation: banner-out 340ms linear both;
+}
+
+/* it slides along its edge (move.js): no corner to resize, and the hint would be cut by the card's own edge */
+html[data-theme="banner"] .resize,
+html[data-theme="banner"] .hint {
+    display: none;
+}
+
+/* the card is placed from its top (or left) corner and grows from the edge, whatever its scale; the side behind the edge has extra padding */
+html[data-theme="banner"][data-banner-edge="left"] .board {
+    inset: var(--banner-offset) auto auto calc(var(--tuck) * -1);
+    width: calc(var(--banner-w) + var(--tuck));
+    padding-left: calc(14px + var(--tuck));
+    transform-origin: var(--tuck) 0;
+}
+
+html[data-theme="banner"][data-banner-edge="right"] .board {
+    inset: var(--banner-offset) calc(var(--tuck) * -1) auto auto;
+    width: calc(var(--banner-w) + var(--tuck));
+    padding-right: calc(14px + var(--tuck));
+    flex-direction: row-reverse;
+    transform-origin: calc(100% - var(--tuck)) 0;
+}
+
+html[data-theme="banner"][data-banner-edge="top"] .board {
+    inset: calc(var(--tuck) * -1) auto auto var(--banner-offset);
+    padding-top: calc(14px + var(--tuck));
+    transform-origin: 0 var(--tuck);
+}
+
+html[data-theme="banner"][data-banner-edge="bottom"] .board {
+    inset: auto auto calc(var(--tuck) * -1) var(--banner-offset);
+    padding-bottom: calc(14px + var(--tuck));
+    transform-origin: 0 calc(100% - var(--tuck));
+}
+
+/* while Alt + Caps is held: the cursor says it slides along its edge */
+html[data-theme="banner"].armed .board {
+    cursor: ns-resize;
+}
+
+html[data-theme="banner"][data-banner-edge="top"].armed .board,
+html[data-theme="banner"][data-banner-edge="bottom"].armed .board {
+    cursor: ew-resize;
+}
+
+html[data-theme="banner"] .cover {
+    border-radius: 14px;
+}
+
+html[data-theme="banner"] .title {
+    font-size: calc(16px * var(--text-scale, 1));
+}
+
+html[data-theme="banner"] .artist {
+    font-size: calc(13px * var(--text-scale, 1));
+}
+
+/* a line of light on the side of the card that faces the screen */
+html[data-theme="banner"] .board::before {
+    content: "";
+    position: absolute;
+    background: linear-gradient(var(--line, 180deg), rgb(var(--card-accent-rgb)), rgb(var(--card-accent2-rgb)));
+    box-shadow: 0 0 14px 2px rgb(var(--card-accent-rgb) / 70%);
+    pointer-events: none;
+}
+
+html[data-theme="banner"][data-banner-edge="left"] .board::before {
+    inset: 0 0 0 auto;
+    width: 4px;
+}
+
+html[data-theme="banner"][data-banner-edge="right"] .board::before {
+    inset: 0 auto 0 0;
+    width: 4px;
+}
+
+html[data-theme="banner"][data-banner-edge="top"] .board::before {
+    --line: 90deg;
+
+    inset: auto 0 0;
+    height: 4px;
+}
+
+html[data-theme="banner"][data-banner-edge="bottom"] .board::before {
+    --line: 90deg;
+
+    inset: 0 0 auto;
+    height: 4px;
+}
+
+/* a band of light that crosses the card once it is out */
+html[data-theme="banner"] .board::after {
+    content: "";
+    position: absolute;
+    inset: -30% auto -30% 0;
+    width: 38%;
+    background: linear-gradient(100deg, transparent, rgb(255 255 255 / 14%) 50%, transparent);
+    transform: skewX(-18deg);
+    translate: -200% 0;
+    pointer-events: none;
+}
+
+/* the parts come in after the card, following it from the edge; going away they have nothing to play */
+html[data-theme="banner"] .board:not(.swapping)::after {
+    animation: banner-sheen 900ms 560ms ease-in-out both;
+}
+
+html[data-theme="banner"] .board:not(.swapping) .cover {
+    animation: banner-pop 640ms 300ms cubic-bezier(0.2, 1.1, 0.3, 1.25) both;
+}
+
+html[data-theme="banner"] .board:not(.swapping) .info {
+    animation: banner-reveal 560ms 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+html[data-theme="banner"] .board:not(.swapping) .bars {
+    animation: banner-reveal 560ms 470ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* out of the edge, a little past where it rests, then back */
+@keyframes banner-in {
+    0% {
+        translate: var(--out-x) var(--out-y);
+        animation-timing-function: cubic-bezier(0.16, 0.9, 0.25, 1);
+    }
+
+    60% {
+        translate: calc(var(--bx) * var(--reach) * -1) calc(var(--by) * var(--reach) * -1);
+        animation-timing-function: cubic-bezier(0.45, 0, 0.3, 1);
+    }
+
+    100% {
+        translate: 0 0;
+    }
+}
+
+/* a small pull away from the edge, then fast into it */
+@keyframes banner-out {
+    0% {
+        translate: 0 0;
+        animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
+    }
+
+    22% {
+        translate: calc(var(--bx) * var(--reach) * -0.8) calc(var(--by) * var(--reach) * -0.8);
+        animation-timing-function: cubic-bezier(0.5, 0, 0.85, 0.3);
+    }
+
+    100% {
+        translate: var(--out-x) var(--out-y);
+    }
+}
+
+@keyframes banner-pop {
+    from {
+        opacity: 0;
+        rotate: -10deg;
+        scale: 0.5;
+    }
+
+    to {
+        opacity: 1;
+        rotate: 0deg;
+        scale: 1;
+    }
+}
+
+@keyframes banner-reveal {
+    from {
+        opacity: 0;
+        translate: calc(var(--bx) * 22px) calc(var(--by) * 22px);
+    }
+
+    to {
+        opacity: 1;
+        translate: 0 0;
+    }
+}
+
+@keyframes banner-sheen {
+    from {
+        translate: -200% 0;
+    }
+
+    to {
+        translate: 420% 0;
+    }
+}

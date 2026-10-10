@@ -69,7 +69,7 @@ a copy it cannot tell whether you edited, it keeps it as `.<name>.backup` before
   - a `streamoverlay:settings` event on `window` (`detail` holds every value)
   - `group` puts a setting on a tab of the overlay's page (`Look`, `Layout`...), in the order the groups first appear; settings
     without one are on the first tab. `when` shows a setting only while another setting has a value (`{ "theme": "fancy" }`,
-    or `{ "flap": true }` for a switch): the value of a setting that is not shown is still sent to the page.
+    or `{ "flap": true }` for a switch), and `unless` hides it while it has one (`{ "theme": "banner" }`): the value of a setting that is not shown is still sent to the page.
 - `keys`: key states the page may receive. Only these are read, only while the overlay is visible, and an overlay only
   ever gets the keys it listed. Allowed names are in `main/keys.ts` (letters, digits, `SHIFT`, `CTRL`, `ALT`, `CAPS`,
   `SPACE`, `TAB`, `ENTER`, `ESC`, arrows, and the mouse buttons `LMB`, `RMB`, `MMB`).
@@ -117,7 +117,16 @@ Besides Default and Gothic there are seven custom themes, each with its own shap
 (the accent settings stay on the Default and Gothic themes): Neon Nights (dark cyberpunk, pink/cyan), Porcelain Light
 (the only bright one, ivory glass), Retro Terminal (green phosphor CRT, square keys, mono font while none is picked),
 Sakura Pastel (plum and pink, very round), Molten Lava (basalt and ember orange, angular), Royal Gold (black and gold
-hairlines) and Ocean Abyss (deep navy, cyan, generously round). The gothic keyboard, mouse and Spotify card used to be
+hairlines) and Ocean Abyss (deep navy, cyan, generously round).
+
+The Spotify card has one more, **Banner**, which is not shared because it only makes sense there (`defaultOverlays/spotify/banner.css`).
+The card hangs on one edge of the screen: the `banner-edge` setting picks it (`html[data-banner-edge="left"]`) and `banner-offset`
+places it along the edge, from the top or the left; the `position` setting is hidden (`unless`). `move.js` slides the card along
+its edge while Alt + Caps is held (only `--banner-offset` changes and `banner-offset` is saved; there is no corner to resize). The card is wider than it looks: the side behind the edge is padding, so the slide can overshoot without showing
+a gap, and it scales from the edge. The entrance is a finite CSS animation on the card and its parts, which the host replays when the
+overlay appears and plays backwards when the share stops. On a track change `script.js` adds `.swapping` (the card goes into the edge,
+`banner-out`), changes the text and cover after `SWAP_OUT_MS` and removes it again, which starts the entrance over; messages that arrive
+meanwhile only update what is shown at the end, so skipping through songs never shows the ones in between. The gothic keyboard, mouse and Spotify card used to be
 overlays of their own (`obnoxious-keyboard`...): `migrate.ts` moves what was
 saved for them (what is on, settings, presets, global presets) to the theme when the plugin starts.
 
