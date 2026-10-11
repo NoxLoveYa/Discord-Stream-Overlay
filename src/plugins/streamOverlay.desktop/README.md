@@ -257,6 +257,7 @@ Finite CSS animations replay when the overlay appears and play in reverse when t
 | `main/window.ts` | the overlay window: loading, settings, show / hide / reload, saves |
 | `main/page.ts` | runs a script in an overlay page and ignores the rejection of a page that is navigating or gone; `callHook` calls one of the `window.__streamOverlay*` functions of the host page |
 | `main/channels.ts` | the live data an overlay can ask for: the `Channel` interface, the `CHANNELS` list, and `Channels`, which keeps the latest state and the watchers of one window and hands them to the host page |
+| `gameMode.ts` | the check that the patch in `index.tsx` adds to Discord's Game Mode (`isThrottling`): no 10 fps cap on Discord's window while a stream is open, unless the setting is off |
 | `sources.ts` | listeners on Discord that feed a channel from the settings page (`SOURCES`) |
 | `main/input.ts` | key states, mouse movement, cursor relay and mouse capture for the window |
 | `main/keys.ts`, `main/powershell.ts` | key whitelist and the PowerShell helper: `GetAsyncKeyState` for keys and buttons, raw input for mouse movement and wheel; exits when Discord does. `powershell.ts` starts a helper and reads its lines (shared with `main/focus.ts`) |

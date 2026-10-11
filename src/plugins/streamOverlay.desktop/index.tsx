@@ -7,6 +7,7 @@
 import { Devs } from "@utils/constants";
 import definePlugin from "@utils/types";
 
+import { allowGameModeThrottle } from "./gameMode";
 import { manageStreamsPatch } from "./menu";
 import { migrateOverlays, settings } from "./settings";
 import { startSoftwareStream, stopSoftwareStream } from "./softwareStream";
@@ -18,6 +19,17 @@ export default definePlugin({
     authors: [Devs.NoxLoveYa],
     tags: ["Voice", "Appearance"],
     settings,
+    allowGameModeThrottle,
+
+    patches: [
+        {
+            find: "get isThrottling()",
+            replacement: {
+                match: /(get isThrottling\(\)\{return )/,
+                replace: "$1$self.allowGameModeThrottle()&&"
+            }
+        }
+    ],
 
     contextMenus: {
         "manage-streams": manageStreamsPatch

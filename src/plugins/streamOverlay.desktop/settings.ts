@@ -61,6 +61,11 @@ export const settings = definePluginSettings({
         description: "Always use Windows' software H.264 encoder for Stream only, even with an NVIDIA card (more processor use). Normally this is automatic: only when the encoder of your graphics card cannot be drawn into. Restart your stream after changing it",
         default: false
     },
+    keepFullFramerate: {
+        type: OptionType.BOOLEAN,
+        description: "Keep Discord at full frame rate while you share your screen or watch a stream, even when a game is running and Discord is in the background. Discord's Game Mode otherwise caps its window at 10 fps then, which makes the stream preview (and the overlays on it) choppy; the stream itself is not affected. Restart Discord once after updating the plugin for this to apply",
+        default: true
+    },
     alwaysShow: {
         type: OptionType.BOOLEAN,
         description: "Show the overlays even when not screensharing (for testing)",
